@@ -108,6 +108,11 @@ DATABASE_URL=postgresql://dreamwallet:dreamwallet_dev@localhost:5437/dreamwallet
 
 ## Deploy
 
-- Railway (planned) — web + worker + PostgreSQL + Redis
+- **Production**: vm-mini (PM2 + nginx + Certbot TLS)
+  - URL: https://dreamwallet.brewos.ru
+  - PM2: `dreamwallet-web` (id 3, port 3300), `dreamwallet-worker` (id 4)
+  - nginx: `/etc/nginx/sites-enabled/dreamwallet.brewos.ru`
+  - Config: `ecosystem.config.cjs`
+  - Rebuild & restart: `pnpm build && pm2 restart dreamwallet-web dreamwallet-worker`
 - CI: `.github/workflows/ci.yml` (typecheck + build)
-- CD: `.github/workflows/deploy.yml` (Railway deploy on push to main)
+- CD: `.github/workflows/deploy.yml` (Railway — не активен, на будущее)

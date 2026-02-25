@@ -66,3 +66,28 @@ const isAuthed = middleware(async ({ ctx, next }) => {
 })
 
 export const protectedProcedure = t.procedure.use(isAuthed)
+
+// Admin middleware — requires ADMIN role
+const isAdmin = middleware(async ({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Необходима авторизация',
+    })
+  }
+  if ((ctx.session.user as Record<string, unknown>).role !== 'ADMIN') {
+    throw new TRPCError({
+      code: 'FORBIDDEN',
+      message: 'Недостаточно прав. Требуется роль администратора.',
+    })
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      session: ctx.session,
+      user: ctx.session.user,
+    },
+  })
+})
+
+export const adminProcedure = t.procedure.use(isAuthed).use(isAdmin)

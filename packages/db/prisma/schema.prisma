@@ -11,12 +11,18 @@ datasource db {
 // Auth & Users
 // ─────────────────────────────────────────────
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
   name          String?
   avatarUrl     String?   @map("avatar_url")
   emailVerified Boolean   @default(false) @map("email_verified")
+  role          UserRole  @default(USER) @map("role")
   currency      String    @default("RUB")
   timezone      String    @default("Europe/Moscow")
   locale        String    @default("ru")
@@ -61,6 +67,7 @@ model OAuthAccount {
   userId            String  @map("user_id")
   provider          String
   providerAccountId String  @map("provider_account_id")
+  password          String?
   accessToken       String? @map("access_token")
   refreshToken      String? @map("refresh_token")
   expiresAt         Int?    @map("expires_at")

@@ -27,8 +27,9 @@ import {
   Wallet,
   LogOut,
   Sparkles,
+  Shield,
 } from 'lucide-react'
-import { signOut } from '@/lib/auth-client'
+import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 
 const mainNav = [
@@ -47,6 +48,8 @@ const projectNav = [
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { data: session } = useSession()
+  const isAdmin = (session?.user as Record<string, unknown> | undefined)?.role === 'ADMIN'
 
   async function handleSignOut() {
     await signOut()
@@ -115,6 +118,16 @@ export function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
+          {isAdmin && (
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin')}>
+                <Link href="/admin">
+                  <Shield className="h-4 w-4" />
+                  <span>Админка</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
           <SidebarMenuItem>
             <SidebarMenuButton asChild isActive={pathname === '/dashboard/pricing'}>
               <Link href="/dashboard/pricing">

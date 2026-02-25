@@ -8,6 +8,7 @@ import { budgetRouter } from './budget'
 import { settingsRouter } from './settings'
 import { importRouter } from './import'
 import { billingRouter } from './billing'
+import { adminRouter } from './admin'
 
 export const appRouter = router({
   wallet: walletRouter,
@@ -19,6 +20,7 @@ export const appRouter = router({
   settings: settingsRouter,
   import: importRouter,
   billing: billingRouter,
+  admin: adminRouter,
 })
 
 export type AppRouter = typeof appRouter
