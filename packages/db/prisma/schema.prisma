@@ -1,0 +1,589 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// Auth & Users
+// ─────────────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatarUrl     String?   @map("avatar_url")
+  emailVerified Boolean   @default(false) @map("email_verified")
+  currency      String    @default("RUB")
+  timezone      String    @default("Europe/Moscow")
+  locale        String    @default("ru")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Better Auth relations
+  sessions Session[]
+  accounts OAuthAccount[]
+
+  // App relations
+  personalWallet   Wallet?           @relation("PersonalWallet")
+  projects         Project[]         @relation("ProjectOwner")
+  projectMembers   ProjectMember[]
+  categories       Category[]
+  subscriptions    Subscription[]
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  importTemplates  ImportTemplate[]
+  autoRules        AutoCategoryRule[]
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model OAuthAccount {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  accessToken       String? @map("access_token")
+  refreshToken      String? @map("refresh_token")
+  expiresAt         Int?    @map("expires_at")
+  tokenType         String? @map("token_type")
+  scope             String?
+  idToken           String? @map("id_token")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("oauth_accounts")
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("verifications")
+}
+
+// ─────────────────────────────────────────────
+// Wallets & Accounts
+// ─────────────────────────────────────────────
+
+model Wallet {
+  id        String     @id @default(cuid())
+  name      String
+  type      WalletType @default(PERSONAL)
+  currency  String     @default("RUB")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  // Personal wallet owner (null for project wallets)
+  userId String? @unique @map("user_id")
+  user   User?   @relation("PersonalWallet", fields: [userId], references: [id], onDelete: Cascade)
+
+  // Project wallet (null for personal wallets)
+  projectId String?  @unique @map("project_id")
+  project   Project? @relation("ProjectWallet", fields: [projectId], references: [id], onDelete: Cascade)
+
+  accounts Account[]
+  budgets  Budget[]
+
+  @@map("wallets")
+}
+
+enum WalletType {
+  PERSONAL
+  PROJECT
+}
+
+model Account {
+  id             String      @id @default(cuid())
+  walletId       String      @map("wallet_id")
+  name           String
+  type           AccountType
+  currency       String      @default("RUB")
+  balance        Decimal     @default(0) @db.Decimal(15, 2)
+  initialBalance Decimal     @default(0) @map("initial_balance") @db.Decimal(15, 2)
+  icon           String?
+  color          String?
+  isArchived     Boolean     @default(false) @map("is_archived")
+  sortOrder      Int         @default(0) @map("sort_order")
+  createdAt      DateTime    @default(now()) @map("created_at")
+  updatedAt      DateTime    @updatedAt @map("updated_at")
+
+  wallet          Wallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  bankConnection  BankConnection?
+  transactions    Transaction[]   @relation("TransactionAccount")
+  transfersFrom   Transaction[]   @relation("TransferFrom")
+  transfersTo     Transaction[]   @relation("TransferTo")
+
+  @@map("accounts")
+}
+
+enum AccountType {
+  BANK_ACCOUNT
+  CASH
+  CRYPTO
+  INVESTMENT
+  CREDIT_CARD
+  SAVINGS
+  CUSTOM
+}
+
+// ─────────────────────────────────────────────
+// Transactions
+// ─────────────────────────────────────────────
+
+model Transaction {
+  id            String          @id @default(cuid())
+  accountId     String          @map("account_id")
+  type          TransactionType
+  amount        Decimal         @db.Decimal(15, 2)
+  currency      String          @default("RUB")
+  date          DateTime        @db.Date
+  description   String?
+  counterparty  String?
+  reference     String?
+  isRecurring   Boolean         @default(false) @map("is_recurring")
+  source        TransactionSource @default(MANUAL)
+  metadata      Json?
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+
+  account       Account         @relation("TransactionAccount", fields: [accountId], references: [id], onDelete: Cascade)
+  categoryId    String?         @map("category_id")
+  category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags          TagOnTransaction[]
+  attachments   Attachment[]
+
+  // Transfer fields
+  transferFromAccountId String?  @map("transfer_from_account_id")
+  transferToAccountId   String?  @map("transfer_to_account_id")
+  transferFromAccount   Account? @relation("TransferFrom", fields: [transferFromAccountId], references: [id])
+  transferToAccount     Account? @relation("TransferTo", fields: [transferToAccountId], references: [id])
+
+  // Recurring transaction template
+  recurringRuleId String?        @map("recurring_rule_id")
+  recurringRule   RecurringRule? @relation(fields: [recurringRuleId], references: [id])
+
+  @@index([accountId, date])
+  @@index([categoryId])
+  @@index([date])
+  @@index([source])
+  @@map("transactions")
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+}
+
+enum TransactionSource {
+  MANUAL
+  CSV_IMPORT
+  BANK_SYNC
+  API
+  RECURRING
+}
+
+// ─────────────────────────────────────────────
+// Categories & Tags
+// ─────────────────────────────────────────────
+
+model Category {
+  id        String       @id @default(cuid())
+  userId    String       @map("user_id")
+  name      String
+  type      CategoryType
+  icon      String?
+  color     String?
+  parentId  String?      @map("parent_id")
+  isDefault Boolean      @default(false) @map("is_default")
+  sortOrder Int          @default(0) @map("sort_order")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent       Category?         @relation("CategoryTree", fields: [parentId], references: [id])
+  children     Category[]        @relation("CategoryTree")
+  transactions Transaction[]
+  budgets      Budget[]
+  autoRules    AutoCategoryRule[]
+
+  @@unique([userId, name, parentId])
+  @@map("categories")
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+model Tag {
+  id        String             @id @default(cuid())
+  name      String
+  color     String?
+  createdAt DateTime           @default(now()) @map("created_at")
+
+  transactions TagOnTransaction[]
+
+  @@map("tags")
+}
+
+model TagOnTransaction {
+  transactionId String @map("transaction_id")
+  tagId         String @map("tag_id")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  tag         Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([transactionId, tagId])
+  @@map("tags_on_transactions")
+}
+
+// ─────────────────────────────────────────────
+// Budgets
+// ─────────────────────────────────────────────
+
+model Budget {
+  id             String       @id @default(cuid())
+  walletId       String       @map("wallet_id")
+  categoryId     String       @map("category_id")
+  amount         Decimal      @db.Decimal(15, 2)
+  period         BudgetPeriod
+  alertThreshold Int          @default(80) @map("alert_threshold")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  wallet   Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([walletId, categoryId, period])
+  @@map("budgets")
+}
+
+enum BudgetPeriod {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// ─────────────────────────────────────────────
+// Projects
+// ─────────────────────────────────────────────
+
+model Project {
+  id          String        @id @default(cuid())
+  ownerId     String        @map("owner_id")
+  name        String
+  description String?
+  icon        String?
+  color       String?
+  currency    String        @default("RUB")
+  status      ProjectStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  owner   User            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  wallet  Wallet?         @relation("ProjectWallet")
+  members ProjectMember[]
+  reports Report[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+  DRAFT
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String      @map("project_id")
+  userId    String      @map("user_id")
+  role      MemberRole  @default(VIEWER)
+  invitedAt DateTime    @default(now()) @map("invited_at")
+  joinedAt  DateTime?   @map("joined_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+enum MemberRole {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// ─────────────────────────────────────────────
+// Bank Connections
+// ─────────────────────────────────────────────
+
+model BankConnection {
+  id             String               @id @default(cuid())
+  accountId      String               @unique @map("account_id")
+  provider       BankProvider
+  providerName   String?              @map("provider_name")
+  externalId     String?              @map("external_id")
+  credentials    String?              // AES-256-GCM encrypted JSON
+  lastSyncAt     DateTime?            @map("last_sync_at")
+  syncSchedule   String?              @map("sync_schedule") // cron expression
+  status         BankConnectionStatus @default(ACTIVE)
+  errorMessage   String?              @map("error_message")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  updatedAt      DateTime             @updatedAt @map("updated_at")
+
+  account    Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  syncLogs   BankSyncLog[]
+
+  @@map("bank_connections")
+}
+
+enum BankProvider {
+  TOCHKA
+  SBER
+  TBANK
+  ALFA
+  CUSTOM
+}
+
+enum BankConnectionStatus {
+  ACTIVE
+  EXPIRED
+  ERROR
+  DISCONNECTED
+}
+
+model BankSyncLog {
+  id               String   @id @default(cuid())
+  bankConnectionId String   @map("bank_connection_id")
+  status           String   // success, error, partial
+  transactionsAdded Int     @default(0) @map("transactions_added")
+  transactionsSkipped Int   @default(0) @map("transactions_skipped")
+  errorMessage     String?  @map("error_message")
+  startedAt        DateTime @map("started_at")
+  completedAt      DateTime? @map("completed_at")
+
+  bankConnection BankConnection @relation(fields: [bankConnectionId], references: [id], onDelete: Cascade)
+
+  @@map("bank_sync_logs")
+}
+
+// ─────────────────────────────────────────────
+// Auto-categorization Rules
+// ─────────────────────────────────────────────
+
+model AutoCategoryRule {
+  id         String   @id @default(cuid())
+  userId     String   @map("user_id")
+  categoryId String   @map("category_id")
+  field      String   @default("description") // description, counterparty
+  pattern    String   // regex or keyword
+  isRegex    Boolean  @default(false) @map("is_regex")
+  priority   Int      @default(0)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("auto_category_rules")
+}
+
+// ─────────────────────────────────────────────
+// Recurring Rules
+// ─────────────────────────────────────────────
+
+model RecurringRule {
+  id          String   @id @default(cuid())
+  name        String
+  amount      Decimal  @db.Decimal(15, 2)
+  type        TransactionType
+  schedule    String   // cron expression
+  nextRunAt   DateTime @map("next_run_at")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  transactions Transaction[]
+
+  @@map("recurring_rules")
+}
+
+// ─────────────────────────────────────────────
+// Import
+// ─────────────────────────────────────────────
+
+model ImportTemplate {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  name        String
+  provider    String?  // "tinkoff", "sber", "alfa", "custom"
+  columnMap   Json     @map("column_map") // { date: "A", amount: "B", description: "C" }
+  dateFormat  String?  @map("date_format")
+  delimiter   String?  @default(",")
+  skipRows    Int      @default(0) @map("skip_rows")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("import_templates")
+}
+
+// ─────────────────────────────────────────────
+// Reports
+// ─────────────────────────────────────────────
+
+model Report {
+  id        String   @id @default(cuid())
+  projectId String?  @map("project_id")
+  name      String
+  type      String   // pnl, cashflow, category_breakdown, custom
+  filters   Json?    // saved filter state
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+// ─────────────────────────────────────────────
+// Attachments
+// ─────────────────────────────────────────────
+
+model Attachment {
+  id            String   @id @default(cuid())
+  transactionId String   @map("transaction_id")
+  filename      String
+  mimeType      String   @map("mime_type")
+  size          Int
+  url           String
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+
+  @@map("attachments")
+}
+
+// ─────────────────────────────────────────────
+// Subscriptions (Billing)
+// ─────────────────────────────────────────────
+
+model Subscription {
+  id                 String             @id @default(cuid())
+  userId             String             @map("user_id")
+  plan               SubscriptionPlan   @default(FREE)
+  status             SubscriptionStatus @default(ACTIVE)
+  provider           PaymentProvider?
+  externalId         String?            @map("external_id")
+  stripeCustomerId   String?            @unique @map("stripe_customer_id")
+  stripeSubscriptionId String?          @unique @map("stripe_subscription_id")
+  currentPeriodStart DateTime?          @map("current_period_start")
+  currentPeriodEnd   DateTime?          @map("current_period_end")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  BUSINESS
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  TRIALING
+}
+
+enum PaymentProvider {
+  STRIPE
+  YUKASSA
+}
+
+// ─────────────────────────────────────────────
+// Notifications
+// ─────────────────────────────────────────────
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String           @map("user_id")
+  type      NotificationType
+  title     String
+  body      String?
+  data      Json?
+  isRead    Boolean          @default(false) @map("is_read")
+  createdAt DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  BUDGET_WARNING
+  BUDGET_EXCEEDED
+  LARGE_TRANSACTION
+  BANK_SYNC_ERROR
+  BANK_SYNC_COMPLETE
+  SYSTEM
+}
+
+// ─────────────────────────────────────────────
+// Audit Log
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  action    String   // create, update, delete
+  entity    String   // transaction, account, project, etc.
+  entityId  String   @map("entity_id")
+  changes   Json?    // { field: { old: "x", new: "y" } }
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([entity, entityId])
+  @@map("audit_logs")
+}

@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: dreamwallet-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dreamwallet
+      POSTGRES_PASSWORD: dreamwallet_dev
+      POSTGRES_DB: dreamwallet
+    ports:
+      - "5437:5432"
+    volumes:
+      - dreamwallet-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dreamwallet"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: dreamwallet-redis
+    restart: unless-stopped
+    ports:
+      - "6384:6379"
+    volumes:
+      - dreamwallet-redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  dreamwallet-pgdata:
+  dreamwallet-redis:

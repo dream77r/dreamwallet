@@ -1,0 +1,21 @@
+{
+  "name": "dreamwallet",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DreamWallet — SaaS platform for personal and business finance management",
+  "packageManager": "pnpm@10.29.2",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "typecheck": "turbo typecheck",
+    "db:generate": "turbo db:generate",
+    "db:push": "turbo db:push",
+    "db:migrate": "turbo db:migrate",
+    "clean": "turbo clean && rm -rf node_modules"
+  },
+  "devDependencies": {
+    "turbo": "^2.8.10",
+    "typescript": "^5.8.3"
+  }
+}

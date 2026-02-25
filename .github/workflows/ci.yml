@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @dreamwallet/db db:generate
+
+      # Type-check all packages
+      - run: pnpm --filter @dreamwallet/shared build
+      - run: pnpm --filter @dreamwallet/bank-integrations build
+      - run: pnpm --filter @dreamwallet/web typecheck
+
+  build:
+    runs-on: ubuntu-latest
+    needs: lint-and-typecheck
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @dreamwallet/db db:generate
+      - run: pnpm --filter @dreamwallet/shared build
+      - run: pnpm --filter @dreamwallet/bank-integrations build
+
+      # Build web app
+      - run: pnpm --filter @dreamwallet/web build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      # Build worker
+      - run: pnpm --filter @dreamwallet/worker build
