@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,10 +45,19 @@ function getProjectColor(index: number, color?: string | null) {
 }
 
 export default function ProjectsPage() {
+  const [editingId, setEditingId] = useState<string | null>(null)
   const { data: projects, isLoading } = trpc.project.list.useQuery()
+  const editingProject = projects?.find(p => p.id === editingId)
 
   return (
     <div className="space-y-6">
+      {editingProject && (
+        <ProjectForm
+          initialData={{ id: editingProject.id, name: editingProject.name, description: editingProject.description, currency: editingProject.wallet?.currency ?? 'RUB' }}
+          open={!!editingId}
+          onOpenChange={(o) => { if (!o) setEditingId(null) }}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Проекты</h1>
@@ -116,7 +126,7 @@ export default function ProjectsPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>Открыть</DropdownMenuItem>
-                          <DropdownMenuItem>Редактировать</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEditingId(project.id)}>Редактировать</DropdownMenuItem>
                           <DropdownMenuItem className="text-red-600">Архивировать</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
