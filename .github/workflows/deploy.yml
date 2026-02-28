@@ -1,38 +1,61 @@
-name: Deploy
+name: Deploy to Production
 
 on:
   push:
     branches: [main]
 
-concurrency:
-  group: deploy-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  deploy-web:
+  deploy:
+    name: Deploy to fi-vmmini
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Install Railway CLI
-        run: npm i -g @railway/cli
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
-      - name: Deploy Web
-        run: railway up -d --service web
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Add server to known hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H 151.241.234.248 >> ~/.ssh/known_hosts
 
-  deploy-worker:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-      - uses: actions/checkout@v4
+      - name: Deploy
+        run: |
+          ssh dreamwallet@151.241.234.248 << 'ENDSSH'
+            set -e
+            cd /home/dreamwallet/projects/dreamwallet
+            
+            echo "📦 Pulling latest code..."
+            git pull origin main
+            
+            echo "📥 Installing dependencies..."
+            pnpm install --frozen-lockfile
+            
+            echo "🗄️ Applying DB migrations..."
+            pnpm --filter @dreamwallet/db db:push
+            
+            echo "🔨 Building..."
+            pnpm --filter @dreamwallet/web build
+            pnpm --filter @dreamwallet/worker build
+            
+            echo "🚀 Restarting services..."
+            pm2 restart all --update-env
+            pm2 save
+            
+            echo "✅ Deploy complete!"
+          ENDSSH
 
-      - name: Install Railway CLI
-        run: npm i -g @railway/cli
-
-      - name: Deploy Worker
-        run: railway up -d --service worker
-        env:
-          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Health check
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://dreamwallet.brewos.ru)
+          echo "HTTP Status: $STATUS"
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "307" ]; then
+            echo "❌ Health check failed!"
+            exit 1
+          fi
+          echo "✅ Site is up!"
