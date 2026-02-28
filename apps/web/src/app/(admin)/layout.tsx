@@ -2,7 +2,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { auth } from '@/lib/auth'
 import Link from 'next/link'
-import { Shield, Users, LayoutDashboard, ArrowLeft } from 'lucide-react'
+import { Shield, Users, LayoutDashboard, ArrowLeft, Sparkles } from 'lucide-react'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const headerList = await headers()
@@ -37,6 +37,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <span className="flex items-center gap-1.5">
                 <Users className="h-3.5 w-3.5" />
                 Пользователи
+              </span>
+            </Link>
+            <Link
+              href="/admin/plans"
+              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" />
+                Тарифы
               </span>
             </Link>
           </div>

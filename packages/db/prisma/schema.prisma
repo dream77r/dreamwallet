@@ -531,6 +531,31 @@ enum SubscriptionPlan {
   FREE
   PRO
   BUSINESS
+  CUSTOM
+}
+
+// Configurable plan limits — editable via admin panel
+model PlanConfig {
+  id                       String           @id @default(cuid())
+  plan                     SubscriptionPlan @unique
+  displayName              String           @map("display_name")
+  priceMonthly             Int              @default(0) @map("price_monthly")
+  priceYearly              Int              @default(0) @map("price_yearly")
+  maxAccounts              Int              @default(3) @map("max_accounts")           // -1 = unlimited
+  maxProjects              Int              @default(1) @map("max_projects")           // -1 = unlimited
+  maxBankConnections       Int              @default(0) @map("max_bank_connections")   // -1 = unlimited
+  maxProjectMembers        Int              @default(0) @map("max_project_members")    // -1 = unlimited
+  transactionHistoryMonths Int              @default(6) @map("transaction_history_months") // -1 = unlimited
+  hasAiCategorization      Boolean          @default(false) @map("has_ai_categorization")
+  hasCustomReports         Boolean          @default(false) @map("has_custom_reports")
+  hasExport                Boolean          @default(false) @map("has_export")
+  hasApiAccess             Boolean          @default(false) @map("has_api_access")
+  isVisible                Boolean          @default(true) @map("is_visible")  // false = only in admin
+  sortOrder                Int              @default(0) @map("sort_order")
+  createdAt                DateTime         @default(now()) @map("created_at")
+  updatedAt                DateTime         @updatedAt @map("updated_at")
+
+  @@map("plan_configs")
 }
 
 enum SubscriptionStatus {

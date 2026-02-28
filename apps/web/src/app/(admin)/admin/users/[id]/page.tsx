@@ -53,6 +53,7 @@ const planLabels: Record<string, string> = {
   FREE: 'Бесплатный',
   PRO: 'Pro',
   BUSINESS: 'Business',
+  CUSTOM: 'Custom',
 }
 
 const statusLabels: Record<string, string> = {
@@ -143,6 +144,7 @@ function SubscriptionCard({ userId, subscription }: { userId: string; subscripti
                 <SelectItem value="FREE">Бесплатный</SelectItem>
                 <SelectItem value="PRO">Pro</SelectItem>
                 <SelectItem value="BUSINESS">Business</SelectItem>
+                <SelectItem value="CUSTOM">Custom (ручной)</SelectItem>
               </SelectContent>
             </Select>
           </div>
