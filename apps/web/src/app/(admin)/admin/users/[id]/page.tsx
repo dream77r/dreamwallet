@@ -16,8 +16,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { trpc } from '@/lib/trpc/client'
-import { ArrowLeft, Shield, ShieldOff, Trash2, CreditCard } from 'lucide-react'
+import { ArrowLeft, Shield, ShieldOff, Trash2, CreditCard, Sparkles } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { toast } from 'sonner'
 import { useState } from 'react'
@@ -38,6 +47,160 @@ function formatBalance(amount: number | string) {
     currency: 'RUB',
     maximumFractionDigits: 0,
   }).format(Number(amount))
+}
+
+const planLabels: Record<string, string> = {
+  FREE: 'Бесплатный',
+  PRO: 'Pro',
+  BUSINESS: 'Business',
+}
+
+const statusLabels: Record<string, string> = {
+  ACTIVE: 'Активна',
+  TRIALING: 'Пробный период',
+  PAST_DUE: 'Просрочена',
+  CANCELLED: 'Отменена',
+}
+
+const statusVariants: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  ACTIVE: 'default',
+  TRIALING: 'secondary',
+  PAST_DUE: 'destructive',
+  CANCELLED: 'outline',
+}
+
+type Subscription = {
+  id: string
+  plan: string
+  status: string
+  currentPeriodEnd: Date | null
+  currentPeriodStart: Date | null
+  cancelAtPeriodEnd: boolean
+  provider: string | null
+}
+
+function SubscriptionCard({ userId, subscription }: { userId: string; subscription: Subscription | undefined }) {
+  const utils = trpc.useUtils()
+  const [subPlan, setSubPlan] = useState(subscription?.plan ?? 'FREE')
+  const [subStatus, setSubStatus] = useState(subscription?.status ?? 'ACTIVE')
+  const [subPeriodEnd, setSubPeriodEnd] = useState(
+    subscription?.currentPeriodEnd
+      ? new Date(subscription.currentPeriodEnd).toISOString().split('T')[0]
+      : ''
+  )
+
+  const updateSubscription = trpc.admin.updateSubscription.useMutation({
+    onSuccess: () => {
+      toast.success('Подписка обновлена')
+      void utils.admin.getUser.invalidate({ id: userId })
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  function addDays(days: number) {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    setSubPeriodEnd(d.toISOString().split('T')[0])
+  }
+
+  function handleSave() {
+    updateSubscription.mutate({
+      userId,
+      plan: subPlan as 'FREE' | 'PRO' | 'BUSINESS',
+      status: subStatus as 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELLED',
+      currentPeriodEnd: subPeriodEnd ? new Date(subPeriodEnd).toISOString() : undefined,
+    })
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Подписка
+          </CardTitle>
+          <div className="flex gap-2">
+            <Badge variant="outline">{planLabels[subPlan] ?? subPlan}</Badge>
+            <Badge variant={statusVariants[subStatus] ?? 'outline'}>
+              {statusLabels[subStatus] ?? subStatus}
+            </Badge>
+          </div>
+        </div>
+        {subscription?.provider && (
+          <CardDescription>Провайдер: {subscription.provider}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Тариф</Label>
+            <Select value={subPlan} onValueChange={setSubPlan}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FREE">Бесплатный</SelectItem>
+                <SelectItem value="PRO">Pro</SelectItem>
+                <SelectItem value="BUSINESS">Business</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Статус</Label>
+            <Select value={subStatus} onValueChange={setSubStatus}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ACTIVE">Активна</SelectItem>
+                <SelectItem value="TRIALING">Пробный период</SelectItem>
+                <SelectItem value="PAST_DUE">Просрочена</SelectItem>
+                <SelectItem value="CANCELLED">Отменена</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Дата окончания подписки</Label>
+          <div className="flex gap-2">
+            <Input
+              type="date"
+              value={subPeriodEnd}
+              onChange={(e) => setSubPeriodEnd(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="button" variant="outline" size="sm" onClick={() => addDays(30)}>
+              +30 дней
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={() => addDays(365)}>
+              +1 год
+            </Button>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="flex items-center justify-between">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={() => { setSubStatus('CANCELLED'); }}
+          >
+            Отменить подписку
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updateSubscription.isPending}
+          >
+            {updateSubscription.isPending ? 'Сохранение...' : 'Сохранить изменения'}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -229,6 +392,12 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
           </CardContent>
         </Card>
       </div>
+
+      {/* Subscription management */}
+      <SubscriptionCard
+        userId={user.id}
+        subscription={user.subscriptions[0]}
+      />
 
       {/* Accounts */}
       {user.personalWallet?.accounts && user.personalWallet.accounts.length > 0 && (

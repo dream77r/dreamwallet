@@ -125,7 +125,19 @@ export const adminRouter = router({
       const user = await ctx.prisma.user.findUnique({
         where: { id: input.id },
         include: {
-          subscriptions: { where: { status: 'ACTIVE' }, take: 1 },
+          subscriptions: {
+            orderBy: { createdAt: 'desc' as const },
+            take: 1,
+            select: {
+              id: true,
+              plan: true,
+              status: true,
+              currentPeriodEnd: true,
+              currentPeriodStart: true,
+              cancelAtPeriodEnd: true,
+              provider: true,
+            },
+          },
           personalWallet: {
             include: {
               accounts: {
@@ -203,5 +215,42 @@ export const adminRouter = router({
       // Cascading delete — Prisma handles it via onDelete: Cascade
       await ctx.prisma.user.delete({ where: { id: input.id } })
       return { success: true }
+    }),
+
+  updateSubscription: adminProcedure
+    .input(
+      z.object({
+        userId: z.string(),
+        plan: z.enum(['FREE', 'PRO', 'BUSINESS']),
+        status: z.enum(['ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELLED']),
+        currentPeriodEnd: z.string().datetime().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const sub = await ctx.prisma.subscription.findFirst({
+        where: { userId: input.userId },
+        orderBy: { createdAt: 'desc' },
+      })
+
+      if (!sub) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Подписка пользователя не найдена' })
+      }
+
+      return ctx.prisma.subscription.update({
+        where: { id: sub.id },
+        data: {
+          plan: input.plan,
+          status: input.status,
+          ...(input.currentPeriodEnd
+            ? { currentPeriodEnd: new Date(input.currentPeriodEnd) }
+            : {}),
+        },
+        select: {
+          id: true,
+          plan: true,
+          status: true,
+          currentPeriodEnd: true,
+        },
+      })
     }),
 })
