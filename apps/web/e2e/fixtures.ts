@@ -7,42 +7,31 @@ export const TEST_USER = {
 }
 
 /**
- * Логинимся или регистрируемся через UI.
- * Возвращает page уже на /dashboard.
+ * Логинимся или регистрируемся через UI (используется только в auth.spec.ts).
+ * Для остальных тестов сессия загружается из storageState (global-setup).
  */
-export async function loginOrRegister(page: Page): Promise<void> {
+export async function loginViaUI(page: Page, email: string, password: string): Promise<boolean> {
   await page.goto('/login')
-
-  // Заполняем форму логина
-  await page.fill('#email', TEST_USER.email)
-  await page.fill('#password', TEST_USER.password)
+  await page.fill('#email', email)
+  await page.fill('#password', password)
   await page.click('button[type="submit"]')
 
-  // Если редирект на /dashboard — готово
-  // Если нет (неверные данные) — пробуем регистрацию
-  const isOnDashboard = await page
-    .waitForURL('**/dashboard', { timeout: 5_000 })
+  return page
+    .waitForURL('**/dashboard', { timeout: 10_000 })
     .then(() => true)
     .catch(() => false)
-
-  if (!isOnDashboard) {
-    await page.goto('/register')
-    await page.fill('#name', TEST_USER.name)
-    await page.fill('#email', TEST_USER.email)
-    await page.fill('#password', TEST_USER.password)
-    await page.click('button[type="submit"]')
-    await page.waitForURL('**/dashboard', { timeout: 10_000 })
-  }
 }
 
-/** Расширенная фикстура с автологином */
+/** Фикстура: page уже залогинена через storageState из global-setup */
 type Fixtures = {
   authedPage: Page
 }
 
 export const test = base.extend<Fixtures>({
   authedPage: async ({ page }, use) => {
-    await loginOrRegister(page)
+    // storageState уже применён через playwright.config.ts (project: authenticated)
+    await page.goto('/dashboard')
+    await page.waitForURL('**/dashboard', { timeout: 10_000 })
     await use(page)
   },
 })

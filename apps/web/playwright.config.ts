@@ -1,4 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
+import * as path from 'path'
+
+export const AUTH_FILE = path.join(__dirname, 'e2e/.auth/user.json')
 
 /**
  * Playwright E2E configuration for DreamWallet
@@ -12,6 +15,9 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'github' : 'list',
 
+  // Глобальный setup: создаёт тестового юзера и сохраняет auth state ОДИН раз
+  globalSetup: './e2e/global-setup.ts',
+
   use: {
     baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
@@ -19,9 +25,20 @@ export default defineConfig({
   },
 
   projects: [
+    // Auth тесты — без storageState (тестируем сам процесс входа)
     {
-      name: 'chromium',
+      name: 'auth',
+      testMatch: ['**/auth.spec.ts'],
       use: { ...devices['Desktop Chrome'] },
+    },
+    // Все остальные тесты — с сохранённой сессией (быстро, без логина)
+    {
+      name: 'app',
+      testMatch: ['**/dashboard.spec.ts', '**/transactions.spec.ts'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: AUTH_FILE,
+      },
     },
   ],
 
