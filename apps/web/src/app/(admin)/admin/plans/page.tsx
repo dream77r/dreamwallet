@@ -13,7 +13,7 @@ import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { Sparkles, Eye, EyeOff, Infinity as InfinityIcon } from 'lucide-react'
 
-type PlanConfig = {
+type PlanFormValues = {
   plan: 'FREE' | 'PRO' | 'BUSINESS' | 'CUSTOM'
   displayName: string
   priceMonthly: number
@@ -86,9 +86,9 @@ function LimitInput({
   )
 }
 
-function PlanCard({ config }: { config: PlanConfig }) {
+function PlanCard({ config }: { config: PlanFormValues }) {
   const utils = trpc.useUtils()
-  const [form, setForm] = useState<PlanConfig>({ ...config })
+  const [form, setForm] = useState<PlanFormValues>({ ...config })
 
   const update = trpc.admin.updatePlanConfig.useMutation({
     onSuccess: () => {
@@ -98,7 +98,8 @@ function PlanCard({ config }: { config: PlanConfig }) {
     onError: (e) => toast.error(e.message),
   })
 
-  const set = <K extends keyof PlanConfig>(key: K, value: PlanConfig[K]) =>
+  // Trailing comma required in .tsx to prevent generic from being parsed as JSX
+  const set = <K extends keyof PlanFormValues,>(key: K, value: PlanFormValues[K]) =>
     setForm((f) => ({ ...f, [key]: value }))
 
   return (
@@ -194,7 +195,7 @@ function PlanCard({ config }: { config: PlanConfig }) {
                 ['hasCustomReports', 'Пользовательские отчёты'],
                 ['hasExport', 'Экспорт данных'],
                 ['hasApiAccess', 'API доступ'],
-              ] as [keyof PlanConfig, string][]
+              ] as [keyof PlanFormValues, string][]
             ).map(([key, label]) => (
               <div key={key} className="flex items-center justify-between">
                 <Label className="text-sm cursor-pointer" htmlFor={`${config.plan}-${key}`}>
@@ -252,7 +253,7 @@ export default function AdminPlansPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {(configs ?? []).map((config) => (
-          <PlanCard key={config.plan} config={config as PlanConfig} />
+          <PlanCard key={config.plan} config={config as unknown as PlanFormValues} />
         ))}
       </div>
     </div>
