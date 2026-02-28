@@ -1,13 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
   SelectContent,
@@ -26,18 +26,18 @@ import {
 } from '@/components/ui/dialog'
 import {
   User,
-  Bell,
   Shield,
-  CreditCard,
-  Trash2,
+  Sparkles,
   Save,
   CheckCircle2,
   Lock,
   Globe,
   Clock,
-  Sparkles,
   AlertTriangle,
+  Trash2,
 } from 'lucide-react'
+import { trpc } from '@/lib/trpc/client'
+import { toast } from 'sonner'
 
 const currencies = [
   { value: 'RUB', label: '₽ Российский рубль' },
@@ -60,25 +60,58 @@ const timezones = [
   { value: 'Asia/Almaty', label: 'Алматы (UTC+6)' },
 ]
 
+const planLabels: Record<string, string> = {
+  FREE: 'Бесплатный',
+  PRO: 'Pro',
+  BUSINESS: 'Business',
+}
+
 export default function SettingsPage() {
-  const [saved, setSaved] = useState(false)
-  const [name, setName] = useState('Александр Иванов')
-  const [email] = useState('alexander@example.com')
+  const utils = trpc.useUtils()
+
+  // Fetch real user data
+  const { data: user, isLoading: userLoading } = trpc.settings.get.useQuery()
+  const { data: subscription, isLoading: subLoading } = trpc.settings.getSubscription.useQuery()
+
+  // Local state synced from server
+  const [name, setName] = useState('')
   const [currency, setCurrency] = useState('RUB')
   const [timezone, setTimezone] = useState('Europe/Moscow')
-  const [notifications, setNotifications] = useState({
-    budgetAlerts: true,
-    weeklyDigest: true,
-    largeTransactions: true,
-    monthlyReport: false,
-  })
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteConfirmText, setDeleteConfirmText] = useState('')
 
-  function handleSave() {
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2500)
+  // Sync local state when user data loads
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? '')
+      setCurrency(user.currency)
+      setTimezone(user.timezone)
+    }
+  }, [user])
+
+  const updateMutation = trpc.settings.update.useMutation({
+    onSuccess: () => {
+      toast.success('Настройки сохранены')
+      void utils.settings.get.invalidate()
+    },
+    onError: (err) => toast.error(`Ошибка: ${err.message}`),
+  })
+
+  function handleSaveProfile() {
+    updateMutation.mutate({ name: name.trim() || undefined })
   }
+
+  function handleSavePreferences() {
+    updateMutation.mutate({ currency, timezone })
+  }
+
+  const plan = subscription?.plan ?? 'FREE'
+  const isLoading = userLoading || subLoading
+
+  // Initials for avatar
+  const initials = user?.name
+    ? user.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()
+    : '?'
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -87,7 +120,7 @@ export default function SettingsPage() {
         <p className="text-muted-foreground text-sm">Управление аккаунтом и предпочтениями</p>
       </div>
 
-      {/* Profile section */}
+      {/* Profile */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
@@ -98,16 +131,22 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-semibold">
-              АИ
+            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-semibold flex-shrink-0">
+              {isLoading ? '?' : initials}
             </div>
             <div>
-              <p className="font-medium">{name}</p>
-              <p className="text-sm text-muted-foreground">{email}</p>
+              {isLoading ? (
+                <>
+                  <Skeleton className="h-5 w-32 mb-1" />
+                  <Skeleton className="h-4 w-48" />
+                </>
+              ) : (
+                <>
+                  <p className="font-medium">{user?.name || '—'}</p>
+                  <p className="text-sm text-muted-foreground">{user?.email}</p>
+                </>
+              )}
             </div>
-            <Button variant="outline" size="sm" className="ml-auto">
-              Сменить фото
-            </Button>
           </div>
 
           <Separator />
@@ -115,26 +154,30 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="name">Имя</Label>
-              <Input
-                id="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
+              {isLoading ? <Skeleton className="h-9 w-full" /> : (
+                <Input
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                value={email}
-                disabled
-                className="text-muted-foreground"
-              />
+              {isLoading ? <Skeleton className="h-9 w-full" /> : (
+                <Input
+                  id="email"
+                  value={user?.email ?? ''}
+                  disabled
+                  className="text-muted-foreground"
+                />
+              )}
             </div>
           </div>
 
-          <Button onClick={handleSave} disabled={saved}>
-            {saved ? (
-              <><CheckCircle2 className="h-4 w-4" /> Сохранено</>
+          <Button onClick={handleSaveProfile} disabled={updateMutation.isPending || isLoading}>
+            {updateMutation.isPending ? (
+              <><Save className="h-4 w-4" /> Сохранение...</>
             ) : (
               <><Save className="h-4 w-4" /> Сохранить</>
             )}
@@ -149,21 +192,21 @@ export default function SettingsPage() {
             <Globe className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">Региональные настройки</CardTitle>
           </div>
-          <CardDescription>Валюта, часовой пояс и формат дат</CardDescription>
+          <CardDescription>Валюта и часовой пояс</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
             <Label>Основная валюта</Label>
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {currencies.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isLoading ? <Skeleton className="h-9 w-full" /> : (
+              <Select value={currency} onValueChange={setCurrency}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {currencies.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -173,54 +216,22 @@ export default function SettingsPage() {
                 Часовой пояс
               </div>
             </Label>
-            <Select value={timezone} onValueChange={setTimezone}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {timezones.map((tz) => (
-                  <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {isLoading ? <Skeleton className="h-9 w-full" /> : (
+              <Select value={timezone} onValueChange={setTimezone}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {timezones.map((tz) => (
+                    <SelectItem key={tz.value} value={tz.value}>{tz.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
-          <Button onClick={handleSave} variant="outline">
+          <Button onClick={handleSavePreferences} variant="outline" disabled={updateMutation.isPending || isLoading}>
             <Save className="h-4 w-4" />
             Сохранить настройки
           </Button>
-        </CardContent>
-      </Card>
-
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Bell className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Уведомления</CardTitle>
-          </div>
-          <CardDescription>Настройте, о чём хотите получать уведомления</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {[
-            { key: 'budgetAlerts', label: 'Превышение бюджета', description: 'Когда расходы превышают установленный лимит' },
-            { key: 'weeklyDigest', label: 'Еженедельный дайджест', description: 'Краткий отчёт о финансах каждое воскресенье' },
-            { key: 'largeTransactions', label: 'Крупные транзакции', description: 'Уведомления о транзакциях свыше 10 000 ₽' },
-            { key: 'monthlyReport', label: 'Ежемесячный отчёт', description: 'Подробный отчёт в начале каждого месяца' },
-          ].map(({ key, label, description }) => (
-            <div key={key} className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">{label}</p>
-                <p className="text-xs text-muted-foreground">{description}</p>
-              </div>
-              <Switch
-                checked={notifications[key as keyof typeof notifications]}
-                onCheckedChange={(checked) =>
-                  setNotifications(prev => ({ ...prev, [key]: checked }))
-                }
-              />
-            </div>
-          ))}
         </CardContent>
       </Card>
 
@@ -231,7 +242,7 @@ export default function SettingsPage() {
             <Shield className="h-4 w-4 text-muted-foreground" />
             <CardTitle className="text-base">Безопасность</CardTitle>
           </div>
-          <CardDescription>Управление паролем и сессиями</CardDescription>
+          <CardDescription>Управление паролем и доступом</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <Button variant="outline" className="w-full justify-start gap-2">
@@ -242,11 +253,6 @@ export default function SettingsPage() {
             <Shield className="h-4 w-4" />
             Двухфакторная аутентификация
             <Badge variant="secondary" className="ml-auto">Не настроена</Badge>
-          </Button>
-          <Button variant="outline" className="w-full justify-start gap-2 text-muted-foreground">
-            <Globe className="h-4 w-4" />
-            Активные сессии
-            <Badge className="ml-auto">1</Badge>
           </Button>
         </CardContent>
       </Card>
@@ -261,40 +267,54 @@ export default function SettingsPage() {
           <CardDescription>Ваш текущий тариф</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <p className="font-semibold">Бесплатный тариф</p>
-                <Badge variant="secondary">Free</Badge>
+          {subLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : (
+            <>
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold">{planLabels[plan] ?? plan} тариф</p>
+                    <Badge variant={plan === 'FREE' ? 'secondary' : 'default'}>{plan}</Badge>
+                  </div>
+                  {plan === 'FREE' && (
+                    <p className="text-sm text-muted-foreground">До 3 счетов · 1 проект · Ручной ввод + CSV</p>
+                  )}
+                </div>
+                {plan === 'FREE' && (
+                  <Button size="sm">
+                    <Sparkles className="h-4 w-4" />
+                    Улучшить
+                  </Button>
+                )}
               </div>
-              <p className="text-sm text-muted-foreground">До 3 счетов, до 100 транзакций в месяц</p>
-            </div>
-            <Button>
-              <Sparkles className="h-4 w-4" />
-              Улучшить
-            </Button>
-          </div>
 
-          <Separator className="my-4" />
+              <Separator className="my-4" />
 
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Счета</span>
-              <span>2 / 3</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Транзакции в феврале</span>
-              <span>47 / 100</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Проекты</span>
-              <span className="text-muted-foreground">Только Pro</span>
-            </div>
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Импорт CSV</span>
-              <span className="text-muted-foreground">Только Pro</span>
-            </div>
-          </div>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Счета</span>
+                  <span>{plan === 'FREE' ? 'До 3' : plan === 'PRO' ? 'До 20' : 'Без ограничений'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Проекты</span>
+                  <span>{plan === 'FREE' ? '1 проект' : 'Без ограничений'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">CSV-импорт</span>
+                  <span>✅ Включён</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Банковские интеграции</span>
+                  <span>{plan === 'FREE' ? '—' : plan === 'PRO' ? '2 банка' : 'Без ограничений'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">История транзакций</span>
+                  <span>{plan === 'FREE' ? '6 месяцев' : plan === 'PRO' ? '3 года' : 'Без ограничений'}</span>
+                </div>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
@@ -305,19 +325,8 @@ export default function SettingsPage() {
             <AlertTriangle className="h-4 w-4 text-red-500" />
             <CardTitle className="text-base text-red-600">Опасная зона</CardTitle>
           </div>
-          <CardDescription>Необратимые действия с аккаунтом</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium">Экспортировать данные</p>
-              <p className="text-xs text-muted-foreground">Скачать все данные в формате CSV</p>
-            </div>
-            <Button variant="outline" size="sm">Экспорт</Button>
-          </div>
-
-          <Separator />
-
+        <CardContent>
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-red-600">Удалить аккаунт</p>
@@ -334,7 +343,7 @@ export default function SettingsPage() {
                 <DialogHeader>
                   <DialogTitle>Удаление аккаунта</DialogTitle>
                   <DialogDescription>
-                    Это действие необратимо. Все ваши данные — транзакции, счета, бюджеты, проекты — будут удалены безвозвратно.
+                    Это действие необратимо. Все транзакции, счета, бюджеты и проекты будут удалены навсегда.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="py-2">
@@ -349,13 +358,8 @@ export default function SettingsPage() {
                   />
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>
-                    Отмена
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    disabled={deleteConfirmText !== 'удалить'}
-                  >
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Отмена</Button>
+                  <Button variant="destructive" disabled={deleteConfirmText !== 'удалить'}>
                     Удалить аккаунт навсегда
                   </Button>
                 </DialogFooter>
