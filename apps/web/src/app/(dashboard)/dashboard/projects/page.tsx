@@ -19,6 +19,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { trpc } from '@/lib/trpc/client'
+import { ProjectForm } from '@/components/projects/project-form'
 
 const PROJECT_COLORS = [
   'bg-purple-500',
@@ -54,10 +55,7 @@ export default function ProjectsPage() {
             {isLoading ? 'Загрузка...' : `${projects?.length ?? 0} проектов`}
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4" />
-          Новый проект
-        </Button>
+        <ProjectForm />
       </div>
 
       {/* Project cards grid */}
@@ -79,10 +77,9 @@ export default function ProjectsPage() {
             <FolderKanban className="h-10 w-10 mb-3" />
             <p className="font-medium mb-1">Нет проектов</p>
             <p className="text-sm">Создайте первый бизнес-проект для отслеживания финансов</p>
-            <Button className="mt-4">
-              <Plus className="h-4 w-4" />
-              Создать проект
-            </Button>
+            <div className="mt-4">
+              <ProjectForm />
+            </div>
           </Card>
         ) : (
           <>
@@ -160,13 +157,8 @@ export default function ProjectsPage() {
             })}
 
             {/* Add project card */}
-            <Card className="flex items-center justify-center border-dashed cursor-pointer hover:bg-muted/50 transition-colors min-h-[200px]">
-              <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-dashed">
-                  <Plus className="h-5 w-5" />
-                </div>
-                <p className="text-sm font-medium">Новый проект</p>
-              </div>
+            <Card className="flex items-center justify-center border-dashed hover:bg-muted/50 transition-colors min-h-[200px]">
+              <ProjectForm />
             </Card>
           </>
         )}

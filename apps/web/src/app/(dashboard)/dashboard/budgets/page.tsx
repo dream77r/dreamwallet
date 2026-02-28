@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import { BudgetForm } from '@/components/budgets/budget-form'
 
 type BudgetPeriod = 'MONTHLY' | 'WEEKLY' | 'YEARLY'
 type BudgetStatus = 'ok' | 'warning' | 'over'
@@ -97,10 +98,7 @@ export default function BudgetsPage() {
             {monthLabel} · {isLoading ? '...' : `${budgets?.length ?? 0} бюджетов`}
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4" />
-          Создать бюджет
-        </Button>
+        {walletId && <BudgetForm walletId={walletId} />}
       </div>
 
       {/* Summary */}
@@ -187,10 +185,9 @@ export default function BudgetsPage() {
           <PiggyBank className="h-10 w-10 mb-3" />
           <p className="font-medium mb-1">Нет бюджетов</p>
           <p className="text-sm">Создайте первый бюджет для контроля расходов</p>
-          <Button className="mt-4">
-            <Plus className="h-4 w-4" />
-            Создать бюджет
-          </Button>
+          <div className="mt-4">
+            {walletId && <BudgetForm walletId={walletId} />}
+          </div>
         </Card>
       ) : (
         <div className="space-y-3">

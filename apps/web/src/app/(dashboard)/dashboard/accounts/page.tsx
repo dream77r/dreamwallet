@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { trpc } from '@/lib/trpc/client'
+import { AccountForm } from '@/components/accounts/account-form'
 
 type AccountType = 'BANK_ACCOUNT' | 'CASH' | 'CRYPTO' | 'INVESTMENT' | 'CREDIT_CARD' | 'SAVINGS' | 'CUSTOM'
 
@@ -67,6 +68,7 @@ function formatAmount(amount: number, currency = 'RUB') {
 }
 
 export default function AccountsPage() {
+  const { data: wallet } = trpc.wallet.get.useQuery()
   const { data: accounts, isLoading } = trpc.account.listAll.useQuery()
 
   const totalAssets = accounts?.filter(a => Number(a.balance) > 0).reduce((s, a) => s + Number(a.balance), 0) ?? 0
@@ -82,10 +84,7 @@ export default function AccountsPage() {
             {isLoading ? 'Загрузка...' : `${accounts?.length ?? 0} счетов и кошельков`}
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4" />
-          Добавить счёт
-        </Button>
+        {wallet && <AccountForm walletId={wallet.id} />}
       </div>
 
       {/* Summary */}
