@@ -251,7 +251,7 @@ export default function AdminPlansPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {configs?.map((config) => (
+        {(configs ?? []).map((config) => (
           <PlanCard key={config.plan} config={config as PlanConfig} />
         ))}
       </div>
