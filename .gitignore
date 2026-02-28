@@ -37,3 +37,10 @@ coverage/
 # PWA
 public/sw.js
 public/workbox-*.js
+
+# Playwright
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
+.env.e2e
