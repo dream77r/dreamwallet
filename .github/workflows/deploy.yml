@@ -46,8 +46,12 @@ jobs:
             pnpm --filter @dreamwallet/web build
             pnpm --filter @dreamwallet/worker build
             
+            echo "📁 Copying static assets for standalone..."
+            cp -r apps/web/public apps/web/.next/standalone/apps/web/public
+            cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+            
             echo "🚀 Restarting services..."
-            pm2 restart all --update-env
+            pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
             pm2 save
             
             echo "✅ Deploy complete!"
