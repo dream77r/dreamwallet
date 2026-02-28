@@ -28,6 +28,7 @@ import {
 } from 'recharts'
 import { trpc } from '@/lib/trpc/client'
 import { useMemo } from 'react'
+import { TransactionForm } from '@/components/transactions/transaction-form'
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -128,9 +129,12 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Обзор</h1>
-        <p className="text-muted-foreground text-sm">{monthLabel}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">Обзор</h1>
+          <p className="text-muted-foreground text-sm">{monthLabel}</p>
+        </div>
+        <TransactionForm />
       </div>
 
       {/* Stat cards */}

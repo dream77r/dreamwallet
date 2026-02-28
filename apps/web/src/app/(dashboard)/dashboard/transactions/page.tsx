@@ -21,7 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
-  Plus,
   Search,
   ChevronLeft,
   ChevronRight,
@@ -38,6 +37,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import { TransactionForm } from '@/components/transactions/transaction-form'
 
 const PAGE_SIZE = 20
 
@@ -124,10 +124,7 @@ export default function TransactionsPage() {
             {isLoading ? 'Загрузка...' : `${total} записей`}
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4" />
-          Добавить
-        </Button>
+        <TransactionForm />
       </div>
 
       {/* Summary row */}
