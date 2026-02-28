@@ -249,6 +249,59 @@ export const adminRouter = router({
       })
     }),
 
+  listSubscriptions: adminProcedure
+    .input(
+      z.object({
+        search: z.string().optional(),
+        plan: z.enum(["FREE", "PRO", "BUSINESS", "CUSTOM"]).optional(),
+        status: z.enum(["ACTIVE", "TRIALING", "PAST_DUE", "CANCELLED"]).optional(),
+        page: z.number().int().min(1).default(1),
+        limit: z.number().int().min(1).max(100).default(20),
+      }).optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const { search, plan, status, page = 1, limit = 20 } = input ?? {}
+      const skip = (page - 1) * limit
+
+      const where = {
+        ...(plan ? { plan } : {}),
+        ...(status ? { status } : {}),
+        ...(search
+          ? {
+              user: {
+                OR: [
+                  { email: { contains: search, mode: "insensitive" as const } },
+                  { name: { contains: search, mode: "insensitive" as const } },
+                ],
+              },
+            }
+          : {}),
+      }
+
+      const [subscriptions, total] = await Promise.all([
+        ctx.prisma.subscription.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            plan: true,
+            status: true,
+            currentPeriodEnd: true,
+            cancelAtPeriodEnd: true,
+            createdAt: true,
+            user: {
+              select: { id: true, email: true, name: true },
+            },
+          },
+        }),
+        ctx.prisma.subscription.count({ where }),
+      ])
+
+      return { subscriptions, total, page, limit }
+    }),
+
   updateSubscription: adminProcedure
     .input(
       z.object({
