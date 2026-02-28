@@ -33,6 +33,17 @@ export const PLAN_LIMITS = {
     hasApiAccess: true,
     transactionHistoryMonths: -1, // unlimited
   },
+  CUSTOM: {
+    maxProjects: -1,
+    maxAccounts: -1,
+    maxBankConnections: -1,
+    maxProjectMembers: -1,
+    hasAiCategorization: true,
+    hasCustomReports: true,
+    hasExport: true,
+    hasApiAccess: true,
+    transactionHistoryMonths: -1, // unlimited — overridden by DB config
+  },
 } as const
 
 // ─── Default Categories ────────────────────────

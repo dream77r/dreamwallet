@@ -138,6 +138,87 @@ async function main() {
     })
   }
 
+  // Seed plan configs (upsert so re-running is safe)
+  const planConfigs = [
+    {
+      plan: 'FREE' as const,
+      displayName: 'Бесплатный',
+      priceMonthly: 0,
+      priceYearly: 0,
+      maxAccounts: 3,
+      maxProjects: 1,
+      maxBankConnections: 0,
+      maxProjectMembers: 0,
+      transactionHistoryMonths: 6,
+      hasAiCategorization: false,
+      hasCustomReports: false,
+      hasExport: false,
+      hasApiAccess: false,
+      isVisible: true,
+      sortOrder: 0,
+    },
+    {
+      plan: 'PRO' as const,
+      displayName: 'Pro',
+      priceMonthly: 490,
+      priceYearly: 4490,
+      maxAccounts: 20,
+      maxProjects: -1,
+      maxBankConnections: 2,
+      maxProjectMembers: 3,
+      transactionHistoryMonths: 36,
+      hasAiCategorization: true,
+      hasCustomReports: true,
+      hasExport: true,
+      hasApiAccess: false,
+      isVisible: true,
+      sortOrder: 1,
+    },
+    {
+      plan: 'BUSINESS' as const,
+      displayName: 'Business',
+      priceMonthly: 1490,
+      priceYearly: 13900,
+      maxAccounts: -1,
+      maxProjects: -1,
+      maxBankConnections: -1,
+      maxProjectMembers: -1,
+      transactionHistoryMonths: -1,
+      hasAiCategorization: true,
+      hasCustomReports: true,
+      hasExport: true,
+      hasApiAccess: true,
+      isVisible: true,
+      sortOrder: 2,
+    },
+    {
+      plan: 'CUSTOM' as const,
+      displayName: 'Custom',
+      priceMonthly: 0,
+      priceYearly: 0,
+      maxAccounts: -1,
+      maxProjects: -1,
+      maxBankConnections: -1,
+      maxProjectMembers: -1,
+      transactionHistoryMonths: -1,
+      hasAiCategorization: true,
+      hasCustomReports: true,
+      hasExport: true,
+      hasApiAccess: true,
+      isVisible: false, // hidden from landing page, admin-only
+      sortOrder: 3,
+    },
+  ]
+
+  for (const config of planConfigs) {
+    await prisma.planConfig.upsert({
+      where: { plan: config.plan },
+      update: config,
+      create: config,
+    })
+  }
+  console.log('  PlanConfigs: 4 plans seeded (FREE, PRO, BUSINESS, CUSTOM)')
+
   // Create subscription
   await prisma.subscription.upsert({
     where: { id: 'seed-subscription' },

@@ -217,11 +217,43 @@ export const adminRouter = router({
       return { success: true }
     }),
 
+  getPlanConfigs: adminProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.planConfig.findMany({
+      orderBy: { sortOrder: 'asc' },
+    })
+  }),
+
+  updatePlanConfig: adminProcedure
+    .input(
+      z.object({
+        plan: z.enum(['FREE', 'PRO', 'BUSINESS', 'CUSTOM']),
+        displayName: z.string().min(1).max(50),
+        priceMonthly: z.number().int().min(0),
+        priceYearly: z.number().int().min(0),
+        maxAccounts: z.number().int().min(-1),
+        maxProjects: z.number().int().min(-1),
+        maxBankConnections: z.number().int().min(-1),
+        maxProjectMembers: z.number().int().min(-1),
+        transactionHistoryMonths: z.number().int().min(-1),
+        hasAiCategorization: z.boolean(),
+        hasCustomReports: z.boolean(),
+        hasExport: z.boolean(),
+        hasApiAccess: z.boolean(),
+        isVisible: z.boolean(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.planConfig.update({
+        where: { plan: input.plan },
+        data: input,
+      })
+    }),
+
   updateSubscription: adminProcedure
     .input(
       z.object({
         userId: z.string(),
-        plan: z.enum(['FREE', 'PRO', 'BUSINESS']),
+        plan: z.enum(['FREE', 'PRO', 'BUSINESS', 'CUSTOM']),
         status: z.enum(['ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELLED']),
         currentPeriodEnd: z.string().datetime().optional(),
       })
