@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth'
 import { prismaAdapter } from 'better-auth/adapters/prisma'
 import { prisma } from '@dreamwallet/db'
+import { DEFAULT_EXPENSE_CATEGORIES, DEFAULT_INCOME_CATEGORIES } from '@dreamwallet/shared'
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL,
@@ -51,22 +52,52 @@ export const auth = betterAuth({
     user: {
       create: {
         after: async (user) => {
-          // Create personal wallet + FREE subscription on first sign-up
-          await prisma.wallet.create({
-            data: {
-              userId: user.id,
-              name: 'Личный кошелёк',
-              type: 'PERSONAL',
-              currency: 'RUB',
-            },
-          })
-          await prisma.subscription.create({
-            data: {
-              userId: user.id,
-              plan: 'FREE',
-              status: 'ACTIVE',
-            },
-          })
+          // Create personal wallet + FREE subscription + default categories on first sign-up
+          await Promise.all([
+            prisma.wallet.create({
+              data: {
+                userId: user.id,
+                name: 'Личный кошелёк',
+                type: 'PERSONAL',
+                currency: 'RUB',
+              },
+            }),
+            prisma.subscription.create({
+              data: {
+                userId: user.id,
+                plan: 'FREE',
+                status: 'ACTIVE',
+              },
+            }),
+            // Create default expense categories
+            ...DEFAULT_EXPENSE_CATEGORIES.map((cat, i) =>
+              prisma.category.create({
+                data: {
+                  userId: user.id,
+                  name: cat.name,
+                  icon: cat.icon,
+                  color: cat.color,
+                  type: 'EXPENSE',
+                  isDefault: true,
+                  sortOrder: i,
+                },
+              })
+            ),
+            // Create default income categories
+            ...DEFAULT_INCOME_CATEGORIES.map((cat, i) =>
+              prisma.category.create({
+                data: {
+                  userId: user.id,
+                  name: cat.name,
+                  icon: cat.icon,
+                  color: cat.color,
+                  type: 'INCOME',
+                  isDefault: true,
+                  sortOrder: i,
+                },
+              })
+            ),
+          ])
         },
       },
     },
