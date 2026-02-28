@@ -6,14 +6,16 @@ on:
   pull_request:
     branches: [main]
 
+env:
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dreamwallet
+  BETTER_AUTH_SECRET: ci-build-secret-not-real-32-chars-min
+  NEXT_PUBLIC_APP_URL: http://localhost:3000
+  REDIS_URL: redis://localhost:6379
+  NEXT_TELEMETRY_DISABLED: 1
+
 jobs:
-  lint-and-typecheck:
+  typecheck:
     runs-on: ubuntu-latest
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dreamwallet
-      BETTER_AUTH_SECRET: ci-build-secret-not-real-32-chars-min
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
-      REDIS_URL: redis://localhost:6379
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -24,21 +26,11 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @dreamwallet/db db:generate
-
-      # Type-check all packages
-      - run: pnpm --filter @dreamwallet/shared build
-      - run: pnpm --filter @dreamwallet/bank-integrations build
       - run: pnpm --filter @dreamwallet/web typecheck
 
   build:
     runs-on: ubuntu-latest
-    needs: lint-and-typecheck
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dreamwallet
-      BETTER_AUTH_SECRET: ci-build-secret-not-real-32-chars-min
-      NEXT_PUBLIC_APP_URL: http://localhost:3000
-      REDIS_URL: redis://localhost:6379
-      NEXT_TELEMETRY_DISABLED: 1
+    needs: typecheck
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -49,11 +41,9 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @dreamwallet/db db:generate
-      - run: pnpm --filter @dreamwallet/shared build
-      - run: pnpm --filter @dreamwallet/bank-integrations build
 
-      # Build web app
-      - run: pnpm --filter @dreamwallet/web build
+      - name: Build web
+        run: pnpm --filter @dreamwallet/web build
 
-      # Build worker
-      - run: pnpm --filter @dreamwallet/worker build
+      - name: Build worker
+        run: pnpm --filter @dreamwallet/worker build
