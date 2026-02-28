@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,8 +14,6 @@ import {
   Wallet,
   Banknote,
   MoreHorizontal,
-  ArrowUpRight,
-  ArrowDownRight,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -23,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { trpc } from '@/lib/trpc/client'
+import { toast } from 'sonner'
 import { AccountForm } from '@/components/accounts/account-form'
 
 type AccountType = 'BANK_ACCOUNT' | 'CASH' | 'CRYPTO' | 'INVESTMENT' | 'CREDIT_CARD' | 'SAVINGS' | 'CUSTOM'
@@ -68,8 +68,18 @@ function formatAmount(amount: number, currency = 'RUB') {
 }
 
 export default function AccountsPage() {
+  const [editingId, setEditingId] = useState<string | null>(null)
+
   const { data: wallet } = trpc.wallet.get.useQuery()
   const { data: accounts, isLoading } = trpc.account.listAll.useQuery()
+  const utils = trpc.useUtils()
+
+  const archiveMutation = trpc.account.archive.useMutation({
+    onSuccess: () => { toast.success('Счёт архивирован'); void utils.account.listAll.invalidate() },
+    onError: (err) => toast.error(`Ошибка: ${err.message}`),
+  })
+
+  const editingAccount = accounts?.find(a => a.id === editingId)
 
   const totalAssets = accounts?.filter(a => Number(a.balance) > 0).reduce((s, a) => s + Number(a.balance), 0) ?? 0
   const totalDebt = accounts?.filter(a => Number(a.balance) < 0).reduce((s, a) => s + Number(a.balance), 0) ?? 0
@@ -114,6 +124,26 @@ export default function AccountsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit form (controlled) */}
+      {editingAccount && wallet && (
+        <AccountForm
+          walletId={wallet.id}
+          initialData={{ id: editingAccount.id, name: editingAccount.name, type: editingAccount.type as 'BANK_ACCOUNT' | 'CASH' | 'SAVINGS' | 'CREDIT_CARD' | 'INVESTMENT' | 'CRYPTO' | 'CUSTOM', currency: editingAccount.currency }}
+          open={!!editingId}
+          onOpenChange={(o) => { if (!o) setEditingId(null) }}
+        />
+      )}
+
+      {/* Onboarding */}
+      {!isLoading && accounts?.length === 0 && wallet && (
+        <Card className="flex flex-col items-center justify-center py-16 border-dashed text-muted-foreground">
+          <div className="text-4xl mb-3">💳</div>
+          <p className="font-medium text-foreground mb-1">Добавьте первый счёт</p>
+          <p className="text-sm mb-4">Счёт — это банковская карта, наличные или кошелёк</p>
+          <AccountForm walletId={wallet.id} />
+        </Card>
+      )}
 
       {/* Account cards grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -163,9 +193,8 @@ export default function AccountsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Редактировать</DropdownMenuItem>
-                            <DropdownMenuItem>История транзакций</DropdownMenuItem>
-                            <DropdownMenuItem className="text-red-600">Архивировать</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditingId(account.id)}>Редактировать</DropdownMenuItem>
+                            <DropdownMenuItem className="text-red-600" onClick={() => archiveMutation.mutate({ id: account.id })}>Архивировать</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>

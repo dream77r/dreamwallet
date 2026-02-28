@@ -74,6 +74,7 @@ export default function TransactionsPage() {
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [page, setPage] = useState(1)
+  const [editingId, setEditingId] = useState<string | null>(null)
 
   const utils = trpc.useUtils()
 
@@ -115,8 +116,17 @@ export default function TransactionsPage() {
     .reduce((s, t) => s + Number(t.amount), 0)
   const net = totalIncome - totalExpense
 
+  const editingTx = transactions.find(t => t.id === editingId)
+
   return (
     <div className="space-y-6">
+      {editingTx && (
+        <TransactionForm
+          initialData={{ id: editingTx.id, type: editingTx.type as 'INCOME' | 'EXPENSE' | 'TRANSFER', accountId: editingTx.accountId, amount: editingTx.amount, date: editingTx.date, description: editingTx.description, categoryId: editingTx.categoryId }}
+          open={!!editingId}
+          onOpenChange={(o) => { if (!o) setEditingId(null) }}
+        />
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Транзакции</h1>
@@ -233,7 +243,13 @@ export default function TransactionsPage() {
               ) : transactions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                    Транзакции не найдены
+                    {!search && typeFilter === 'all' && categoryFilter === 'all'
+                      ? <div className="flex flex-col items-center gap-2">
+                          <span className="text-2xl">💸</span>
+                          <p className="font-medium text-foreground">Нет транзакций</p>
+                          <p className="text-sm">Добавьте первую транзакцию чтобы начать отслеживать финансы</p>
+                        </div>
+                      : 'Транзакции не найдены'}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -286,7 +302,7 @@ export default function TransactionsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Редактировать</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setEditingId(tx.id)}>Редактировать</DropdownMenuItem>
                             <DropdownMenuItem
                               className="text-red-600"
                               onClick={() => deleteMutation.mutate({ id: tx.id })}

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -57,6 +58,7 @@ const CATEGORY_COLORS = [
 ]
 
 export default function BudgetsPage() {
+  const [editingId, setEditingId] = useState<string | null>(null)
   const utils = trpc.useUtils()
 
   // Get wallet first to retrieve walletId
@@ -169,6 +171,20 @@ export default function BudgetsPage() {
         </Card>
       )}
 
+      {/* Edit form (controlled) */}
+      {editingId && walletId && budgets && (() => {
+        const b = budgets.find(x => x.id === editingId)
+        if (!b) return null
+        return (
+          <BudgetForm
+            walletId={walletId}
+            initialData={{ id: b.id, categoryId: b.categoryId, amount: b.amount, period: b.period as 'WEEKLY' | 'MONTHLY' | 'YEARLY', alertThreshold: (b as { alertThreshold?: number | null }).alertThreshold ?? 80 }}
+            open={!!editingId}
+            onOpenChange={(o) => { if (!o) setEditingId(null) }}
+          />
+        )
+      })()}
+
       {/* Budget list */}
       {isLoading ? (
         <div className="space-y-3">
@@ -228,7 +244,7 @@ export default function BudgetsPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>Редактировать</DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setEditingId(budget.id)}>Редактировать</DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-red-600"
                                 onClick={() => deleteMutation.mutate({ id: budget.id })}
