@@ -226,7 +226,9 @@ function PlanCard({ config }: { config: PlanFormValues }) {
 }
 
 export default function AdminPlansPage() {
-  const { data: configs, isLoading } = trpc.admin.getPlanConfigs.useQuery()
+  const { data, isLoading } = trpc.admin.getPlanConfigs.useQuery()
+  // Explicit cast to avoid implicit-any in map callback (Next.js build strictness)
+  const configs = data as PlanFormValues[] | undefined
 
   if (isLoading) {
     return (
@@ -253,7 +255,7 @@ export default function AdminPlansPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {(configs ?? []).map((config) => (
-          <PlanCard key={config.plan} config={config as unknown as PlanFormValues} />
+          <PlanCard key={config.plan} config={config} />
         ))}
       </div>
     </div>
