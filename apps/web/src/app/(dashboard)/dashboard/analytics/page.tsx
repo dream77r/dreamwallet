@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                   <YAxis yAxisId="amount" orientation="left" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
                   <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip formatter={(value: number, name: string) => name === 'Накоплено' ? formatAmount(value) : `${value}%`} />
+                  <Tooltip formatter={((value: number | undefined, name: string) => { if (value === undefined) return ""; return name === 'Накоплено' ? formatAmount(value as number) : `${value}%`; }) as never} />
                   <Legend />
                   <Line yAxisId="amount" type="monotone" dataKey="savings" name="Накоплено" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   <Line yAxisId="rate" type="monotone" dataKey="savingsRate" name="Норма, %" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />

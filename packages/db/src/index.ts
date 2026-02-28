@@ -1,9 +1,9 @@
 import 'dotenv/config'
-import { PrismaClient } from './generated/prisma'
+import { PrismaClient } from './generated/prisma/index.js'
 import { PrismaPg } from '@prisma/adapter-pg'
 
-export { PrismaClient } from './generated/prisma'
-export * from './generated/prisma'
+export { PrismaClient } from './generated/prisma/index.js'
+export * from './generated/prisma/index.js'
 
 function createPrismaClient() {
   const adapter = new PrismaPg({
