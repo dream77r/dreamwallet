@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -21,6 +22,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
   Search,
   ChevronLeft,
   ChevronRight,
@@ -28,6 +36,9 @@ import {
   ArrowDownRight,
   ArrowLeftRight,
   MoreHorizontal,
+  Trash2,
+  Tag,
+  X,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -76,6 +87,11 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkCategoryOpen, setBulkCategoryOpen] = useState(false)
+  const [bulkCategoryId, setBulkCategoryId] = useState('')
+
   const utils = trpc.useUtils()
 
   // Fetch transactions with filters
@@ -102,6 +118,61 @@ export default function TransactionsPage() {
       toast.error(`Ошибка: ${err.message}`)
     },
   })
+
+  // Bulk update mutation (for category change)
+  const updateMutation = trpc.transaction.update.useMutation()
+
+  // Bulk helpers
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === transactions.length && transactions.length > 0) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(transactions.map((t) => t.id)))
+    }
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set())
+    setBulkCategoryId('')
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selectedIds)
+    let deleted = 0
+    for (const id of ids) {
+      try {
+        await deleteMutation.mutateAsync({ id })
+        deleted++
+      } catch { /* skip */ }
+    }
+    toast.success(`Удалено ${deleted} транзакций`)
+    clearSelection()
+    void utils.transaction.list.invalidate()
+  }
+
+  async function handleBulkCategory() {
+    if (!bulkCategoryId) return
+    const ids = Array.from(selectedIds)
+    let updated = 0
+    for (const id of ids) {
+      try {
+        await updateMutation.mutateAsync({ id, categoryId: bulkCategoryId })
+        updated++
+      } catch { /* skip */ }
+    }
+    toast.success(`Обновлено ${updated} транзакций`)
+    setBulkCategoryOpen(false)
+    clearSelection()
+    void utils.transaction.list.invalidate()
+  }
 
   const transactions = data?.items ?? []
   const total = data?.total ?? 0
@@ -212,13 +283,87 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
 
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="flex items-center gap-3 py-3 px-4">
+            <span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+            <div className="flex gap-2 ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setBulkCategoryOpen(true)}
+              >
+                <Tag className="mr-1.5 h-3.5 w-3.5" />
+                Категория
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                onClick={handleBulkDelete}
+              >
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+                Удалить
+              </Button>
+              <Button variant="ghost" size="sm" onClick={clearSelection}>
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Bulk category dialog */}
+      <Dialog open={bulkCategoryOpen} onOpenChange={setBulkCategoryOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader>
+            <DialogTitle>Сменить категорию</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-1">
+            <p className="text-sm text-muted-foreground">
+              Для {selectedIds.size} транзакций будет установлена:
+            </p>
+            <div className="space-y-1.5">
+              <Label>Категория</Label>
+              <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Выберите категорию" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.icon ? `${c.icon} ` : ''}{c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <Button
+              className="w-full"
+              disabled={!bulkCategoryId}
+              onClick={handleBulkCategory}
+            >
+              Применить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Table */}
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="pl-6 w-[110px]">Дата</TableHead>
+                <TableHead className="pl-4 w-[44px]">
+                  <Checkbox
+                    checked={transactions.length > 0 && selectedIds.size === transactions.length}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Выбрать все"
+                  />
+                </TableHead>
+                <TableHead className="w-[110px]">Дата</TableHead>
                 <TableHead>Описание</TableHead>
                 <TableHead>Категория</TableHead>
                 <TableHead>Счёт</TableHead>
@@ -231,7 +376,8 @@ export default function TransactionsPage() {
               {isLoading ? (
                 Array.from({ length: 8 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="pl-6"><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell className="pl-4"><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
@@ -242,7 +388,7 @@ export default function TransactionsPage() {
                 ))
               ) : transactions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                     {!search && typeFilter === 'all' && categoryFilter === 'all'
                       ? <div className="flex flex-col items-center gap-2">
                           <span className="text-2xl">💸</span>
@@ -260,8 +406,18 @@ export default function TransactionsPage() {
                     day: '2-digit', month: '2-digit', year: 'numeric'
                   })
                   return (
-                    <TableRow key={tx.id} className="hover:bg-muted/50">
-                      <TableCell className="pl-6 text-muted-foreground text-sm">{dateLabel}</TableCell>
+                    <TableRow
+                      key={tx.id}
+                      className={`hover:bg-muted/50 ${selectedIds.has(tx.id) ? 'bg-primary/5' : ''}`}
+                    >
+                      <TableCell className="pl-4">
+                        <Checkbox
+                          checked={selectedIds.has(tx.id)}
+                          onCheckedChange={() => toggleSelect(tx.id)}
+                          aria-label="Выбрать"
+                        />
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{dateLabel}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className={`flex h-7 w-7 items-center justify-center rounded-full ${
