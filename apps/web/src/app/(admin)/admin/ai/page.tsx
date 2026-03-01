@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Sparkles, Zap, CheckCircle, XCircle, Loader2, TestTube } from 'lucide-react'
 import { toast } from 'sonner'
-import { OPENROUTER_MODELS } from '@/server/routers/ai'
+import { OPENROUTER_MODELS } from '@/lib/ai-models'
 
 const TIER_LABELS: Record<string, { label: string; color: string }> = {
   free:     { label: 'Бесплатно', color: 'bg-green-100 text-green-700' },
