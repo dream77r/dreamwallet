@@ -84,6 +84,7 @@ export default function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [tagFilter, setTagFilter] = useState<string>('')
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
 
@@ -103,10 +104,14 @@ export default function TransactionsPage() {
     ...(search ? { search } : {}),
     ...(typeFilter !== 'all' ? { type: typeFilter as TxType } : {}),
     ...(categoryFilter !== 'all' ? { categoryId: categoryFilter } : {}),
+    ...(tagFilter ? { tags: [tagFilter] } : {}),
   })
 
   // Fetch categories for filter dropdown
   const { data: categories } = trpc.category.list.useQuery()
+
+  // Fetch tags for filter dropdown
+  const { data: tags } = trpc.tags.list.useQuery()
 
   // Delete mutation
   const deleteMutation = trpc.transaction.delete.useMutation({
@@ -279,6 +284,27 @@ export default function TransactionsPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={tagFilter || 'all'} onValueChange={(v) => { setTagFilter(v === 'all' ? '' : v); setPage(1) }}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Тег" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все теги</SelectItem>
+                {tags?.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.name}>{tag.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {(search || typeFilter !== 'all' || categoryFilter !== 'all' || tagFilter) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setSearch(''); setTypeFilter('all'); setCategoryFilter('all'); setTagFilter(''); setPage(1) }}
+              >
+                <X className="mr-1 h-3.5 w-3.5" />
+                Сбросить
+              </Button>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -389,7 +415,7 @@ export default function TransactionsPage() {
               ) : transactions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
-                    {!search && typeFilter === 'all' && categoryFilter === 'all'
+                    {!search && typeFilter === 'all' && categoryFilter === 'all' && !tagFilter
                       ? <div className="flex flex-col items-center gap-2">
                           <span className="text-2xl">💸</span>
                           <p className="font-medium text-foreground">Нет транзакций</p>

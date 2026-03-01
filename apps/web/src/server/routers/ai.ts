@@ -160,4 +160,106 @@ export const aiRouter = router({
       await ctx.prisma.user.update({ where: { id: user.id }, data: { role: 'SUPER_ADMIN' } })
       return { ok: true }
     }),
+
+  // ── AI Chat Advisor ────────────────────────────────────────────────────
+  chat: protectedProcedure
+    .input(z.object({ message: z.string().min(1).max(500) }))
+    .mutation(async ({ ctx, input }) => {
+      // Get user's preferred model
+      const userRecord = await ctx.prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { aiModel: true },
+      })
+      const defaultRaw = await getSetting(ctx.prisma, SETTINGS_KEY_DEFAULT)
+      const modelToUse = userRecord?.aiModel ?? defaultRaw ?? 'anthropic/claude-haiku-4-5'
+
+      // Get recent transactions for context
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
+      const recentTransactions = wallet
+        ? await ctx.prisma.transaction.findMany({
+            where: { account: { walletId: wallet.id } },
+            orderBy: { date: 'desc' },
+            take: 20,
+            include: { category: { select: { name: true } } },
+          })
+        : []
+
+      const summary = recentTransactions
+        .map(
+          (t) =>
+            `${t.date.toISOString().split('T')[0]} ${t.type} ${t.amount} ${t.currency} ${t.category?.name ?? 'без категории'} "${t.description ?? ''}"`,
+        )
+        .join('\n')
+
+      const systemPrompt = `Ты персональный финансовый советник в приложении DreamWallet. Отвечай на русском языке кратко и по делу. У тебя есть данные о последних транзакциях пользователя:
+
+${summary || 'Транзакции не найдены.'}
+
+Помогай с вопросами о расходах, категориях, финансовых привычках. Давай конкретные советы на основе данных.`
+
+      const reply = await callOpenRouter({
+        model: modelToUse,
+        systemPrompt,
+        prompt: input.message,
+        maxTokens: 800,
+      })
+
+      if (!reply) {
+        return { reply: 'К сожалению, AI-сервис временно недоступен. Попробуйте позже.' }
+      }
+
+      return { reply }
+    }),
+
+  // ── AI Auto-Rule Suggestion ────────────────────────────────────────────
+  suggestAutoRule: protectedProcedure
+    .input(z.object({ description: z.string().min(3).max(200) }))
+    .mutation(async ({ ctx, input }) => {
+      // Get user's preferred model
+      const userRecord = await ctx.prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { aiModel: true },
+      })
+      const defaultRaw = await getSetting(ctx.prisma, SETTINGS_KEY_DEFAULT)
+      const modelToUse = userRecord?.aiModel ?? defaultRaw ?? 'anthropic/claude-haiku-4-5'
+
+      // Get user categories
+      const categories = await ctx.prisma.category.findMany({
+        where: { userId: ctx.user.id },
+        select: { name: true, type: true },
+      })
+
+      const categoryList = categories.map((c) => `${c.name} (${c.type})`).join(', ')
+
+      const prompt = `Пользователь описывает правило автокатегоризации транзакций словами:
+"${input.description}"
+
+Доступные категории: ${categoryList || 'нет категорий'}
+
+Ответь ТОЛЬКО JSON без markdown:
+{"pattern":"ключевое слово или regex для поиска в описании транзакции","categoryName":"точное название категории из списка","confidence":число от 0 до 100}`
+
+      const raw = await callOpenRouter({
+        model: modelToUse,
+        prompt,
+        maxTokens: 200,
+      })
+
+      if (!raw) {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'AI-сервис недоступен' })
+      }
+
+      try {
+        const match = raw.match(/\{[\s\S]*\}/)
+        if (!match) throw new Error('No JSON')
+        const parsed = JSON.parse(match[0]) as { pattern: string; categoryName: string; confidence: number }
+        return {
+          pattern: String(parsed.pattern),
+          categoryName: String(parsed.categoryName),
+          confidence: Math.min(100, Math.max(0, Number(parsed.confidence) || 50)),
+        }
+      } catch {
+        throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Не удалось распарсить ответ AI' })
+      }
+    }),
 })

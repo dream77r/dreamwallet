@@ -32,7 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Zap, Pencil, Trash2, Plus, ArrowRight } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { Zap, Pencil, Trash2, Plus, ArrowRight, Sparkles, Loader2, Check } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
@@ -322,11 +323,163 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
   )
 }
 
+// ─── AI Suggest Dialog ────────────────────────────────────────────────────────
+
+interface AiSuggestDialogProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+function AiSuggestDialog({ open, onOpenChange }: AiSuggestDialogProps) {
+  const utils = trpc.useUtils()
+  const [description, setDescription] = useState('')
+  const [suggestion, setSuggestion] = useState<{
+    pattern: string
+    categoryName: string
+    confidence: number
+  } | null>(null)
+
+  const { data: categories = [] } = trpc.category.list.useQuery()
+
+  const suggestMutation = trpc.ai.suggestAutoRule.useMutation({
+    onSuccess: (data) => setSuggestion(data),
+    onError: (e) => toast.error(e.message),
+  })
+
+  const createMutation = trpc.autoRules.create.useMutation({
+    onSuccess: () => {
+      toast.success('Правило создано')
+      utils.autoRules.list.invalidate()
+      handleClose()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+
+  function handleClose() {
+    onOpenChange(false)
+    setDescription('')
+    setSuggestion(null)
+  }
+
+  function handleSuggest() {
+    if (!description.trim()) return
+    setSuggestion(null)
+    suggestMutation.mutate({ description: description.trim() })
+  }
+
+  function handleApply() {
+    if (!suggestion) return
+    const category = categories.find(
+      (c) => c.name.toLowerCase() === suggestion.categoryName.toLowerCase(),
+    )
+    if (!category) {
+      toast.error(`Категория "${suggestion.categoryName}" не найдена`)
+      return
+    }
+    createMutation.mutate({
+      pattern: suggestion.pattern,
+      categoryId: category.id,
+      field: 'description',
+      isRegex: false,
+    })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4" />
+            Создать правило через AI
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 pt-1">
+          <div className="space-y-1.5">
+            <Label>Опишите правило словами</Label>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Например: все покупки в Яндекс Маркет отнести к категории Покупки"
+              maxLength={200}
+              rows={3}
+            />
+          </div>
+
+          {!suggestion && (
+            <Button
+              onClick={handleSuggest}
+              className="w-full"
+              disabled={!description.trim() || suggestMutation.isPending}
+            >
+              {suggestMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  Анализирую...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-1.5 h-4 w-4" />
+                  Сгенерировать
+                </>
+              )}
+            </Button>
+          )}
+
+          {suggestion && (
+            <Card className="border-green-200 bg-green-50/50">
+              <CardContent className="p-4 space-y-2">
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Паттерн:</span>{' '}
+                  <code className="font-mono font-medium">{suggestion.pattern}</code>
+                </p>
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Категория:</span>{' '}
+                  <span className="font-medium">{suggestion.categoryName}</span>
+                </p>
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Уверенность:</span>{' '}
+                  <span className="font-medium">{suggestion.confidence}%</span>
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {suggestion && (
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setSuggestion(null)}
+              >
+                Заново
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleApply}
+                disabled={createMutation.isPending}
+              >
+                {createMutation.isPending ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-1.5 h-4 w-4" />
+                )}
+                Применить
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AutoRulesPage() {
   const [createOpen, setCreateOpen] = useState(false)
   const [editRule, setEditRule] = useState<AutoRule | null>(null)
+  const [aiSuggestOpen, setAiSuggestOpen] = useState(false)
 
   const { data: rules = [], isLoading } = trpc.autoRules.list.useQuery()
 
@@ -343,10 +496,16 @@ export default function AutoRulesPage() {
             Правила автоматически назначают категории новым транзакциям
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Добавить правило
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setAiSuggestOpen(true)}>
+            <Sparkles className="mr-1.5 h-4 w-4" />
+            Создать через AI
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Добавить правило
+          </Button>
+        </div>
       </div>
 
       {/* Подсказка как это работает */}
@@ -420,6 +579,7 @@ export default function AutoRulesPage() {
 
       {/* Dialogs */}
       <RuleFormDialog open={createOpen} onOpenChange={setCreateOpen} />
+      <AiSuggestDialog open={aiSuggestOpen} onOpenChange={setAiSuggestOpen} />
 
       {editRule && (
         <RuleFormDialog
