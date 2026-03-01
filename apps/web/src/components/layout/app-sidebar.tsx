@@ -28,6 +28,7 @@ import {
   LogOut,
   Sparkles,
   Shield,
+  Tag,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
@@ -37,6 +38,7 @@ const mainNav = [
   { title: 'Транзакции', href: '/dashboard/transactions', icon: ArrowLeftRight },
   { title: 'Счета', href: '/dashboard/accounts', icon: CreditCard },
   { title: 'Бюджеты', href: '/dashboard/budgets', icon: Target },
+  { title: 'Категории', href: '/dashboard/categories', icon: Tag },
   { title: 'Аналитика', href: '/dashboard/analytics', icon: PieChart },
   { title: 'Импорт', href: '/dashboard/import', icon: Upload },
 ]
