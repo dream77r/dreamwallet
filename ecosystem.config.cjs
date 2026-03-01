@@ -8,6 +8,7 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 3300,
         HOSTNAME: '127.0.0.1',
+        VAPID_PUBLIC_KEY: 'BBm2y61MWXOVQsmgXM7x5kROppnE9CwHvRVIowjDxpOeEW8niBmpRc5ypCFFXUeK4-wHVjLVam53OFlVGKP3zXM',
       },
       max_memory_restart: '300M',
       exp_backoff_restart_delay: 100,
