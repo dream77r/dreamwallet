@@ -270,37 +270,41 @@ export function createBot(token: string) {
     const user = await getUser(String(ctx.chat.id))
     if (!user) return ctx.reply('👋 Привяжи аккаунт DreamWallet, нажав /start')
 
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
+    const deepgramKey = process.env.DEEPGRAM_API_KEY
+    if (!deepgramKey) {
       return ctx.reply('⚠️ Голосовые сообщения временно недоступны')
     }
 
     const thinking = await ctx.reply('🎙️ Распознаю...')
 
     try {
-      // Скачиваем голосовой файл
-      const file     = await ctx.getFile()
-      const fileUrl  = `https://api.telegram.org/file/bot${token}/${file.file_path}`
-      const response = await fetch(fileUrl)
-      const buffer   = await response.arrayBuffer()
+      // Скачиваем голосовой файл из Telegram
+      const file    = await ctx.getFile()
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`
+      const tgRes   = await fetch(fileUrl)
+      const buffer  = Buffer.from(await tgRes.arrayBuffer())
 
-      // Отправляем в Whisper
-      const { OpenAI } = await import('openai')
-      const openai = new OpenAI({ apiKey })
+      // Отправляем в DeepGram Nova-2
+      const dgRes = await fetch(
+        'https://api.deepgram.com/v1/listen?model=nova-2&language=ru&smart_format=true&punctuate=true',
+        {
+          method:  'POST',
+          headers: {
+            'Authorization': `Token ${deepgramKey}`,
+            'Content-Type':  'audio/ogg',
+          },
+          body: buffer,
+        },
+      )
 
-      const blob = new Blob([buffer], { type: 'audio/ogg' })
-      const formData = new FormData()
-      formData.append('file', blob, 'voice.ogg')
-      formData.append('model', 'whisper-1')
-      formData.append('language', 'ru')
+      if (!dgRes.ok) {
+        throw new Error(`DeepGram error: ${dgRes.status}`)
+      }
 
-      const transcription = await openai.audio.transcriptions.create({
-        file:     blob as unknown as File,
-        model:    'whisper-1',
-        language: 'ru',
-      })
-
-      const text = transcription.text.trim()
+      const dgData = await dgRes.json() as {
+        results?: { channels?: Array<{ alternatives?: Array<{ transcript?: string }> }> }
+      }
+      const text = (dgData.results?.channels?.[0]?.alternatives?.[0]?.transcript ?? '').trim()
       logger.info({ text }, 'Voice transcribed')
 
       // Удаляем "распознаю"
