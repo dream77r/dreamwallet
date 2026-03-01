@@ -51,6 +51,10 @@ const templates = [
   { value: 'alfa', label: 'Альфа-Банк' },
   { value: 'vtb', label: 'ВТБ' },
   { value: 'raiffeisen', label: 'Райффайзен' },
+  { value: 'gazprom', label: 'Газпромбанк' },
+  { value: 'ozon', label: 'Ozon Банк' },
+  { value: 'pochtabank', label: 'Почта Банк' },
+  { value: 'mts', label: 'МТС Банк' },
   { value: 'custom', label: 'Произвольный CSV' },
 ]
 

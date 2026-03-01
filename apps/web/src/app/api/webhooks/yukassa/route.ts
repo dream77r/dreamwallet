@@ -1,9 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@dreamwallet/db'
 
+// YooKassa IP ranges (https://yookassa.ru/developers/using-api/webhooks)
+const YUKASSA_IPS = [
+  '185.71.76.', '185.71.77.',   // /27
+  '77.75.153.',                   // /25
+  '77.75.156.',                   // 77.75.156.11, 77.75.156.35
+  '77.75.154.',                   // /25
+  '2a02:5180:',                   // IPv6
+]
+
+function isYukassaIp(ip: string): boolean {
+  // In development — allow all
+  if (process.env.NODE_ENV !== 'production') return true
+  return YUKASSA_IPS.some(prefix => ip.startsWith(prefix))
+}
+
 // ЮKassa webhook: payment.succeeded, payment.canceled, refund.succeeded
 export async function POST(request: NextRequest) {
   try {
+    // IP verification
+    const forwarded = request.headers.get('x-forwarded-for')
+    const ip = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') ?? ''
+    if (!isYukassaIp(ip)) {
+      console.warn(`YooKassa webhook: rejected request from IP ${ip}`)
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const body = await request.json()
     const { event, object: payment } = body
 

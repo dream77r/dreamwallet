@@ -105,13 +105,162 @@ function parseCsv(buffer: Buffer, template: string | null) {
   return { headers, rows }
 }
 
+// ── Bank template definitions ──────────────────────────────────────────────
+// Each bank: delimiter, skipRows, column mapping
+
+type BankTemplate = {
+  delimiter: string
+  skipRows: number
+  map: Record<string, string>
+}
+
+const BANK_TEMPLATES: Record<string, BankTemplate> = {
+  tinkoff: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      'Дата операции': 'date',
+      'Дата платежа': 'date',
+      'Описание': 'description',
+      'Сумма операции': 'amount',
+      'Сумма платежа': 'amount',
+      'Категория': 'category',
+      'MCC': 'skip',
+      'Статус': 'skip',
+      'Номер карты': 'skip',
+      'Кэшбэк': 'skip',
+      'Бонусы (начислено)': 'skip',
+      'Бонусы (списано)': 'skip',
+      'Валюта операции': 'skip',
+      'Валюта платежа': 'skip',
+    },
+  },
+  sber: {
+    delimiter: ';',
+    skipRows: 1, // First row is account metadata
+    map: {
+      'Дата': 'date',
+      'Дата и время операции': 'date',
+      'Описание операции': 'description',
+      'Описание': 'description',
+      'Сумма': 'amount',
+      'Сумма операции': 'amount',
+      'Категория': 'category',
+      'Номер карты': 'skip',
+    },
+  },
+  alfa: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      // New format (2024)
+      'Дата операции': 'date',
+      'Дата обработки': 'skip',
+      'Описание операции': 'description',
+      'Категория': 'category',
+      'MCC-код': 'skip',
+      'Сумма': 'amount',
+      'Дебет': 'amount',
+      'Кредит': 'amount',
+      'Валюта': 'skip',
+      'MCC': 'skip',
+      // Older format
+      'Дата': 'date',
+      'Описание': 'description',
+    },
+  },
+  vtb: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      'Дата совершения операции': 'date',
+      'Дата отражения операции': 'skip',
+      'Наименование операции': 'description',
+      'Описание': 'description',
+      'Дебет': 'amount',
+      'Кредит': 'amount',
+      'Сумма': 'amount',
+      'Остаток': 'skip',
+      'Номер счёта': 'skip',
+      'Тип операции': 'skip',
+      'Валюта': 'skip',
+    },
+  },
+  raiffeisen: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      'Дата транзакции': 'date',
+      'Дата проводки': 'skip',
+      'Тип': 'skip',
+      'Сумма': 'amount',
+      'Валюта': 'skip',
+      'Контрагент': 'counterparty',
+      'Категория': 'category',
+      'Описание': 'description',
+      'Номер документа': 'skip',
+      'Баланс': 'skip',
+    },
+  },
+  gazprom: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      'Дата': 'date',
+      'Дата операции': 'date',
+      'Сумма': 'amount',
+      'Описание': 'description',
+      'Назначение': 'description',
+      'Категория': 'category',
+      'Валюта': 'skip',
+    },
+  },
+  ozon: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      'Дата операции': 'date',
+      'Дата': 'date',
+      'Описание': 'description',
+      'Наименование операции': 'description',
+      'Сумма': 'amount',
+      'Тип': 'skip',
+      'Статус': 'skip',
+    },
+  },
+  pochtabank: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      'Дата': 'date',
+      'Дата и время': 'date',
+      'Описание операции': 'description',
+      'Описание': 'description',
+      'Сумма операции': 'amount',
+      'Сумма': 'amount',
+      'Категория': 'category',
+      'Контрагент': 'counterparty',
+      'Валюта': 'skip',
+    },
+  },
+  mts: {
+    delimiter: ';',
+    skipRows: 0,
+    map: {
+      'Дата операции': 'date',
+      'Описание': 'description',
+      'Наименование торговой точки': 'counterparty',
+      'Сумма операции': 'amount',
+      'Сумма в валюте счёта': 'amount',
+      'Категория': 'category',
+      'MCC': 'skip',
+      'Валюта': 'skip',
+    },
+  },
+}
+
 function detectDelimiter(content: string, template: string | null): string {
-  // Known bank templates
-  if (template === 'tinkoff') return ';'
-  if (template === 'sber') return ';'
-  if (template === 'alfa') return ';'
-  if (template === 'vtb') return ';'
-  if (template === 'raiffeisen') return ';'
+  if (template && BANK_TEMPLATES[template]) return BANK_TEMPLATES[template].delimiter
 
   // Auto-detect: count occurrences in first line
   const firstLine = content.split('\n')[0] || ''
@@ -125,8 +274,7 @@ function detectDelimiter(content: string, template: string | null): string {
 }
 
 function getSkipRows(template: string | null): number {
-  // Some banks add header rows before actual data
-  if (template === 'sber') return 1
+  if (template && BANK_TEMPLATES[template]) return BANK_TEMPLATES[template].skipRows
   return 0
 }
 
@@ -136,43 +284,21 @@ function autoDetectMapping(
 ): Record<string, string> {
   const mapping: Record<string, string> = {}
 
-  // Known templates
-  if (template === 'tinkoff') {
-    const map: Record<string, string> = {
-      'Дата операции': 'date',
-      'Дата платежа': 'date',
-      'Описание': 'description',
-      'Сумма операции': 'amount',
-      'Сумма платежа': 'amount',
-      'Категория': 'category',
-      'Статус': 'skip',
-      'Номер карты': 'skip',
-    }
+  // Use bank-specific template mapping
+  if (template && BANK_TEMPLATES[template]) {
+    const bankMap = BANK_TEMPLATES[template].map
     for (const h of headers) {
-      mapping[h] = map[h] || 'skip'
-    }
-    return mapping
-  }
-
-  if (template === 'sber') {
-    const map: Record<string, string> = {
-      'Дата': 'date',
-      'Описание операции': 'description',
-      'Сумма': 'amount',
-      'Категория': 'category',
-    }
-    for (const h of headers) {
-      mapping[h] = map[h] || 'skip'
+      mapping[h] = bankMap[h] ?? 'skip'
     }
     return mapping
   }
 
   // Generic auto-detect by column name keywords
   const dateKeywords = ['дата', 'date', 'время', 'time', 'when']
-  const amountKeywords = ['сумма', 'amount', 'sum', 'value']
-  const descKeywords = ['описание', 'description', 'назначение', 'comment', 'memo']
+  const amountKeywords = ['сумма', 'amount', 'sum', 'value', 'дебет', 'кредит', 'debit', 'credit']
+  const descKeywords = ['описание', 'description', 'назначение', 'наименование', 'comment', 'memo', 'операция']
   const categoryKeywords = ['категория', 'category', 'тип']
-  const counterpartyKeywords = ['контрагент', 'counterparty', 'получатель', 'отправитель']
+  const counterpartyKeywords = ['контрагент', 'counterparty', 'получатель', 'отправитель', 'торговая точка']
 
   for (const h of headers) {
     const lower = h.toLowerCase()
