@@ -31,6 +31,7 @@ import {
   Tag,
   Repeat2,
   Zap,
+  Flag,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
@@ -43,6 +44,7 @@ const mainNav = [
   { title: 'Бюджеты', href: '/dashboard/budgets', icon: Target },
   { title: 'Категории', href: '/dashboard/categories', icon: Tag },
   { title: 'Авто-правила', href: '/dashboard/auto-rules', icon: Zap },
+  { title: 'Цели', href: '/dashboard/goals', icon: Flag },
   { title: 'Аналитика', href: '/dashboard/analytics', icon: PieChart },
   { title: 'Импорт', href: '/dashboard/import', icon: Upload },
 ]

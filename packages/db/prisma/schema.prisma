@@ -43,6 +43,7 @@ model User {
   auditLogs        AuditLog[]
   importTemplates  ImportTemplate[]
   autoRules        AutoCategoryRule[]
+  goals            Goal[]
 
   @@map("users")
 }
@@ -618,4 +619,27 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([entity, entityId])
   @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────
+// Goals (Financial Goals)
+// ─────────────────────────────────────────────
+
+model Goal {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  name          String
+  targetAmount  Decimal   @db.Decimal(15, 2) @map("target_amount")
+  currentAmount Decimal   @default(0) @db.Decimal(15, 2) @map("current_amount")
+  deadline      DateTime?
+  icon          String?
+  color         String?
+  isCompleted   Boolean   @default(false) @map("is_completed")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("goals")
 }
