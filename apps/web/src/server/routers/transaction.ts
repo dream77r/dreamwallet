@@ -115,11 +115,33 @@ export const transactionRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { tags, ...data } = input
 
+      // ── Авто-категоризация: применяем правила если категория не задана ──
+      let resolvedCategoryId = data.categoryId
+      if (!resolvedCategoryId && (data.description || data.counterparty)) {
+        const rules = await ctx.prisma.autoCategoryRule.findMany({
+          where:   { userId: ctx.user.id, isActive: true },
+          orderBy: [{ priority: 'desc' }],
+        })
+        for (const rule of rules) {
+          const text = rule.field === 'counterparty'
+            ? (data.counterparty ?? '')
+            : (data.description ?? '')
+          const matches = rule.isRegex
+            ? new RegExp(rule.pattern, 'i').test(text)
+            : text.toLowerCase().includes(rule.pattern.toLowerCase())
+          if (matches) {
+            resolvedCategoryId = rule.categoryId
+            break
+          }
+        }
+      }
+
       const transaction = await ctx.prisma.$transaction(async (tx) => {
         // Create transaction
         const created = await tx.transaction.create({
           data: {
             ...data,
+            categoryId: resolvedCategoryId,
             amount: data.amount,
             source: 'MANUAL',
           },

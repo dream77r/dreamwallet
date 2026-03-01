@@ -29,6 +29,7 @@ import {
 import { trpc } from '@/lib/trpc/client'
 import { useMemo } from 'react'
 import { TransactionForm } from '@/components/transactions/transaction-form'
+import Link from 'next/link'
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -95,6 +96,8 @@ export default function DashboardPage() {
   )
 
   // 6. Get recent transactions
+  const { data: goals } = trpc.goals.list.useQuery()
+
   const { data: recentTxData, isLoading: txLoading } = trpc.transaction.list.useQuery({
     page: 1,
     pageSize: 5,
@@ -423,6 +426,44 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Goals widget */}
+      {goals && goals.filter(g => !g.isCompleted).length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle>Финансовые цели</CardTitle>
+              <Link href="/dashboard/goals" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                Все цели →
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {goals.filter(g => !g.isCompleted).slice(0, 3).map(goal => {
+                const current = Number(goal.currentAmount)
+                const target = Number(goal.targetAmount)
+                const pct = Math.min(100, Math.round((current / target) * 100))
+                const color = goal.color ?? '#3B82F6'
+                return (
+                  <div key={goal.id} className="space-y-2 rounded-lg border p-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg leading-none">{goal.icon ?? '🎯'}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{goal.name}</p>
+                        <p className="text-xs text-muted-foreground">{pct}% из {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(target)}</p>
+                      </div>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }
