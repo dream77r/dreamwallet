@@ -312,4 +312,42 @@ export const transactionRouter = router({
 
       return { success: true }
     }),
+
+  // Global search across transactions
+  search: protectedProcedure
+    .input(z.object({
+      query: z.string().min(1).max(200),
+      limit: z.number().min(1).max(50).default(20),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { query, limit } = input
+      const q = query.trim()
+
+      // Get user's wallet
+      const wallet = await ctx.prisma.wallet.findFirst({
+        where: { userId: ctx.user.id },
+        include: { accounts: { select: { id: true } } },
+      })
+      if (!wallet) return []
+
+      const accountIds = wallet.accounts.map(a => a.id)
+
+      return ctx.prisma.transaction.findMany({
+        where: {
+          accountId: { in: accountIds },
+          OR: [
+            { description: { contains: q, mode: 'insensitive' } },
+            { counterparty: { contains: q, mode: 'insensitive' } },
+            { reference: { contains: q, mode: 'insensitive' } },
+          ],
+        },
+        include: {
+          account: { select: { name: true, currency: true } },
+          category: { select: { name: true, icon: true } },
+          tags: { include: { tag: { select: { name: true, color: true } } } },
+        },
+        orderBy: { date: 'desc' },
+        take: limit,
+      })
+    }),
 })

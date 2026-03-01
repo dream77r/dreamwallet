@@ -14,6 +14,7 @@ import { autoRulesRouter } from './auto-rules'
 import { goalsRouter } from './goals'
 import { telegramRouter } from './telegram'
 import { tagsRouter } from './tags'
+import { pushRouter } from './push'
 
 export const appRouter = router({
   wallet: walletRouter,
@@ -31,6 +32,7 @@ export const appRouter = router({
   goals: goalsRouter,
   telegram: telegramRouter,
   tags: tagsRouter,
+  push: pushRouter,
 })
 
 export type AppRouter = typeof appRouter

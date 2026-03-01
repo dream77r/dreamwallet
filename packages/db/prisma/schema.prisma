@@ -45,6 +45,7 @@ model User {
   autoRules        AutoCategoryRule[]
   goals            Goal[]
   tags             Tag[]
+  pushSubscriptions PushSubscription[]
   telegramConn     TelegramConnection?
 
   @@map("users")
@@ -665,4 +666,23 @@ model TelegramConnection {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("telegram_connections")
+}
+
+// ─────────────────────────────────────────────
+// Web Push Subscriptions
+// ─────────────────────────────────────────────
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  endpoint  String   @unique
+  p256dh    String   @map("p256dh")   // DH public key
+  auth      String                     // Auth secret
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
 }

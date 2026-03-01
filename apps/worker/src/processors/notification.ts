@@ -1,9 +1,36 @@
 import type { Job, Processor } from 'bullmq'
 import { prisma } from '@dreamwallet/db'
+import webpush from 'web-push'
 
 interface NotificationData {
   type: 'budget_check' | 'large_transaction' | 'weekly_digest'
   userId?: string
+  transactionId?: string
+  amount?: number
+  description?: string
+}
+
+// Configure VAPID once
+const VAPID_PUBLIC = process.env.VAPID_PUBLIC_KEY ?? ''
+const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY ?? ''
+if (VAPID_PUBLIC && VAPID_PRIVATE) {
+  webpush.setVapidDetails('mailto:support@dreamwallet.app', VAPID_PUBLIC, VAPID_PRIVATE)
+}
+
+async function pushToUser(userId: string, payload: { title: string; body: string; url?: string }) {
+  if (!VAPID_PUBLIC || !VAPID_PRIVATE) return
+  const subs = await prisma.pushSubscription.findMany({ where: { userId } })
+  const data = JSON.stringify({ ...payload, icon: '/icon-192.png' })
+  await Promise.allSettled(
+    subs.map((s) =>
+      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, data)
+        .catch(async (e: { statusCode?: number }) => {
+          if (e.statusCode === 404 || e.statusCode === 410) {
+            await prisma.pushSubscription.delete({ where: { id: s.id } }).catch(() => null)
+          }
+        })
+    )
+  )
 }
 
 export const notificationProcessor: Processor<NotificationData> = async (job: Job<NotificationData>) => {
@@ -13,9 +40,24 @@ export const notificationProcessor: Processor<NotificationData> = async (job: Jo
     return await checkBudgets(userId)
   }
 
-  if (type === 'large_transaction') {
-    // Handled inline in transaction creation
-    return { skipped: true }
+  if (type === 'large_transaction' && userId) {
+    const { amount = 0, description = 'Транзакция' } = job.data
+    const amountStr = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(amount)
+    await prisma.notification.create({
+      data: {
+        userId,
+        type: 'LARGE_TRANSACTION',
+        title: `Крупный расход: ${amountStr}`,
+        body: description,
+        data: { amount, transactionId: job.data.transactionId },
+      },
+    })
+    await pushToUser(userId, {
+      title: `💸 Крупный расход`,
+      body: `${description}: ${amountStr}`,
+      url: '/dashboard/transactions',
+    })
+    return { sent: true }
   }
 
   if (type === 'weekly_digest') {
@@ -60,26 +102,20 @@ async function checkBudgets(userId: string) {
     const percentage = budgetAmount > 0 ? Math.round((spentAmount / budgetAmount) * 100) : 0
 
     if (percentage >= 100) {
+      const title = `Бюджет "${budget.category.name}" превышен!`
+      const body = `Потрачено ${spentAmount.toLocaleString('ru')} из ${budgetAmount.toLocaleString('ru')} (${percentage}%)`
       await prisma.notification.create({
-        data: {
-          userId,
-          type: 'BUDGET_EXCEEDED',
-          title: `Бюджет "${budget.category.name}" превышен!`,
-          body: `Потрачено ${spentAmount.toLocaleString('ru')} из ${budgetAmount.toLocaleString('ru')} (${percentage}%)`,
-          data: { budgetId: budget.id, categoryId: budget.categoryId },
-        },
+        data: { userId, type: 'BUDGET_EXCEEDED', title, body, data: { budgetId: budget.id } },
       })
+      await pushToUser(userId, { title: `🔴 ${title}`, body, url: '/dashboard/budgets' })
       notifications++
     } else if (percentage >= budget.alertThreshold) {
+      const title = `Бюджет "${budget.category.name}" — ${percentage}%`
+      const body = `Потрачено ${spentAmount.toLocaleString('ru')} из ${budgetAmount.toLocaleString('ru')}`
       await prisma.notification.create({
-        data: {
-          userId,
-          type: 'BUDGET_WARNING',
-          title: `Бюджет "${budget.category.name}" — ${percentage}%`,
-          body: `Потрачено ${spentAmount.toLocaleString('ru')} из ${budgetAmount.toLocaleString('ru')}`,
-          data: { budgetId: budget.id, categoryId: budget.categoryId },
-        },
+        data: { userId, type: 'BUDGET_WARNING', title, body, data: { budgetId: budget.id } },
       })
+      await pushToUser(userId, { title: `🟡 ${title}`, body, url: '/dashboard/budgets' })
       notifications++
     }
   }
