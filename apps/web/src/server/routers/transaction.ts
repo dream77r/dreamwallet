@@ -168,13 +168,13 @@ export const transactionRouter = router({
           })
         }
 
-        // Add tags
+        // Add tags (upsert by userId+name, then link to transaction)
         if (tags?.length) {
           for (const tagName of tags) {
             const tag = await tx.tag.upsert({
-              where: { id: tagName }, // Will fail, but that's fine — we search by name below
+              where: { userId_name: { userId: ctx.user.id, name: tagName } },
               update: {},
-              create: { name: tagName },
+              create: { userId: ctx.user.id, name: tagName },
             })
             await tx.tagOnTransaction.create({
               data: { transactionId: created.id, tagId: tag.id },
@@ -243,6 +243,21 @@ export const transactionRouter = router({
             where: { id: accountId },
             data: { balance: { decrement: amount } },
           })
+        }
+
+        // Sync tags if provided
+        if (tags !== undefined) {
+          await tx.tagOnTransaction.deleteMany({ where: { transactionId: id } })
+          for (const tagName of tags) {
+            const tag = await tx.tag.upsert({
+              where: { userId_name: { userId: ctx.user.id, name: tagName } },
+              update: {},
+              create: { userId: ctx.user.id, name: tagName },
+            })
+            await tx.tagOnTransaction.create({
+              data: { transactionId: id, tagId: tag.id },
+            })
+          }
         }
 
         // Audit log

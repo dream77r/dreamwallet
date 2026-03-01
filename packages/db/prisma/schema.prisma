@@ -44,6 +44,7 @@ model User {
   importTemplates  ImportTemplate[]
   autoRules        AutoCategoryRule[]
   goals            Goal[]
+  tags             Tag[]
   telegramConn     TelegramConnection?
 
   @@map("users")
@@ -253,12 +254,15 @@ enum CategoryType {
 
 model Tag {
   id        String             @id @default(cuid())
+  userId    String             @map("user_id")
   name      String
-  color     String?
+  color     String             @default("#6366f1")
   createdAt DateTime           @default(now()) @map("created_at")
 
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions TagOnTransaction[]
 
+  @@unique([userId, name])
   @@map("tags")
 }
 
