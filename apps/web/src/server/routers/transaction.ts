@@ -39,6 +39,10 @@ export const transactionRouter = router({
         ]
       }
 
+      if (tags && tags.length > 0) {
+        where.tags = { some: { tag: { name: { in: tags } } } }
+      }
+
       // Ensure user can only see their own transactions
       if (filters.walletId) {
         const wallet = await ctx.prisma.wallet.findFirst({

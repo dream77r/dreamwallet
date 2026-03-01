@@ -16,6 +16,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  Cell,
 } from 'recharts'
 import { trpc } from '@/lib/trpc/client'
 
@@ -83,6 +84,20 @@ export default function AnalyticsPage() {
     { enabled: !!walletId }
   )
 
+  // Top categories for selected period
+  const periodDateRange = useMemo(() => {
+    const now = new Date()
+    return {
+      start: new Date(now.getFullYear(), now.getMonth() - months + 1, 1),
+      end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+    }
+  }, [months])
+
+  const { data: topCategoriesRaw } = trpc.wallet.getCategoryBreakdown.useQuery(
+    { walletId: walletId!, type: 'EXPENSE', dateFrom: periodDateRange.start, dateTo: periodDateRange.end },
+    { enabled: !!walletId }
+  )
+
   // Process cash flow data for chart
   const chartData = useMemo(() => {
     if (!cashFlowRaw) return []
@@ -138,6 +153,17 @@ export default function AnalyticsPage() {
   const maxCategory = categoryBreakdown.length > 0
     ? Math.max(...categoryBreakdown.map(c => Math.max(c.thisMonth, c.lastMonth)))
     : 0
+
+  // Top-5 categories for the selected period (horizontal bar chart)
+  const topCategories = useMemo(() => {
+    if (!topCategoriesRaw) return []
+    return topCategoriesRaw.slice(0, 5).map((cat, i) => ({
+      name: cat.categoryName,
+      amount: cat.amount,
+      percentage: cat.percentage,
+      fill: CHART_COLORS[i % CHART_COLORS.length],
+    }))
+  }, [topCategoriesRaw])
 
   const isLoading = !walletId || cashFlowLoading
 
@@ -305,6 +331,51 @@ export default function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top-5 Expense Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Топ категорий расходов</CardTitle>
+          <CardDescription>Топ-5 категорий за {periodConfig[period].label.toLowerCase()}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!topCategoriesRaw ? (
+            <Skeleton className="h-[250px] w-full" />
+          ) : topCategories.length === 0 ? (
+            <div className="flex h-[250px] items-center justify-center text-muted-foreground text-sm">
+              Нет расходов за выбранный период
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={topCategories} layout="vertical" margin={{ left: 20, right: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
+                <Tooltip
+                  formatter={(value: number) => formatAmount(value)}
+                  labelStyle={{ fontWeight: 600 }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0].payload as { name: string; amount: number; percentage: number }
+                    return (
+                      <div className="rounded-lg border bg-background px-3 py-2 shadow-sm">
+                        <p className="text-sm font-semibold">{d.name}</p>
+                        <p className="text-sm">{formatAmount(d.amount)}</p>
+                        <p className="text-xs text-muted-foreground">{d.percentage}% от расходов</p>
+                      </div>
+                    )
+                  }}
+                />
+                <Bar dataKey="amount" name="Сумма" radius={[0, 4, 4, 0]}>
+                  {topCategories.map((entry, index) => (
+                    <Cell key={index} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }

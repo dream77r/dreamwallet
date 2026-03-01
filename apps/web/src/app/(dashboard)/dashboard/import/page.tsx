@@ -33,7 +33,10 @@ import {
   ArrowRight,
   File,
   Loader2,
+  History,
+  Inbox,
 } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import { trpc } from '@/lib/trpc/client'
 
 type Step = 1 | 2 | 3 | 4
@@ -97,6 +100,9 @@ export default function ImportPage() {
   // Fetch user accounts for target selection
   const { data: accounts } = trpc.account.listAll.useQuery()
   const importMutation = trpc.import.start.useMutation()
+
+  // Import history
+  const { data: importHistory, isLoading: historyLoading } = trpc.import.history.useQuery()
 
   async function handleFileUpload(selectedFile: File) {
     setFile(selectedFile)
@@ -537,6 +543,61 @@ export default function ImportPage() {
           )}
         </div>
       )}
+
+      {/* Import History */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-base">История импортов</CardTitle>
+          </div>
+          <CardDescription>Последние 20 импортов</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {historyLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : !importHistory || importHistory.length === 0 ? (
+            <div className="flex flex-col items-center gap-2 py-8 text-muted-foreground">
+              <Inbox className="h-8 w-8" />
+              <p className="text-sm">Нет импортов</p>
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Дата</TableHead>
+                  <TableHead>Файл</TableHead>
+                  <TableHead className="text-right">Импортировано</TableHead>
+                  <TableHead className="text-right">Пропущено</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {importHistory.map((entry) => {
+                  const changes = entry.changes as Record<string, unknown> | null
+                  const fileName = (changes?.fileName as string) ?? '—'
+                  const imported = (changes?.imported as number) ?? 0
+                  const skipped = ((changes?.skipped as number) ?? 0) + ((changes?.errors as number) ?? 0)
+                  const dateLabel = new Date(entry.createdAt).toLocaleDateString('ru-RU', {
+                    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit',
+                  })
+                  return (
+                    <TableRow key={entry.id}>
+                      <TableCell className="text-sm text-muted-foreground">{dateLabel}</TableCell>
+                      <TableCell className="text-sm font-medium truncate max-w-[200px]">{fileName}</TableCell>
+                      <TableCell className="text-right text-sm text-green-600 font-medium">{imported}</TableCell>
+                      <TableCell className="text-right text-sm text-muted-foreground">{skipped}</TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
