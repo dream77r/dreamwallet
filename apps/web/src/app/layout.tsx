@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { TRPCProvider } from '@/lib/trpc/client'
+import { PwaProvider } from '@/components/pwa-provider'
 import './globals.css'
 
 const geistSans = Geist({
@@ -22,6 +23,14 @@ export const metadata: Metadata = {
   },
   description: 'Управление личными и бизнес-финансами в одном месте',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'DreamWallet',
+  },
+  icons: {
+    apple: '/icon-192.png',
+  },
 }
 
 export const viewport: Viewport = {
@@ -44,6 +53,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TRPCProvider>
             {children}
+            <PwaProvider />
           </TRPCProvider>
           <Toaster richColors position="top-right" />
         </ThemeProvider>

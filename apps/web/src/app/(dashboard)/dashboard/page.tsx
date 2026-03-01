@@ -30,6 +30,7 @@ import { trpc } from '@/lib/trpc/client'
 import { useMemo } from 'react'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import Link from 'next/link'
+import { AiInsights } from '@/components/dashboard/ai-insights'
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -464,6 +465,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       )}
+      {/* AI Insights */}
+      <AiInsights />
     </div>
   )
 }
