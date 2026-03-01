@@ -317,6 +317,54 @@ export const transactionRouter = router({
       return { success: true }
     }),
 
+  // Export transactions as CSV
+  export: protectedProcedure
+    .input(z.object({
+      format: z.enum(['csv']).default('csv'),
+      dateFrom: z.string().datetime().optional(),
+      dateTo: z.string().datetime().optional(),
+      type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
+      if (!wallet) return { data: '', filename: 'transactions.csv' }
+
+      const accounts = await ctx.prisma.account.findMany({
+        where: { walletId: wallet.id },
+        select: { id: true },
+      })
+
+      const transactions = await ctx.prisma.transaction.findMany({
+        where: {
+          accountId: { in: accounts.map(a => a.id) },
+          ...(input.type ? { type: input.type } : {}),
+          ...(input.dateFrom || input.dateTo ? {
+            date: {
+              ...(input.dateFrom ? { gte: new Date(input.dateFrom) } : {}),
+              ...(input.dateTo ? { lte: new Date(input.dateTo) } : {}),
+            }
+          } : {}),
+        },
+        orderBy: { date: 'desc' },
+        include: { category: { select: { name: true } }, tags: { include: { tag: { select: { name: true } } } } },
+      })
+
+      const rows = [
+        ['Дата', 'Тип', 'Сумма', 'Валюта', 'Описание', 'Категория', 'Теги'].join(','),
+        ...transactions.map(t => [
+          t.date.toISOString().split('T')[0],
+          t.type,
+          t.amount,
+          t.currency,
+          `"${(t.description ?? '').replace(/"/g, '""')}"`,
+          t.category?.name ?? '',
+          t.tags.map(tt => tt.tag.name).join(';'),
+        ].join(',')),
+      ].join('\n')
+
+      return { data: rows, filename: `transactions-${new Date().toISOString().split('T')[0]}.csv` }
+    }),
+
   // Global search across transactions
   search: protectedProcedure
     .input(z.object({

@@ -1,4 +1,4 @@
-import { Worker, type Processor } from 'bullmq'
+import { Worker, Queue, type Processor } from 'bullmq'
 import IORedis from 'ioredis'
 import pino from 'pino'
 import { bankSyncProcessor } from './processors/bank-sync'
@@ -43,6 +43,17 @@ createWorker('categorize', categorizeProcessor)
 createWorker('notification', notificationProcessor)
 
 logger.info('All workers started')
+
+// Weekly digest cron — every Sunday at 9:00 Moscow time
+const notifQueue = new Queue('notifications', { connection })
+notifQueue.add('weekly-digest', { type: 'weekly_digest' }, {
+  repeat: { pattern: '0 9 * * 0', tz: 'Europe/Moscow' },
+  jobId: 'weekly-digest-cron',
+}).then(() => {
+  logger.info('Weekly digest cron scheduled (Sun 09:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule weekly digest cron')
+})
 
 // Start Telegram bot (if token configured)
 const botToken = process.env.TELEGRAM_BOT_TOKEN

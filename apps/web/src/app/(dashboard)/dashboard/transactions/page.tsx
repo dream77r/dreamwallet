@@ -39,6 +39,7 @@ import {
   Trash2,
   Tag,
   X,
+  Download,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -94,6 +95,25 @@ export default function TransactionsPage() {
   const [bulkCategoryId, setBulkCategoryId] = useState('')
 
   const utils = trpc.useUtils()
+
+  // CSV export
+  const exportQuery = trpc.transaction.export.useQuery(
+    { format: 'csv' },
+    { enabled: false }
+  )
+
+  const handleExport = async () => {
+    const result = await exportQuery.refetch()
+    if (result.data) {
+      const blob = new Blob([result.data.data], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = result.data.filename
+      a.click()
+      URL.revokeObjectURL(url)
+    }
+  }
 
   // Fetch transactions with filters
   const { data, isLoading } = trpc.transaction.list.useQuery({
@@ -210,11 +230,17 @@ export default function TransactionsPage() {
             {isLoading ? 'Загрузка...' : `${total} записей`}
           </p>
         </div>
-        <TransactionForm />
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={exportQuery.isFetching}>
+            <Download className="h-4 w-4 mr-2" />
+            {exportQuery.isFetching ? 'Экспорт...' : 'CSV'}
+          </Button>
+          <TransactionForm />
+        </div>
       </div>
 
       {/* Summary row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-5 pb-4">
             <p className="text-muted-foreground text-xs mb-1">Доходы</p>
@@ -391,9 +417,9 @@ export default function TransactionsPage() {
                 </TableHead>
                 <TableHead className="w-[110px]">Дата</TableHead>
                 <TableHead>Описание</TableHead>
-                <TableHead>Категория</TableHead>
+                <TableHead className="hidden md:table-cell">Категория</TableHead>
                 <TableHead>Счёт</TableHead>
-                <TableHead>Тип</TableHead>
+                <TableHead className="hidden md:table-cell">Тип</TableHead>
                 <TableHead className="text-right pr-6">Сумма</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -405,9 +431,9 @@ export default function TransactionsPage() {
                     <TableCell className="pl-4"><Skeleton className="h-4 w-4" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
                     <TableCell className="pr-6 text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
                     <TableCell></TableCell>
                   </TableRow>
@@ -457,13 +483,13 @@ export default function TransactionsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                         {tx.category?.name ?? '—'}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {tx.account.name}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeBadgeVariants[type]}`}>
                           {typeLabels[type]}
                         </span>

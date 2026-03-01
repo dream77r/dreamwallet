@@ -124,10 +124,59 @@ async function checkBudgets(userId: string) {
 }
 
 async function sendWeeklyDigest() {
+  const now = new Date()
+  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+
   const users = await prisma.user.findMany({
-    select: { id: true },
+    where: { pushSubscriptions: { some: {} } },
+    select: { id: true, name: true },
   })
 
-  // TODO: implement weekly email/push digest
-  return { users: users.length, sent: 0, message: 'Weekly digest not yet implemented' }
+  let sent = 0
+  for (const user of users) {
+    const wallet = await prisma.wallet.findFirst({ where: { userId: user.id } })
+    if (!wallet) continue
+
+    const accounts = await prisma.account.findMany({
+      where: { walletId: wallet.id },
+      select: { id: true },
+    })
+    const accountIds = accounts.map(a => a.id)
+
+    const stats = await prisma.transaction.aggregate({
+      where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: weekAgo } },
+      _sum: { amount: true },
+      _count: true,
+    })
+
+    const topCategory = await prisma.transaction.groupBy({
+      by: ['categoryId'],
+      where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: weekAgo }, categoryId: { not: null } },
+      _sum: { amount: true },
+      orderBy: { _sum: { amount: 'desc' } },
+      take: 1,
+    })
+
+    let categoryName = ''
+    if (topCategory[0]?.categoryId) {
+      const cat = await prisma.category.findUnique({ where: { id: topCategory[0].categoryId }, select: { name: true } })
+      categoryName = cat?.name ?? ''
+    }
+
+    const totalSpent = Number(stats._sum.amount || 0)
+    const txCount = stats._count
+
+    if (txCount === 0) continue
+
+    const amountStr = new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(totalSpent)
+
+    await pushToUser(user.id, {
+      title: '📊 Дайджест за неделю',
+      body: `Расходы: ${amountStr} (${txCount} транзакций)${categoryName ? `. Топ: ${categoryName}` : ''}`,
+      url: '/dashboard/analytics',
+    })
+    sent++
+  }
+
+  return { users: users.length, sent }
 }
