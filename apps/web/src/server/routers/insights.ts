@@ -1,36 +1,20 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
+import { callOpenRouter } from './ai'
 
-const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
-
-// Simple Claude API call without SDK (keeps bundle small)
-async function callClaude(prompt: string): Promise<string> {
-  if (!ANTHROPIC_API_KEY) return ''
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'x-api-key': ANTHROPIC_API_KEY,
-      'anthropic-version': '2023-06-01',
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5',
-      max_tokens: 600,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  })
-
-  if (!res.ok) return ''
-  const data = await res.json()
-  return (data.content?.[0]?.text ?? '') as string
-}
+const DEFAULT_MODEL = 'anthropic/claude-haiku-4-5'
 
 export const insightsRouter = router({
   // Generate AI spending insights for the current month
   generate: protectedProcedure
     .input(z.object({ period: z.enum(['1m', '3m']).default('1m') }))
     .query(async ({ ctx, input }) => {
+      // Determine which model to use
+      const userRecord = await ctx.prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { aiModel: true },
+      })
+      const modelToUse = userRecord?.aiModel ?? DEFAULT_MODEL
       const months = input.period === '3m' ? 3 : 1
       const now = new Date()
       const dateFrom = new Date(now.getFullYear(), now.getMonth() - months + 1, 1)
@@ -108,7 +92,7 @@ ${categoryLines}
 Ответь ТОЛЬКО JSON-массивом без markdown, вот так:
 [{"emoji":"💡","title":"Короткий заголовок","text":"Один конкретный вывод или совет (1-2 предложения)"}]`
 
-      const raw = await callClaude(prompt)
+      const raw = await callOpenRouter({ model: modelToUse, prompt, maxTokens: 600 })
 
       let insights: Array<{ emoji: string; title: string; text: string }> = []
       if (raw) {

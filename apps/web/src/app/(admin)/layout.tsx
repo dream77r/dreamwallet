@@ -8,7 +8,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const headerList = await headers()
   const session = await auth.api.getSession({ headers: headerList })
 
-  if (!session?.user || (session.user as Record<string, unknown>).role !== 'ADMIN') {
+  const role = (session?.user as Record<string, unknown>)?.role
+  if (!session?.user || (role !== 'ADMIN' && role !== 'SUPER_ADMIN')) {
     redirect('/dashboard')
   }
 
@@ -46,6 +47,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               <span className="flex items-center gap-1.5">
                 <Sparkles className="h-3.5 w-3.5" />
                 Тарифы
+              </span>
+            </Link>
+            <Link
+              href="/admin/ai"
+              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <span className="flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                AI-модели
               </span>
             </Link>
           </div>

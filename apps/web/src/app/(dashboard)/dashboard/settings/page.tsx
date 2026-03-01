@@ -148,6 +148,62 @@ function TelegramSection() {
   )
 }
 
+function AiModelSection() {
+  const { data: config, refetch } = trpc.ai.getConfig.useQuery()
+  const setModelMutation = trpc.ai.setMyModel.useMutation({
+    onSuccess: () => { toast.success('Модель сохранена'); refetch() },
+    onError: (e) => toast.error(e.message),
+  })
+
+  if (!config?.hasApiKey) return null
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-violet-500" />
+          <CardTitle className="text-base">AI-модель</CardTitle>
+        </div>
+        <CardDescription>Выберите модель для персональных инсайтов и анализа</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Select
+            value={config.activeModel}
+            onValueChange={(v) => setModelMutation.mutate({ model: v })}
+            disabled={setModelMutation.isPending}
+          >
+            <SelectTrigger className="w-72">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {config.available.map(m => (
+                <SelectItem key={m.id} value={m.id}>
+                  <span>{m.name}</span>
+                  <span className="text-muted-foreground ml-2 text-xs">({m.provider})</span>
+                  {m.costPer1k === 0 && <span className="ml-1 text-xs text-green-600">FREE</span>}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {config.userModel && config.userModel !== config.defaultModel && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setModelMutation.mutate({ model: '' })}
+            >
+              Сбросить
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Модель по умолчанию: {config.available.find(m => m.id === config.defaultModel)?.name ?? config.defaultModel}
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function SettingsPage() {
   const utils = trpc.useUtils()
 
@@ -402,6 +458,9 @@ export default function SettingsPage() {
 
       {/* Telegram */}
       <TelegramSection />
+
+      {/* AI Model */}
+      <AiModelSection />
 
       {/* Danger zone */}
       <Card className="border-red-200">

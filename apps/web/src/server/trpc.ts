@@ -67,27 +67,29 @@ const isAuthed = middleware(async ({ ctx, next }) => {
 
 export const protectedProcedure = t.procedure.use(isAuthed)
 
-// Admin middleware — requires ADMIN role
+// Admin middleware — requires ADMIN or SUPER_ADMIN role
 const isAdmin = middleware(async ({ ctx, next }) => {
   if (!ctx.session?.user) {
-    throw new TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'Необходима авторизация',
-    })
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Необходима авторизация' })
   }
-  if ((ctx.session.user as Record<string, unknown>).role !== 'ADMIN') {
-    throw new TRPCError({
-      code: 'FORBIDDEN',
-      message: 'Недостаточно прав. Требуется роль администратора.',
-    })
+  const role = (ctx.session.user as Record<string, unknown>).role as string
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Недостаточно прав.' })
   }
-  return next({
-    ctx: {
-      ...ctx,
-      session: ctx.session,
-      user: ctx.session.user,
-    },
-  })
+  return next({ ctx: { ...ctx, session: ctx.session, user: ctx.session.user } })
+})
+
+// Super admin middleware — requires SUPER_ADMIN only
+const isSuperAdmin = middleware(async ({ ctx, next }) => {
+  if (!ctx.session?.user) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Необходима авторизация' })
+  }
+  const role = (ctx.session.user as Record<string, unknown>).role as string
+  if (role !== 'SUPER_ADMIN') {
+    throw new TRPCError({ code: 'FORBIDDEN', message: 'Требуется роль суперадмина.' })
+  }
+  return next({ ctx: { ...ctx, session: ctx.session, user: ctx.session.user } })
 })
 
 export const adminProcedure = t.procedure.use(isAuthed).use(isAdmin)
+export const superAdminProcedure = t.procedure.use(isAuthed).use(isSuperAdmin)

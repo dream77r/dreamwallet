@@ -14,6 +14,7 @@ datasource db {
 enum UserRole {
   USER
   ADMIN
+  SUPER_ADMIN
 }
 
 model User {
@@ -23,6 +24,7 @@ model User {
   avatarUrl     String?   @map("avatar_url")
   emailVerified Boolean   @default(false) @map("email_verified")
   role          UserRole  @default(USER) @map("role")
+  aiModel       String?   @map("ai_model")
   currency      String    @default("RUB")
   timezone      String    @default("Europe/Moscow")
   locale        String    @default("ru")
@@ -685,4 +687,17 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("push_subscriptions")
+}
+
+// ─────────────────────────────────────────────
+// App Settings (key-value, managed by superadmin)
+// ─────────────────────────────────────────────
+
+model AppSetting {
+  key       String   @id
+  value     String   // JSON-encoded value
+  updatedAt DateTime @updatedAt @map("updated_at")
+  updatedBy String?  @map("updated_by") // userId
+
+  @@map("app_settings")
 }
