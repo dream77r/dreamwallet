@@ -1,10 +1,9 @@
 import { Bot, Context, session, SessionFlavor } from 'grammy'
-import { PrismaClient } from '@dreamwallet/db'
+import { prisma } from '@dreamwallet/db'
 import { parseTransactionText, formatAmount } from './parser'
 import pino from 'pino'
 
 const logger = pino({ name: 'telegram-bot' })
-const prisma = new PrismaClient()
 
 // ─── Session ─────────────────────────────────────────────────────────────────
 

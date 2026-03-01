@@ -2,16 +2,17 @@
   "name": "@dreamwallet/db",
   "version": "0.1.0",
   "private": true,
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
   "types": "./src/index.ts",
   "scripts": {
+    "build": "tsup src/index.ts --format cjs --external pg-native --out-dir dist",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "clean": "rm -rf node_modules src/generated"
+    "clean": "rm -rf node_modules src/generated dist"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.4.1",
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "prisma": "^7.4.1",
+    "tsup": "^8.4.0",
     "tsx": "^4.19.0",
     "typescript": "^5.8.3"
   }
