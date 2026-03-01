@@ -44,6 +44,7 @@ model User {
   importTemplates  ImportTemplate[]
   autoRules        AutoCategoryRule[]
   goals            Goal[]
+  telegramConn     TelegramConnection?
 
   @@map("users")
 }
@@ -642,4 +643,22 @@ model Goal {
 
   @@index([userId])
   @@map("goals")
+}
+
+// ─────────────────────────────────────────────
+// Telegram Bot Connections
+// ─────────────────────────────────────────────
+
+model TelegramConnection {
+  id           String   @id @default(cuid())
+  userId       String   @unique @map("user_id")
+  chatId       String   @unique @map("chat_id")
+  username     String?
+  firstName    String?  @map("first_name")
+  linkedAt     DateTime @default(now()) @map("linked_at")
+  isActive     Boolean  @default(true) @map("is_active")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("telegram_connections")
 }

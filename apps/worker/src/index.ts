@@ -5,6 +5,7 @@ import { bankSyncProcessor } from './processors/bank-sync'
 import { csvImportProcessor } from './processors/csv-import'
 import { categorizeProcessor } from './processors/categorize'
 import { notificationProcessor } from './processors/notification'
+import { createBot } from './telegram/bot'
 
 const logger = pino({ name: 'dreamwallet-worker' })
 
@@ -42,6 +43,17 @@ createWorker('categorize', categorizeProcessor)
 createWorker('notification', notificationProcessor)
 
 logger.info('All workers started')
+
+// Start Telegram bot (if token configured)
+const botToken = process.env.TELEGRAM_BOT_TOKEN
+if (botToken) {
+  const bot = createBot(botToken)
+  bot.start({ drop_pending_updates: true })
+    .catch((err) => logger.error(err, 'Telegram bot crashed'))
+  logger.info('Telegram bot started (polling mode)')
+} else {
+  logger.warn('TELEGRAM_BOT_TOKEN not set — bot disabled')
+}
 
 // Graceful shutdown
 async function shutdown() {

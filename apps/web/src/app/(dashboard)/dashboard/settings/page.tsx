@@ -66,6 +66,88 @@ const planLabels: Record<string, string> = {
   BUSINESS: 'Business',
 }
 
+// ─── Telegram Section ────────────────────────────────────────────────────────
+
+function TelegramSection() {
+  const utils = trpc.useUtils()
+  const { data: conn, isLoading } = trpc.telegram.getConnection.useQuery()
+
+  const generateLink = trpc.telegram.generateLinkToken.useMutation({
+    onError: (e) => toast.error(e.message),
+  })
+  const disconnect = trpc.telegram.disconnect.useMutation({
+    onSuccess: () => {
+      toast.success('Telegram отключён')
+      utils.telegram.getConnection.invalidate()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+
+  const [linkData, setLinkData] = useState<{ url: string; expiresInMinutes: number } | null>(null)
+
+  async function handleConnect() {
+    const result = await generateLink.mutateAsync()
+    setLinkData(result)
+    window.open(result.url, '_blank')
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Telegram-бот</CardTitle>
+        <CardDescription>Добавляй транзакции текстом или голосом прямо из Telegram</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <Skeleton className="h-10 w-48" />
+        ) : conn ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                ✈️
+              </div>
+              <div>
+                <p className="text-sm font-medium">
+                  {conn.firstName ?? conn.username ?? 'Telegram'} подключён
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {conn.username ? `@${conn.username} · ` : ''}{new Date(conn.linkedAt).toLocaleDateString('ru-RU')}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-red-600"
+              onClick={() => disconnect.mutate()}
+              disabled={disconnect.isPending}
+            >
+              Отключить
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Подключи бота и говори что потратил — он сам добавит транзакцию. Даже голосом! 🎙️
+            </p>
+            <Button onClick={handleConnect} disabled={generateLink.isPending}>
+              {generateLink.isPending ? 'Генерируем ссылку...' : '📱 Подключить Telegram'}
+            </Button>
+            {linkData && (
+              <p className="text-xs text-muted-foreground">
+                Ссылка действует {linkData.expiresInMinutes} мин. Если страница не открылась —{' '}
+                <a href={linkData.url} target="_blank" rel="noreferrer" className="underline">
+                  кликни сюда
+                </a>
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function SettingsPage() {
   const utils = trpc.useUtils()
 
@@ -317,6 +399,9 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Telegram */}
+      <TelegramSection />
 
       {/* Danger zone */}
       <Card className="border-red-200">
