@@ -10,6 +10,7 @@ import { importRouter } from './import'
 import { billingRouter } from './billing'
 import { adminRouter } from './admin'
 import { recurringRouter } from './recurring'
+import { autoRulesRouter } from './auto-rules'
 
 export const appRouter = router({
   wallet: walletRouter,
@@ -23,6 +24,7 @@ export const appRouter = router({
   billing: billingRouter,
   admin: adminRouter,
   recurring: recurringRouter,
+  autoRules: autoRulesRouter,
 })
 
 export type AppRouter = typeof appRouter
