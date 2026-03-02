@@ -195,3 +195,187 @@ export const walletRouter = router({
       }))
     }),
 })
+
+// Monthly forecast — проецируем текущий темп трат на конец месяца
+export const forecastQuery = async (prisma: any, userId: string) => {
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const dayOfMonth = now.getDate()
+
+  const wallet = await prisma.wallet.findFirst({ where: { userId } })
+  if (!wallet) return null
+
+  const accounts = await prisma.account.findMany({
+    where: { walletId: wallet.id },
+    select: { id: true },
+  })
+  const accountIds = accounts.map((a: any) => a.id)
+
+  // Текущие доходы и расходы с начала месяца
+  const [incomeAgg, expenseAgg] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: monthStart } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart } },
+      _sum: { amount: true },
+    }),
+  ])
+
+  const incomeToDate = Number(incomeAgg._sum.amount ?? 0)
+  const expenseToDate = Number(expenseAgg._sum.amount ?? 0)
+
+  // Проецируем на конец месяца
+  const ratio = dayOfMonth > 0 ? daysInMonth / dayOfMonth : 1
+  const projectedExpense = expenseToDate * ratio
+  const projectedIncome = incomeToDate * ratio
+  const projectedBalance = projectedIncome - projectedExpense
+
+  // Прошлый месяц для сравнения
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const prevEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+  const prevExpenseAgg = await prisma.transaction.aggregate({
+    where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: prevStart, lte: prevEnd } },
+    _sum: { amount: true },
+  
+  forecast: protectedProcedure.query(async ({ ctx }) => {
+    return forecastQuery(ctx.prisma, ctx.user.id)
+  }),
+})
+  const prevMonthExpense = Number(prevExpenseAgg._sum.amount ?? 0)
+
+  // Статус: нормально / осторожно / тревога
+  const vsLastMonth = prevMonthExpense > 0
+    ? (projectedExpense - prevMonthExpense) / prevMonthExpense
+    : 0
+
+  const status: 'good' | 'warning' | 'danger' =
+    vsLastMonth > 0.2 ? 'danger' :
+    vsLastMonth > 0.05 ? 'warning' : 'good'
+
+  const daysLeft = daysInMonth - dayOfMonth
+
+  return {
+    daysLeft,
+    daysInMonth,
+    dayOfMonth,
+    incomeToDate,
+    expenseToDate,
+    projectedExpense: Math.round(projectedExpense),
+    projectedIncome: Math.round(projectedIncome),
+    projectedBalance: Math.round(projectedBalance),
+    vsLastMonth: Math.round(vsLastMonth * 100), // % vs прошлый месяц
+    prevMonthExpense: Math.round(prevMonthExpense),
+    status,
+  }
+}
+
+export const monthComparisonQuery = async (prisma: any, userId: string) => {
+  const now = new Date()
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+
+  const wallet = await prisma.wallet.findFirst({ where: { userId } })
+  if (!wallet) return null
+
+  const accounts = await prisma.account.findMany({
+    where: { walletId: wallet.id }, select: { id: true },
+  })
+  const accountIds = accounts.map((a: any) => a.id)
+
+  const [thisIncome, thisExpense, prevIncome, prevExpense] = await Promise.all([
+    prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: thisMonthStart } }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: thisMonthStart } }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
+  ])
+
+  // Нормализуем текущий месяц по дням
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const dayOfMonth = now.getDate()
+  const ratio = daysInMonth / Math.max(dayOfMonth, 1)
+
+  const curr = {
+    income: Number(thisIncome._sum.amount ?? 0),
+    expense: Number(thisExpense._sum.amount ?? 0),
+  }
+  const prev = {
+    income: Number(prevIncome._sum.amount ?? 0),
+    expense: Number(prevExpense._sum.amount ?? 0),
+  }
+
+  const projectedExpense = Math.round(curr.expense * ratio)
+  const expenseDiff = prev.expense > 0 ? Math.round((projectedExpense - prev.expense) / prev.expense * 100) : 0
+  const incomeDiff = prev.income > 0 ? Math.round((curr.income - prev.income) / prev.income * 100) : 0
+
+  const win = expenseDiff < -5  // потратили заметно меньше — победа!
+
+  return {
+    curr: { income: curr.income, expense: curr.expense },
+    prev: { income: prev.income, expense: prev.expense },
+    projectedExpense,
+    expenseDiff,  // % изменение расходов (отрицательный = хорошо)
+    incomeDiff,   // % изменение доходов
+    win,          // показывать конфетти/похвалу
+    monthName: new Intl.DateTimeFormat('ru-RU', { month: 'long' }).format(now),
+    prevMonthName: new Intl.DateTimeFormat('ru-RU', { month: 'long' 
+  monthComparison: protectedProcedure.query(async ({ ctx }) => {
+    return monthComparisonQuery(ctx.prisma, ctx.user.id)
+  }),
+}).format(prevMonthStart),
+  }
+}
+
+export const netWorthQuery = async (prisma: any, userId: string) => {
+  const wallet = await prisma.wallet.findFirst({
+    where: { userId },
+    include: {
+      accounts: { select: { id: true, balance: true, type: true, name: true, currency: true } },
+    },
+  })
+  if (!wallet) return null
+
+  // Активы = сумма счетов с положительным балансом
+  const assets = wallet.accounts
+    .filter((a: any) => Number(a.balance) >= 0)
+    .map((a: any) => ({ name: a.name, balance: Number(a.balance), type: a.type, currency: a.currency }))
+
+  // Пассивы = долги (я должен)
+  const debts = await prisma.debt.findMany({
+    where: { userId, type: 'BORROWED', status: { in: ['ACTIVE', 'PARTIALLY_REPAID'] } },
+    select: { counterparty: true, amount: true, paidAmount: true },
+  })
+
+  const totalAssets = assets.reduce((s: number, a: any) => s + a.balance, 0)
+  const totalDebts = debts.reduce((s: number, d: any) => s + Number(d.amount) - Number(d.paidAmount), 0)
+  const netWorth = totalAssets - totalDebts
+
+  // Прошлый месяц (активы не менялись — берём транзакции для delta)
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const accountIds = wallet.accounts.map((a: any) => a.id)
+  const [inc, exp] = await Promise.all([
+    prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: monthStart } }, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } }),
+  ])
+  const monthDelta = Number(inc._sum.amount ?? 0) - Number(exp._sum.amount ?? 0)
+
+  return {
+    netWorth: Math.round(netWorth),
+    totalAssets: Math.round(totalAssets),
+    totalDebts: Math.round(totalDebts),
+    monthDelta: Math.round(monthDelta),
+    assets,
+    debts: debts.map((d: any) => ({
+      counterparty: d.counterparty,
+      remaining: Math.round(Number(d.amount) - Number(d.paidAmount)),
+    
+  netWorth: protectedProcedure.query(async ({ ctx }) => {
+    return netWorthQuery(ctx.prisma, ctx.user.id)
+  }),
+})),
+  }
+}
