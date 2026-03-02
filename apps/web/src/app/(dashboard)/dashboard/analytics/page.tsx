@@ -16,7 +16,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
-  Cell,
 } from 'recharts'
 import { trpc } from '@/lib/trpc/client'
 
@@ -84,17 +83,9 @@ export default function AnalyticsPage() {
     { enabled: !!walletId }
   )
 
-  // Top categories for selected period
-  const periodDateRange = useMemo(() => {
-    const now = new Date()
-    return {
-      start: new Date(now.getFullYear(), now.getMonth() - months + 1, 1),
-      end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
-    }
-  }, [months])
-
-  const { data: topCategoriesRaw } = trpc.wallet.getCategoryBreakdown.useQuery(
-    { walletId: walletId!, type: 'EXPENSE', dateFrom: periodDateRange.start, dateTo: periodDateRange.end },
+  // Top counterparties
+  const { data: recentTxs } = trpc.transaction.list.useQuery(
+    { walletId: walletId!, pageSize: 500, page: 1 },
     { enabled: !!walletId }
   )
 
@@ -154,16 +145,21 @@ export default function AnalyticsPage() {
     ? Math.max(...categoryBreakdown.map(c => Math.max(c.thisMonth, c.lastMonth)))
     : 0
 
-  // Top-5 categories for the selected period (horizontal bar chart)
-  const topCategories = useMemo(() => {
-    if (!topCategoriesRaw) return []
-    return topCategoriesRaw.slice(0, 5).map((cat, i) => ({
-      name: cat.categoryName,
-      amount: cat.amount,
-      percentage: cat.percentage,
-      fill: CHART_COLORS[i % CHART_COLORS.length],
-    }))
-  }, [topCategoriesRaw])
+  const topCounterparties = useMemo(() => {
+    if (!recentTxs?.items) return []
+    const map = new Map<string, number>()
+    for (const tx of recentTxs.items) {
+      const name = tx.counterparty?.trim()
+      if (!name) continue
+      if (tx.type !== 'EXPENSE') continue
+      map.set(name, (map.get(name) ?? 0) + Number(tx.amount))
+    }
+    return Array.from(map.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+  }, [recentTxs])
+
+  const maxCounterparty = topCounterparties.length > 0 ? topCounterparties[0][1] : 0
 
   const isLoading = !walletId || cashFlowLoading
 
@@ -239,24 +235,22 @@ export default function AnalyticsPage() {
           <CardDescription>По месяцам за {periodConfig[period].label.toLowerCase()}</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <Skeleton className="h-[250px] md:h-[350px] w-full" /> : chartData.length === 0 ? (
-            <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
+          {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
+            <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
               Нет данных за выбранный период
             </div>
           ) : (
-            <div className="min-h-[250px] md:min-h-[350px]">
-              <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
-                <BarChart data={chartData} barCategoryGap="35%">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                  <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} />
-                  <Legend />
-                  <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={chartData} barCategoryGap="35%">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} />
+                <Legend />
+                <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
@@ -312,13 +306,12 @@ export default function AnalyticsPage() {
             <CardDescription>Сумма и норма накоплений по месяцам</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-[250px] md:h-[350px] w-full" /> : chartData.length === 0 ? (
-              <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
+            {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
+              <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
                 Нет данных за выбранный период
               </div>
             ) : (
-              <div className="min-h-[250px] md:min-h-[350px]">
-              <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
+              <ResponsiveContainer width="100%" height={280}>
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
@@ -330,58 +323,39 @@ export default function AnalyticsPage() {
                   <Line yAxisId="rate" type="monotone" dataKey="savingsRate" name="Норма, %" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
-              </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Top-5 Expense Categories */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Топ категорий расходов</CardTitle>
-          <CardDescription>Топ-5 категорий за {periodConfig[period].label.toLowerCase()}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!topCategoriesRaw ? (
-            <Skeleton className="h-[250px] md:h-[350px] w-full" />
-          ) : topCategories.length === 0 ? (
-            <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
-              Нет расходов за выбранный период
-            </div>
-          ) : (
-            <div className="min-h-[250px] md:min-h-[350px]">
-            <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
-              <BarChart data={topCategories} layout="vertical" margin={{ left: 20, right: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
-                <Tooltip
-                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ""}
-                  labelStyle={{ fontWeight: 600 }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null
-                    const d = payload[0].payload as { name: string; amount: number; percentage: number }
-                    return (
-                      <div className="rounded-lg border bg-background px-3 py-2 shadow-sm">
-                        <p className="text-sm font-semibold">{d.name}</p>
-                        <p className="text-sm">{formatAmount(d.amount)}</p>
-                        <p className="text-xs text-muted-foreground">{d.percentage}% от расходов</p>
-                      </div>
-                    )
-                  }}
-                />
-                <Bar dataKey="amount" name="Сумма" radius={[0, 4, 4, 0]}>
-                  {topCategories.map((entry, index) => (
-                    <Cell key={index} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* Top counterparties */}
+      {topCounterparties.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Топ контрагентов</CardTitle>
+            <CardDescription>Где вы тратите больше всего</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topCounterparties.map(([name, amount]) => {
+              const pct = maxCounterparty > 0 ? (amount / maxCounterparty) * 100 : 0
+              return (
+                <div key={name}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium truncate max-w-[200px]">{name}</span>
+                    <span className="text-sm font-semibold text-red-500">{formatAmount(amount)}</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -35,6 +35,8 @@ import {
   Clock,
   AlertTriangle,
   Trash2,
+  Bell,
+  BellOff,
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
@@ -64,6 +66,129 @@ const planLabels: Record<string, string> = {
   FREE: 'Бесплатный',
   PRO: 'Pro',
   BUSINESS: 'Business',
+}
+
+// ─── Push Notifications Section ─────────────────────────────────────────────
+
+function PushNotificationsSection() {
+  const [status, setStatus] = useState<'idle' | 'loading' | 'subscribed' | 'error'>('idle')
+  const { data: keyData } = trpc.push.getPublicKey.useQuery()
+  const { data: subscribedData, refetch } = trpc.push.isSubscribed.useQuery()
+  const subscribeMutation = trpc.push.subscribe.useMutation()
+  const unsubscribeMutation = trpc.push.unsubscribe.useMutation()
+  const testMutation = trpc.push.sendTest.useMutation()
+
+  async function handleSubscribe() {
+    if (!keyData?.publicKey) return
+    setStatus('loading')
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js')
+      await navigator.serviceWorker.ready
+
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: keyData.publicKey,
+      })
+      const json = sub.toJSON()
+      const keys = json.keys as { p256dh: string; auth: string } | undefined
+
+      await subscribeMutation.mutateAsync({
+        endpoint: sub.endpoint,
+        p256dh: keys?.p256dh ?? '',
+        auth: keys?.auth ?? '',
+        userAgent: navigator.userAgent,
+      })
+
+      await refetch()
+      setStatus('subscribed')
+      toast.success('Push-уведомления включены!')
+    } catch (e) {
+      console.error(e)
+      setStatus('error')
+      toast.error('Не удалось включить уведомления')
+    }
+  }
+
+  async function handleUnsubscribe() {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration('/sw.js')
+      const sub = await reg?.pushManager.getSubscription()
+      if (sub) {
+        await unsubscribeMutation.mutateAsync({ endpoint: sub.endpoint })
+        await sub.unsubscribe()
+      }
+      await refetch()
+      toast.success('Уведомления отключены')
+    } catch {
+      toast.error('Ошибка при отключении')
+    }
+  }
+
+  async function handleTest() {
+    await testMutation.mutateAsync()
+    toast.success('Тестовое уведомление отправлено!')
+  }
+
+  const isSubscribed = subscribedData?.subscribed || status === 'subscribed'
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Bell className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-base">Push-уведомления</CardTitle>
+        </div>
+        <CardDescription>Получайте уведомления о важных событиях прямо в браузере</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${isSubscribed ? 'bg-green-100' : 'bg-muted'}`}>
+            {isSubscribed
+              ? <Bell className="h-4 w-4 text-green-600" />
+              : <BellOff className="h-4 w-4 text-muted-foreground" />
+            }
+          </div>
+          <div>
+            <p className="text-sm font-medium">{isSubscribed ? 'Уведомления включены' : 'Уведомления отключены'}</p>
+            <p className="text-xs text-muted-foreground">
+              {isSubscribed
+                ? 'Вы будете получать уведомления в этом браузере'
+                : 'Включите, чтобы не пропускать важные события'}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex gap-2 flex-wrap">
+          {!isSubscribed ? (
+            <Button
+              size="sm"
+              onClick={handleSubscribe}
+              disabled={status === 'loading' || !keyData?.publicKey}
+            >
+              <Bell className="h-4 w-4 mr-2" />
+              {status === 'loading' ? 'Включаем...' : 'Включить уведомления'}
+            </Button>
+          ) : (
+            <>
+              <Button size="sm" variant="outline" onClick={handleTest} disabled={testMutation.isPending}>
+                Отправить тест
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-red-600 hover:text-red-600"
+                onClick={handleUnsubscribe}
+                disabled={unsubscribeMutation.isPending}
+              >
+                <BellOff className="h-4 w-4 mr-2" />
+                Отключить
+              </Button>
+            </>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 }
 
 // ─── Telegram Section ────────────────────────────────────────────────────────
@@ -455,6 +580,9 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Push Notifications */}
+      <PushNotificationsSection />
 
       {/* Telegram */}
       <TelegramSection />

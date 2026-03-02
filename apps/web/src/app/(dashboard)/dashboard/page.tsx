@@ -27,11 +27,11 @@ import {
   Legend,
 } from 'recharts'
 import { trpc } from '@/lib/trpc/client'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import Link from 'next/link'
 import { AiInsights } from '@/components/dashboard/ai-insights'
-import { useSession } from '@/lib/auth-client'
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -66,12 +66,18 @@ function getCurrentMonthLabel() {
 }
 
 export default function DashboardPage() {
-  const { data: session } = useSession()
-  const userName = session?.user?.name?.split(' ')[0]
+  const router = useRouter()
   const { start: monthStart, end: monthEnd } = useMemo(() => getCurrentMonthRange(), [])
 
   // 1. Get personal wallet
   const { data: wallet, isLoading: walletLoading } = trpc.wallet.get.useQuery()
+
+  // Redirect new users (no accounts) to onboarding
+  useEffect(() => {
+    if (!walletLoading && wallet && wallet.accounts?.length === 0) {
+      router.replace('/onboarding')
+    }
+  }, [walletLoading, wallet, router])
 
   const walletId = wallet?.id
 
@@ -138,7 +144,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">{userName ? `Привет, ${userName}!` : 'Обзор'}</h1>
+          <h1 className="text-2xl font-semibold">Обзор</h1>
           <p className="text-muted-foreground text-sm">{monthLabel}</p>
         </div>
         <TransactionForm />

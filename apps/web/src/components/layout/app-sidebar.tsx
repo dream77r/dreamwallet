@@ -33,6 +33,7 @@ import {
   Repeat2,
   Zap,
   Flag,
+  TrendingUp,
   BrainCircuit,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
@@ -48,6 +49,7 @@ const mainNav = [
   { title: 'Теги', href: '/dashboard/tags', icon: Hash },
   { title: 'Авто-правила', href: '/dashboard/auto-rules', icon: Zap },
   { title: 'Цели', href: '/dashboard/goals', icon: Flag },
+  { title: 'Прогноз', href: '/dashboard/forecast', icon: TrendingUp },
   { title: 'Аналитика', href: '/dashboard/analytics', icon: PieChart },
   { title: 'AI Советник', href: '/dashboard/ai-chat', icon: BrainCircuit },
   { title: 'Импорт', href: '/dashboard/import', icon: Upload },
