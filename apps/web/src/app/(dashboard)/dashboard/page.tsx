@@ -31,6 +31,7 @@ import { useMemo } from 'react'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import Link from 'next/link'
 import { AiInsights } from '@/components/dashboard/ai-insights'
+import { useSession } from '@/lib/auth-client'
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -65,6 +66,8 @@ function getCurrentMonthLabel() {
 }
 
 export default function DashboardPage() {
+  const { data: session } = useSession()
+  const userName = session?.user?.name?.split(' ')[0]
   const { start: monthStart, end: monthEnd } = useMemo(() => getCurrentMonthRange(), [])
 
   // 1. Get personal wallet
@@ -135,7 +138,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Обзор</h1>
+          <h1 className="text-2xl font-semibold">{userName ? `Привет, ${userName}!` : 'Обзор'}</h1>
           <p className="text-muted-foreground text-sm">{monthLabel}</p>
         </div>
         <TransactionForm />

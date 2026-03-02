@@ -239,22 +239,24 @@ export default function AnalyticsPage() {
           <CardDescription>По месяцам за {periodConfig[period].label.toLowerCase()}</CardDescription>
         </CardHeader>
         <CardContent>
-          {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
-            <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
+          {isLoading ? <Skeleton className="h-[250px] md:h-[350px] w-full" /> : chartData.length === 0 ? (
+            <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
               Нет данных за выбранный период
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData} barCategoryGap="35%">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} />
-                <Legend />
-                <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="min-h-[250px] md:min-h-[350px]">
+              <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
+                <BarChart data={chartData} barCategoryGap="35%">
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                  <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} />
+                  <Legend />
+                  <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -310,12 +312,13 @@ export default function AnalyticsPage() {
             <CardDescription>Сумма и норма накоплений по месяцам</CardDescription>
           </CardHeader>
           <CardContent>
-            {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
-              <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
+            {isLoading ? <Skeleton className="h-[250px] md:h-[350px] w-full" /> : chartData.length === 0 ? (
+              <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
                 Нет данных за выбранный период
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={280}>
+              <div className="min-h-[250px] md:min-h-[350px]">
+              <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
@@ -327,6 +330,7 @@ export default function AnalyticsPage() {
                   <Line yAxisId="rate" type="monotone" dataKey="savingsRate" name="Норма, %" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
+              </div>
             )}
           </CardContent>
         </Card>
@@ -340,13 +344,14 @@ export default function AnalyticsPage() {
         </CardHeader>
         <CardContent>
           {!topCategoriesRaw ? (
-            <Skeleton className="h-[250px] w-full" />
+            <Skeleton className="h-[250px] md:h-[350px] w-full" />
           ) : topCategories.length === 0 ? (
-            <div className="flex h-[250px] items-center justify-center text-muted-foreground text-sm">
+            <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
               Нет расходов за выбранный период
             </div>
           ) : (
-            <ResponsiveContainer width="100%" height={250}>
+            <div className="min-h-[250px] md:min-h-[350px]">
+            <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
               <BarChart data={topCategories} layout="vertical" margin={{ left: 20, right: 40 }}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
@@ -373,6 +378,7 @@ export default function AnalyticsPage() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
           )}
         </CardContent>
       </Card>

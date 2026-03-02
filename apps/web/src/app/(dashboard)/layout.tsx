@@ -2,6 +2,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { Separator } from '@/components/ui/separator'
+import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +20,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </SidebarInset>
+      <OnboardingWizard />
     </SidebarProvider>
   )
 }
