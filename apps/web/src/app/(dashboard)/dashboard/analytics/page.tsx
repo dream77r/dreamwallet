@@ -357,7 +357,7 @@ export default function AnalyticsPage() {
                 <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
                 <Tooltip
-                  formatter={(value: number) => formatAmount(value)}
+                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ""}
                   labelStyle={{ fontWeight: 600 }}
                   content={({ active, payload }) => {
                     if (!active || !payload?.length) return null
