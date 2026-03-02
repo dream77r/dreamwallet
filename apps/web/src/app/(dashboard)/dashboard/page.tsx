@@ -32,6 +32,7 @@ import { useRouter } from 'next/navigation'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import Link from 'next/link'
 import { AiInsights } from '@/components/dashboard/ai-insights'
+import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidget'
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -324,8 +325,13 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* Financial Score + Budget + Recent transactions */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Financial Score Widget */}
+        <FinancialScoreWidget />
+
       {/* Budget + Recent transactions */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <div className="lg:col-span-2 grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Budgets */}
         <Card>
           <CardHeader>
@@ -435,6 +441,7 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
 
       {/* Goals widget */}
