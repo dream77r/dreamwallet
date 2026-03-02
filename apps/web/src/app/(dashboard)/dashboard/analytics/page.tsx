@@ -2,9 +2,18 @@
 
 import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { TrendingUp, TrendingDown, Minus, Printer } from 'lucide-react'
 import {
   BarChart,
   Bar,
@@ -57,6 +66,7 @@ function getCurrentMonthRange() {
 }
 
 export default function AnalyticsPage() {
+  const [mainTab, setMainTab] = useState<'analytics' | 'report'>('analytics')
   const [period, setPeriod] = useState<Period>('3m')
   const months = periodConfig[period].months
 
@@ -170,6 +180,18 @@ export default function AnalyticsPage() {
           <h1 className="text-2xl font-semibold">Аналитика</h1>
           <p className="text-muted-foreground text-sm">Детальный анализ финансов</p>
         </div>
+        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'analytics' | 'report')}>
+          <TabsList>
+            <TabsTrigger value="analytics">Графики</TabsTrigger>
+            <TabsTrigger value="report">Отчёт</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {mainTab === 'report' && <ReportTab />}
+
+      {mainTab === 'analytics' && <>
+      <div className="flex justify-end">
         <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
           <TabsList>
             {(Object.entries(periodConfig) as [Period, { label: string }][]).map(([key, cfg]) => (
@@ -355,7 +377,198 @@ export default function AnalyticsPage() {
             })}
           </CardContent>
         </Card>
-      )}
+
+      {/* Top-5 Expense Categories */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Топ категорий расходов</CardTitle>
+          <CardDescription>Топ-5 категорий за {periodConfig[period].label.toLowerCase()}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {!topCategoriesRaw ? (
+            <Skeleton className="h-[250px] md:h-[350px] w-full" />
+          ) : topCategories.length === 0 ? (
+            <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
+              Нет расходов за выбранный период
+            </div>
+          ) : (
+            <div className="min-h-[250px] md:min-h-[350px]">
+            <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
+              <BarChart data={topCategories} layout="vertical" margin={{ left: 20, right: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
+                <Tooltip
+                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ""}
+                  labelStyle={{ fontWeight: 600 }}
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0].payload as { name: string; amount: number; percentage: number }
+                    return (
+                      <div className="rounded-lg border bg-background px-3 py-2 shadow-sm">
+                        <p className="text-sm font-semibold">{d.name}</p>
+                        <p className="text-sm">{formatAmount(d.amount)}</p>
+                        <p className="text-xs text-muted-foreground">{d.percentage}% от расходов</p>
+                      </div>
+                    )
+                  }}
+                />
+                <Bar dataKey="amount" name="Сумма" radius={[0, 4, 4, 0]}>
+                  {topCategories.map((entry, index) => (
+                    <Cell key={index} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      </>}
+    </div>
+  )
+}
+
+// ─── Monthly Report Tab ──────────────────────────────────────────────────────
+
+function ReportTab() {
+  const now = new Date()
+  const [year, setYear] = useState(now.getFullYear())
+  const [month, setMonth] = useState(now.getMonth() + 1)
+
+  const { data: report, isLoading } = trpc.transaction.monthlyReport.useQuery({ year, month })
+
+  const years = Array.from({ length: 3 }, (_, i) => now.getFullYear() - 2 + i)
+
+  return (
+    <div className="space-y-6 print:space-y-4">
+      {/* Controls */}
+      <div className="flex items-center gap-3 print:hidden">
+        <Select value={String(month)} onValueChange={(v) => setMonth(parseInt(v))}>
+          <SelectTrigger className="w-[160px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {MONTH_NAMES.map((name, i) => (
+              <SelectItem key={i} value={String(i + 1)}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={String(year)} onValueChange={(v) => setYear(parseInt(v))}>
+          <SelectTrigger className="w-[100px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map(y => (
+              <SelectItem key={y} value={String(y)}>{y}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button variant="outline" size="sm" className="ml-auto" onClick={() => window.print()}>
+          <Printer className="mr-1.5 h-4 w-4" />
+          Распечатать / PDF
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-24" />)}
+          </div>
+          <Skeleton className="h-40" />
+        </div>
+      ) : !report ? (
+        <Card>
+          <CardContent className="p-8 text-center text-muted-foreground">
+            Нет данных за выбранный месяц
+          </CardContent>
+        </Card>
+      ) : (
+        <>
+          {/* Summary cards */}
+          <div className="grid grid-cols-3 gap-4">
+            <Card className="border-green-100 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Доходы</p>
+                <p className="text-xl font-semibold text-green-600">{formatAmount(report.income.total)}</p>
+                <p className="text-xs text-muted-foreground">{report.income.count} транзакций</p>
+              </CardContent>
+            </Card>
+            <Card className="border-red-100 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20">
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Расходы</p>
+                <p className="text-xl font-semibold text-red-600">{formatAmount(report.expense.total)}</p>
+                <p className="text-xs text-muted-foreground">{report.expense.count} транзакций</p>
+              </CardContent>
+            </Card>
+            <Card className={report.savings >= 0
+              ? 'border-blue-100 bg-blue-50/50 dark:border-blue-900/30 dark:bg-blue-950/20'
+              : 'border-gray-100 bg-gray-50/50 dark:border-gray-900/30 dark:bg-gray-950/20'
+            }>
+              <CardContent className="p-4">
+                <p className="text-xs text-muted-foreground mb-1">Сбережения</p>
+                <p className={`text-xl font-semibold ${report.savings >= 0 ? 'text-blue-600' : 'text-gray-500'}`}>
+                  {formatAmount(report.savings)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top-5 categories */}
+          {report.byCategory.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Топ-5 категорий расходов</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {report.byCategory.map((cat, i) => {
+                  const maxAmount = report.byCategory[0]?.amount ?? 1
+                  const pct = maxAmount > 0 ? Math.round((cat.amount / maxAmount) * 100) : 0
+                  return (
+                    <div key={i}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
+                          <span className="text-sm font-medium">{cat.category?.name ?? 'Без категории'}</span>
+                        </div>
+                        <span className="text-sm font-semibold">{formatAmount(cat.amount)}</span>
+                      </div>
+                      <Progress value={pct} className="h-2" />
+                    </div>
+                  )
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Top-5 expenses */}
+          {report.topExpenses.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Топ-5 крупнейших трат</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {report.topExpenses.map((tx, i) => (
+                    <div key={i} className="flex items-center justify-between">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium truncate">{tx.description || 'Без описания'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {tx.category?.name ?? 'Без категории'} &middot; {new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                        </p>
+                      </div>
+                      <span className="shrink-0 ml-4 font-semibold text-red-600">
+                        -{formatAmount(Number(tx.amount))}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </>      )}
     </div>
   )
 }

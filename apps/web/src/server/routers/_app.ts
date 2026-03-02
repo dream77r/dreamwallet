@@ -9,6 +9,7 @@ import { settingsRouter } from './settings'
 import { importRouter } from './import'
 import { billingRouter } from './billing'
 import { adminRouter } from './admin'
+import { debtsRouter } from './debts'
 import { recurringRouter } from './recurring'
 import { autoRulesRouter } from './auto-rules'
 import { goalsRouter } from './goals'
@@ -29,6 +30,7 @@ export const appRouter = router({
   import: importRouter,
   billing: billingRouter,
   admin: adminRouter,
+  debts: debtsRouter,
   recurring: recurringRouter,
   autoRules: autoRulesRouter,
   goals: goalsRouter,

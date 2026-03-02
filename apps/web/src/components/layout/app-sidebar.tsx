@@ -35,6 +35,8 @@ import {
   Flag,
   TrendingUp,
   BrainCircuit,
+  HandCoins,
+  CalendarClock,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
@@ -44,6 +46,8 @@ const mainNav = [
   { title: 'Транзакции', href: '/dashboard/transactions', icon: ArrowLeftRight },
   { title: 'Счета', href: '/dashboard/accounts', icon: CreditCard },
   { title: 'Регулярные', href: '/dashboard/recurring', icon: Repeat2 },
+  { title: 'Долги', href: '/dashboard/debts', icon: HandCoins },
+  { title: 'Подписки', href: '/dashboard/subscriptions-tracker', icon: CalendarClock },
   { title: 'Бюджеты', href: '/dashboard/budgets', icon: Target },
   { title: 'Категории', href: '/dashboard/categories', icon: Tag },
   { title: 'Теги', href: '/dashboard/tags', icon: Hash },
