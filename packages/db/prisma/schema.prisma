@@ -46,6 +46,7 @@ model User {
   importTemplates  ImportTemplate[]
   autoRules        AutoCategoryRule[]
   goals            Goal[]
+  debts            Debt[]
   tags             Tag[]
   pushSubscriptions PushSubscription[]
   telegramConn     TelegramConnection?
@@ -440,15 +441,16 @@ model AutoCategoryRule {
 // ─────────────────────────────────────────────
 
 model RecurringRule {
-  id          String   @id @default(cuid())
-  name        String
-  amount      Decimal  @db.Decimal(15, 2)
-  type        TransactionType
-  schedule    String   // cron expression
-  nextRunAt   DateTime @map("next_run_at")
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id            String   @id @default(cuid())
+  name          String
+  amount        Decimal  @db.Decimal(15, 2)
+  type          TransactionType
+  schedule      String   // cron expression
+  nextRunAt     DateTime @map("next_run_at")
+  isActive      Boolean  @default(true) @map("is_active")
+  reminderDays  Int      @default(3) @map("reminder_days")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
 
   transactions Transaction[]
 
@@ -650,6 +652,41 @@ model Goal {
 
   @@index([userId])
   @@map("goals")
+}
+
+// ─────────────────────────────────────────────
+// Debts & Loans
+// ─────────────────────────────────────────────
+
+enum DebtType {
+  LENT
+  BORROWED
+}
+
+enum DebtStatus {
+  ACTIVE
+  PARTIALLY_REPAID
+  REPAID
+  CANCELLED
+}
+
+model Debt {
+  id           String     @id @default(cuid())
+  userId       String     @map("user_id")
+  type         DebtType
+  status       DebtStatus @default(ACTIVE)
+  counterparty String
+  amount       Decimal    @db.Decimal(15, 2)
+  currency     String     @default("RUB")
+  paidAmount   Decimal    @default(0) @db.Decimal(15, 2) @map("paid_amount")
+  description  String?
+  dueDate      DateTime?  @map("due_date")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("debts")
 }
 
 // ─────────────────────────────────────────────

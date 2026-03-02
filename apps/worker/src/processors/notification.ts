@@ -3,7 +3,7 @@ import { prisma } from '@dreamwallet/db'
 import webpush from 'web-push'
 
 interface NotificationData {
-  type: 'budget_check' | 'large_transaction' | 'weekly_digest'
+  type: 'budget_check' | 'large_transaction' | 'weekly_digest' | 'recurring_reminder'
   userId?: string
   transactionId?: string
   amount?: number
@@ -31,6 +31,37 @@ async function pushToUser(userId: string, payload: { title: string; body: string
         })
     )
   )
+}
+
+async function checkRecurringReminders() {
+  const now = new Date()
+  const in7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+  const rules = await prisma.recurringRule.findMany({
+    where: { isActive: true, nextRunAt: { gte: now, lte: in7Days } },
+    include: {
+      transactions: {
+        take: 1,
+        include: { account: { include: { wallet: { select: { userId: true } } } } },
+      },
+    },
+  })
+
+  let sent = 0
+  for (const rule of rules) {
+    const userId = rule.transactions[0]?.account?.wallet?.userId
+    if (!userId) continue
+    const daysUntil = Math.ceil((rule.nextRunAt.getTime() - now.getTime()) / 86400000)
+    if (daysUntil > rule.reminderDays) continue
+    const fmt = (n: number) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(n)
+    const dayWord = daysUntil === 1 ? 'день' : daysUntil < 5 ? 'дня' : 'дней'
+    const title = `Напоминание: ${rule.name}`
+    const body = `${rule.type === 'EXPENSE' ? 'Списание' : 'Поступление'} ${fmt(Number(rule.amount))} через ${daysUntil} ${dayWord}`
+    await prisma.notification.create({ data: { userId, type: 'SYSTEM', title, body, data: { recurringRuleId: rule.id, daysUntil } } })
+    await pushToUser(userId, { title: `⏰ ${title}`, body, url: '/dashboard/recurring' })
+    sent++
+  }
+  return { checked: rules.length, sent }
 }
 
 export const notificationProcessor: Processor<NotificationData> = async (job: Job<NotificationData>) => {
@@ -62,6 +93,10 @@ export const notificationProcessor: Processor<NotificationData> = async (job: Jo
 
   if (type === 'weekly_digest') {
     return await sendWeeklyDigest()
+  }
+
+  if (type === 'recurring_reminder') {
+    return await checkRecurringReminders()
   }
 
   return { unknown: type }

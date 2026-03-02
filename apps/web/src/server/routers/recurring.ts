@@ -73,11 +73,12 @@ export const recurringRouter = router({
   create: protectedProcedure
     .input(
       z.object({
-        name:      z.string().min(1).max(100),
-        amount:    z.number().positive(),
-        type:      z.enum(['INCOME', 'EXPENSE']),
-        accountId: z.string().cuid(),
-        schedule:  z.enum(['0 9 * * *', '0 9 * * 1', '0 9 1 * *', '0 9 1 */3 *', '0 9 1 1 *']),
+        name:         z.string().min(1).max(100),
+        amount:       z.number().positive(),
+        type:         z.enum(['INCOME', 'EXPENSE']),
+        accountId:    z.string().cuid(),
+        schedule:     z.enum(['0 9 * * *', '0 9 * * 1', '0 9 1 * *', '0 9 1 */3 *', '0 9 1 1 *']),
+        reminderDays: z.number().int().min(0).max(30).default(3),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -92,12 +93,13 @@ export const recurringRouter = router({
       return ctx.prisma.$transaction(async (tx) => {
         const rule = await tx.recurringRule.create({
           data: {
-            name:      input.name,
-            amount:    input.amount,
-            type:      input.type,
-            schedule:  input.schedule,
+            name:         input.name,
+            amount:       input.amount,
+            type:         input.type,
+            schedule:     input.schedule,
             nextRunAt,
-            isActive:  true,
+            isActive:     true,
+            reminderDays: input.reminderDays,
           },
         })
 
@@ -122,10 +124,11 @@ export const recurringRouter = router({
   update: protectedProcedure
     .input(
       z.object({
-        id:       z.string().cuid(),
-        name:     z.string().min(1).max(100).optional(),
-        amount:   z.number().positive().optional(),
-        isActive: z.boolean().optional(),
+        id:           z.string().cuid(),
+        name:         z.string().min(1).max(100).optional(),
+        amount:       z.number().positive().optional(),
+        isActive:     z.boolean().optional(),
+        reminderDays: z.number().int().min(0).max(30).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

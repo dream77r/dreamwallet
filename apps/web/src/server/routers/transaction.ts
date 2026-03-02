@@ -365,6 +365,34 @@ export const transactionRouter = router({
       return { data: rows, filename: `transactions-${new Date().toISOString().split('T')[0]}.csv` }
     }),
 
+  // Monthly report
+  monthlyReport: protectedProcedure
+    .input(z.object({ year: z.number().int(), month: z.number().int().min(1).max(12) }))
+    .query(async ({ ctx, input }) => {
+      const start = new Date(input.year, input.month - 1, 1)
+      const end = new Date(input.year, input.month, 0, 23, 59, 59)
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
+      if (!wallet) return null
+      const accounts = await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } })
+      const accountIds = accounts.map(a => a.id)
+      const where = { accountId: { in: accountIds }, date: { gte: start, lte: end } }
+      const [income, expense, byCategory, topExpenses] = await Promise.all([
+        ctx.prisma.transaction.aggregate({ where: { ...where, type: 'INCOME' }, _sum: { amount: true }, _count: true }),
+        ctx.prisma.transaction.aggregate({ where: { ...where, type: 'EXPENSE' }, _sum: { amount: true }, _count: true }),
+        ctx.prisma.transaction.groupBy({ by: ['categoryId'], where: { ...where, type: 'EXPENSE', categoryId: { not: null } }, _sum: { amount: true }, orderBy: { _sum: { amount: 'desc' } }, take: 5 }),
+        ctx.prisma.transaction.findMany({ where: { ...where, type: 'EXPENSE' }, orderBy: { amount: 'desc' }, take: 5, select: { amount: true, description: true, date: true, category: { select: { name: true } } } }),
+      ])
+      const catIds = byCategory.map(c => c.categoryId).filter(Boolean) as string[]
+      const categories = await ctx.prisma.category.findMany({ where: { id: { in: catIds } }, select: { id: true, name: true } })
+      return {
+        income: { total: Number(income._sum.amount ?? 0), count: income._count },
+        expense: { total: Number(expense._sum.amount ?? 0), count: expense._count },
+        savings: Number(income._sum.amount ?? 0) - Number(expense._sum.amount ?? 0),
+        byCategory: byCategory.map(c => ({ category: categories.find(cat => cat.id === c.categoryId), amount: Number(c._sum.amount ?? 0) })),
+        topExpenses,
+      }
+    }),
+
   // Global search across transactions
   search: protectedProcedure
     .input(z.object({

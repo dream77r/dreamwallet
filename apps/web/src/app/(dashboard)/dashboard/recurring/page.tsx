@@ -73,6 +73,7 @@ interface FormValues {
   type: TxType
   accountId: string
   schedule: ScheduleValue
+  reminderDays: number
 }
 
 interface RecurringFormDialogProps {
@@ -86,11 +87,12 @@ function RecurringFormDialog({ open, onOpenChange, initialData }: RecurringFormD
   const isEdit = !!initialData
 
   const [form, setForm] = useState<FormValues>({
-    name:      initialData?.name ?? '',
-    amount:    initialData ? String(initialData.amount) : '',
-    type:      'EXPENSE',
-    accountId: '',
-    schedule:  '0 9 1 * *',
+    name:         initialData?.name ?? '',
+    amount:       initialData ? String(initialData.amount) : '',
+    type:         'EXPENSE',
+    accountId:    '',
+    schedule:     '0 9 1 * *',
+    reminderDays: 3,
   })
 
   const { data: accounts = [] } = trpc.account.listAll.useQuery()
@@ -100,7 +102,7 @@ function RecurringFormDialog({ open, onOpenChange, initialData }: RecurringFormD
       toast.success('Регулярный платёж добавлен')
       utils.recurring.list.invalidate()
       onOpenChange(false)
-      setForm({ name: '', amount: '', type: 'EXPENSE', accountId: '', schedule: '0 9 1 * *' })
+      setForm({ name: '', amount: '', type: 'EXPENSE', accountId: '', schedule: '0 9 1 * *', reminderDays: 3 })
     },
     onError: (e) => toast.error(e.message),
   })
@@ -127,11 +129,12 @@ function RecurringFormDialog({ open, onOpenChange, initialData }: RecurringFormD
     } else {
       if (!form.accountId) { toast.error('Выберите счёт'); return }
       createMutation.mutate({
-        name:      form.name.trim(),
-        amount:    parseFloat(form.amount),
-        type:      form.type,
-        accountId: form.accountId,
-        schedule:  form.schedule,
+        name:         form.name.trim(),
+        amount:       parseFloat(form.amount),
+        type:         form.type,
+        accountId:    form.accountId,
+        schedule:     form.schedule,
+        reminderDays: form.reminderDays,
       })
     }
   }
@@ -242,6 +245,18 @@ function RecurringFormDialog({ open, onOpenChange, initialData }: RecurringFormD
               </Select>
             </div>
           )}
+
+          {/* Напоминание */}
+          <div className="space-y-1.5">
+            <Label>Напомнить за N дней</Label>
+            <Input
+              type="number"
+              value={form.reminderDays}
+              onChange={(e) => setForm((f) => ({ ...f, reminderDays: parseInt(e.target.value) || 0 }))}
+              min={0}
+              max={30}
+            />
+          </div>
 
           <Button type="submit" className="w-full" disabled={isPending}>
             {isPending ? 'Сохранение...' : isEdit ? 'Сохранить' : 'Добавить'}

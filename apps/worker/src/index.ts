@@ -55,6 +55,15 @@ notifQueue.add('weekly-digest', { type: 'weekly_digest' }, {
   logger.error(err, 'Failed to schedule weekly digest cron')
 })
 
+notifQueue.add('recurring-reminder', { type: 'recurring_reminder' }, {
+  repeat: { pattern: '0 8 * * *', tz: 'Europe/Moscow' },
+  jobId: 'recurring-reminder-cron',
+}).then(() => {
+  logger.info('Recurring reminder cron scheduled (daily 08:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule recurring reminder cron')
+})
+
 // Start Telegram bot (if token configured)
 const botToken = process.env.TELEGRAM_BOT_TOKEN
 if (botToken) {
