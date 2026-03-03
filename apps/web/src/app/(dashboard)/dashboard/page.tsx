@@ -122,16 +122,14 @@ export default function DashboardPage() {
     { enabled: !!walletId }
   )
 
-  // 5. Get budgets
-  const { data: budgets, isLoading: budgetsLoading } = trpc.budget.list.useQuery(
-    { walletId: walletId! },
-    { enabled: !!walletId }
-  )
-
-  // 6. Get recent transactions
-  const { data: goals } = trpc.goals.list.useQuery()
+  // 5. dashboardData — все агрегаты одним запросом
   const { data: dash, isLoading: dashLoading } = trpc.wallet.dashboardData.useQuery(undefined, { staleTime: 30_000 })
-  const { data: greeting, isLoading: greetingLoading } = trpc.wallet.smartGreeting.useQuery()
+  const budgets = dash?.budgets
+  const budgetsLoading = dashLoading
+  const goals = dash?.goals
+  const greeting = dash?.greeting
+  const greetingLoading = dashLoading
+
 
   const { data: recentTxData, isLoading: txLoading } = trpc.transaction.list.useQuery({
     page: 1,
