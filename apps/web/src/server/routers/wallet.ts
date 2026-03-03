@@ -379,3 +379,92 @@ export const netWorthQuery = async (prisma: any, userId: string) => {
 })),
   }
 }
+
+export const smartGreetingQuery = async (prisma: any, userId: string, userName: string | null) => {
+  const now = new Date()
+  const hour = now.getHours()
+  const dayOfMonth = now.getDate()
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+  const daysLeft = daysInMonth - dayOfMonth
+
+  const wallet = await prisma.wallet.findFirst({ where: { userId } })
+  if (!wallet) return null
+
+  const accounts = await prisma.account.findMany({
+    where: { walletId: wallet.id }, select: { id: true },
+  })
+  const accountIds = accounts.map((a: any) => a.id)
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const [expenseAgg, incomeAgg, budgets] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: monthStart } },
+      _sum: { amount: true },
+    }),
+    prisma.budget.findMany({
+      where: { isActive: true, wallet: { userId } },
+      include: { wallet: { include: { accounts: { select: { id: true } } } } },
+    }),
+  ])
+
+  const expense = Number(expenseAgg._sum.amount ?? 0)
+  const income = Number(incomeAgg._sum.amount ?? 0)
+  const dailyRate = dayOfMonth > 0 ? expense / dayOfMonth : 0
+  const projectedExpense = dailyRate * daysInMonth
+
+  // Бюджеты — сколько превышено
+  let budgetsExceeded = 0
+  for (const b of budgets) {
+    const ids = b.wallet.accounts.map((a: any) => a.id)
+    const agg = await prisma.transaction.aggregate({
+      where: { accountId: { in: ids }, categoryId: b.categoryId, type: 'EXPENSE', date: { gte: monthStart } },
+      _sum: { amount: true },
+    })
+    if (Number(agg._sum.amount ?? 0) > Number(b.amount)) budgetsExceeded++
+  }
+
+  // Строим нарратив
+  const greetWord = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер'
+  const name = userName ? `, ${userName.split(' ')[0]}` : ''
+
+  // Статус трат
+  const savingsRate = income > 0 ? (income - expense) / income : 0
+  let status: 'good' | 'warning' | 'danger' = 'good'
+  let statusEmoji = '🟢'
+  let statusText = 'Темп трат нормальный'
+
+  if (savingsRate < 0) {
+    status = 'danger'
+    statusEmoji = '🔴'
+    statusText = 'Расходы превышают доходы'
+  } else if (budgetsExceeded > 0) {
+    status = 'warning'
+    statusEmoji = '🟡'
+    statusText = `${budgetsExceeded} ${budgetsExceeded === 1 ? 'бюджет превышен' : 'бюджета превышено'}`
+  } else if (savingsRate > 0.3) {
+    statusEmoji = '💚'
+    statusText = 'Отличный темп сбережений!'
+  }
+
+  const fmt = (n: number) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 
+  smartGreeting: protectedProcedure.query(async ({ ctx }) => {
+    return smartGreetingQuery(ctx.prisma, ctx.user.id, ctx.user.name ?? null)
+  }),
+}).format(n)
+
+  // Главное сообщение
+  let message = `${greetWord}${name}! До конца месяца ${daysLeft} ${daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'}. ${statusEmoji} ${statusText}.`
+
+  if (income > 0 && expense > 0) {
+    const remaining = income - expense
+    if (remaining > 0) {
+      message += ` Потрачено ${fmt(expense)} из ${fmt(income)}.`
+    }
+  }
+
+  return { message, status, statusEmoji, daysLeft, projectedExpense: Math.round(projectedExpense), expense, income }
+}

@@ -262,4 +262,41 @@ ${summary || 'Транзакции не найдены.'}
         throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Не удалось распарсить ответ AI' })
       }
     }),
+
+  parseReceipt: protectedProcedure
+    .input(z.object({ imageBase64: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { getAiClient } = await import('@/lib/ai-models')
+        const client = await getAiClient(ctx.prisma)
+        if (!client) {
+          // Fallback если нет AI клиента
+          return { amount: 0, description: 'Чек', date: new Date().toISOString().split('T')[0], category: 'Другое' }
+        }
+        const response = await client.chat.completions.create({
+          model: client.model,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: 'Распознай чек на изображении. Верни ТОЛЬКО JSON без markdown: {"amount": число, "description": "краткое описание покупки", "date": "YYYY-MM-DD", "category": "название категории на русском"}. Если не можешь распознать — верни {"amount": 0, "description": "Чек", "date": "' + new Date().toISOString().split('T')[0] + '", "category": "Другое"}',
+                },
+                {
+                  type: 'image_url',
+                  image_url: { url: `data:image/jpeg;base64,${input.imageBase64}` },
+                },
+              ],
+            },
+          ],
+          max_tokens: 200,
+        })
+        const text = response.choices[0]?.message?.content ?? ''
+        const parsed = JSON.parse(text.trim())
+        return parsed
+      } catch {
+        return { amount: 0, description: 'Чек', date: new Date().toISOString().split('T')[0], category: 'Другое' }
+      }
+    }),
 })

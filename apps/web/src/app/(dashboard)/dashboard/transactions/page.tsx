@@ -40,6 +40,7 @@ import {
   Tag,
   X,
   Download,
+  Camera,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -101,6 +102,29 @@ export default function TransactionsPage() {
     { format: 'csv' },
     { enabled: false }
   )
+
+  const parseReceiptMutation = trpc.ai.parseReceipt.useMutation({
+    onSuccess: (data) => {
+      if (data && data.amount > 0) {
+        toast.success(`Распознано: ${data.description} — ${data.amount}₽`)
+      } else {
+        toast.error('Не удалось распознать чек')
+      }
+    },
+    onError: () => toast.error('Ошибка при сканировании'),
+  })
+
+  const handleScanReceipt = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = (reader.result as string).split(',')[1]
+      parseReceiptMutation.mutate({ imageBase64: base64 })
+    }
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
 
   const handleExport = async () => {
     const result = await exportQuery.refetch()
@@ -231,6 +255,15 @@ export default function TransactionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <label className="cursor-pointer">
+            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} />
+            <Button variant="outline" size="sm" asChild disabled={parseReceiptMutation.isPending}>
+              <span>
+                <Camera className="h-4 w-4 mr-2" />
+                {parseReceiptMutation.isPending ? 'Сканирую...' : 'Чек'}
+              </span>
+            </Button>
+          </label>
           <Button variant="outline" size="sm" onClick={handleExport} disabled={exportQuery.isFetching}>
             <Download className="h-4 w-4 mr-2" />
             {exportQuery.isFetching ? 'Экспорт...' : 'CSV'}
