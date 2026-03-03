@@ -265,7 +265,7 @@ ${summary || 'Транзакции не найдены.'}
 
   parseReceipt: protectedProcedure
     .input(z.object({ imageBase64: z.string() }))
-    .mutation(async ({ _ctx, input }) => {
+    .mutation(async ({ input }) => {
       try {
         // Use OpenRouter with vision model
         const apiKey = process.env.OPENROUTER_API_KEY
