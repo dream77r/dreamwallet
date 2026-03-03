@@ -260,116 +260,126 @@ export const walletRouter = router({
   }),
 
   smartGreeting: protectedProcedure.query(async ({ ctx }) => {
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    const dayOfMonth = now.getDate()
-    const daysLeft = daysInMonth - dayOfMonth
-    const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
-    if (!wallet) return null
-    const accounts = await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } })
-    const accountIds = accounts.map((a) => a.id)
-    const [incAgg, expAgg, budgets] = await Promise.all([
-      ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: monthStart } }, _sum: { amount: true } }),
-      ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } }),
-      ctx.prisma.budget.findMany({ where: { isActive: true, wallet: { userId: ctx.user.id } }, include: { wallet: { include: { accounts: { select: { id: true } } } } } }),
-    ])
-    const income = Number(incAgg._sum.amount ?? 0)
-    const expense = Number(expAgg._sum.amount ?? 0)
-    const savingsRate = income > 0 ? Math.max(0, (income - expense) / income) : 0
-    let budgetsExceeded = 0
-    for (const b of budgets) {
-      const ids = b.wallet.accounts.map((a) => a.id)
-      const agg = await ctx.prisma.transaction.aggregate({ where: { accountId: { in: ids }, categoryId: b.categoryId, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } })
-      if (Number(agg._sum.amount ?? 0) > Number(b.amount)) budgetsExceeded++
+    try {
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      const dayOfMonth = now.getDate()
+      const daysLeft = daysInMonth - dayOfMonth
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
+      if (!wallet) return null
+      const accounts = await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } })
+      const accountIds = accounts.map((a) => a.id)
+      const [incAgg, expAgg, budgets] = await Promise.all([
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: monthStart } }, _sum: { amount: true } }),
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } }),
+        ctx.prisma.budget.findMany({ where: { isActive: true, wallet: { userId: ctx.user.id } }, include: { wallet: { include: { accounts: { select: { id: true } } } } } }),
+      ])
+      const income = Number(incAgg._sum.amount ?? 0)
+      const expense = Number(expAgg._sum.amount ?? 0)
+      const savingsRate = income > 0 ? Math.max(0, (income - expense) / income) : 0
+      let budgetsExceeded = 0
+      for (const b of budgets) {
+        const ids = b.wallet.accounts.map((a) => a.id)
+        const agg = await ctx.prisma.transaction.aggregate({ where: { accountId: { in: ids }, categoryId: b.categoryId, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } })
+        if (Number(agg._sum.amount ?? 0) > Number(b.amount)) budgetsExceeded++
+      }
+      const hour = now.getHours()
+      const greetWord = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер'
+      const firstName = ctx.user.name ? (', ' + ctx.user.name.split(' ')[0]) : ''
+      const status = income > 0 && expense > income ? 'danger' : budgetsExceeded > 0 ? 'warning' : 'good'
+      const statusEmoji = status === 'danger' ? '🔴' : status === 'warning' ? '🟡' : savingsRate > 0.3 ? '💚' : '🟢'
+      const statusText = status === 'danger' ? 'Расходы превышают доходы' : budgetsExceeded > 0 ? (budgetsExceeded + ' ' + (budgetsExceeded === 1 ? 'бюджет превышен' : 'бюджета превышено')) : savingsRate > 0.3 ? 'Отличный темп сбережений!' : 'Темп трат нормальный'
+      const fmt = (n: number) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(n)
+      const daysWord = daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'
+      let message = greetWord + firstName + '! До конца месяца ' + daysLeft + ' ' + daysWord + '. ' + statusEmoji + ' ' + statusText + '.'
+      if (income > 0 && expense > 0 && income > expense) message += ' Потрачено ' + fmt(expense) + ' из ' + fmt(income) + '.'
+      return { message, status, statusEmoji, daysLeft, expense, income }
+    } catch (e) {
+      console.error("[smartGreeting] error:", e)
+      return null
     }
-    const hour = now.getHours()
-    const greetWord = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер'
-    const firstName = ctx.user.name ? (', ' + ctx.user.name.split(' ')[0]) : ''
-    const status = income > 0 && expense > income ? 'danger' : budgetsExceeded > 0 ? 'warning' : 'good'
-    const statusEmoji = status === 'danger' ? '🔴' : status === 'warning' ? '🟡' : savingsRate > 0.3 ? '💚' : '🟢'
-    const statusText = status === 'danger' ? 'Расходы превышают доходы' : budgetsExceeded > 0 ? (budgetsExceeded + ' ' + (budgetsExceeded === 1 ? 'бюджет превышен' : 'бюджета превышено')) : savingsRate > 0.3 ? 'Отличный темп сбережений!' : 'Темп трат нормальный'
-    const fmt = (n: number) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(n)
-    const daysWord = daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'
-    let message = greetWord + firstName + '! До конца месяца ' + daysLeft + ' ' + daysWord + '. ' + statusEmoji + ' ' + statusText + '.'
-    if (income > 0 && expense > 0 && income > expense) message += ' Потрачено ' + fmt(expense) + ' из ' + fmt(income) + '.'
-    return { message, status, statusEmoji, daysLeft, expense, income }
   }),
 
   dashboardData: protectedProcedure.query(async ({ ctx }) => {
-    const userId = ctx.user.id
-    const now = new Date()
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-    const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-    const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
-    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
-    const dayOfMonth = now.getDate()
-    const daysLeft = daysInMonth - dayOfMonth
-    const wallet = await ctx.prisma.wallet.findFirst({ where: { userId }, include: { accounts: { select: { id: true, name: true, balance: true, type: true, currency: true } } } })
-    if (!wallet) return null
-    const accountIds = wallet.accounts.map((a) => a.id)
-    const [thisIncome, thisExpense, prevIncome, prevExpense, budgets, goals, debts] = await Promise.all([
-      ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: monthStart } }, _sum: { amount: true } }),
-      ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } }),
-      ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
-      ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
-      ctx.prisma.budget.findMany({ where: { isActive: true, wallet: { userId } }, include: { category: true, wallet: { include: { accounts: { select: { id: true } } } } } }),
-      ctx.prisma.goal.findMany({ where: { userId, isCompleted: false } }),
-      ctx.prisma.debt.findMany({ where: { userId, type: 'BORROWED', status: { in: ['ACTIVE', 'PARTIALLY_REPAID'] } }, select: { counterparty: true, amount: true, paidAmount: true } }),
-    ])
-    const income = Number(thisIncome._sum.amount ?? 0)
-    const expense = Number(thisExpense._sum.amount ?? 0)
-    const prevExp = Number(prevExpense._sum.amount ?? 0)
-    const prevInc = Number(prevIncome._sum.amount ?? 0)
-    const budgetResults = await Promise.all(budgets.map(async (b) => {
-      const ids = b.wallet.accounts.map((a) => a.id)
-      const agg = await ctx.prisma.transaction.aggregate({ where: { accountId: { in: ids }, categoryId: b.categoryId, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } })
-      const spent = Number(agg._sum.amount ?? 0)
-      return { exceeded: spent > Number(b.amount), spent, budget: b }
-    }))
-    const budgetsExceeded = budgetResults.filter((r) => r.exceeded).length
-    const savingsRate = income > 0 ? Math.max(0, (income - expense) / income) : 0
-    const savingsScore = Math.min(40, Math.round((savingsRate / 0.2) * 40))
-    const budgetScore = budgets.length > 0 ? Math.round(((budgets.length - budgetsExceeded) / budgets.length) * 30) : 30
-    const goalScore = goals.length > 0 ? Math.round(goals.reduce((s, g) => s + Math.min(1, Number(g.currentAmount) / Math.max(1, Number(g.targetAmount))), 0) / goals.length * 15) : 15
-    const ratio = daysInMonth / Math.max(dayOfMonth, 1)
-    const currProjected = expense * ratio
-    const consistencyScore = prevExp > 0 ? (currProjected / prevExp <= 1.0 ? 15 : currProjected / prevExp <= 1.1 ? 12 : currProjected / prevExp <= 1.2 ? 9 : currProjected / prevExp <= 1.4 ? 5 : 0) : 15
-    const score = savingsScore + budgetScore + goalScore + consistencyScore
-    const scoreLabel = score >= 85 ? 'Отличное здоровье 💚' : score >= 70 ? 'Хорошее здоровье 🟡' : score >= 50 ? 'Есть над чем работать 🟠' : 'Требует внимания 🔴'
-    const projectedExpense = Math.round(expense * ratio)
-    const projectedIncome = Math.round(income * ratio)
-    const forecastStatus = prevExp > 0 ? (projectedExpense / prevExp > 1.2 ? 'danger' : projectedExpense / prevExp > 1.05 ? 'warning' : 'good') : 'good'
-    const expenseDiff = prevExp > 0 ? Math.round((projectedExpense - prevExp) / prevExp * 100) : 0
-    const hour = now.getHours()
-    const greetWord = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер'
-    const firstName = ctx.user.name ? (', ' + ctx.user.name.split(' ')[0]) : ''
-    const greetStatus = income > 0 && expense > income ? 'danger' : budgetsExceeded > 0 ? 'warning' : 'good'
-    const statusEmoji = greetStatus === 'danger' ? '🔴' : greetStatus === 'warning' ? '🟡' : savingsRate > 0.3 ? '💚' : '🟢'
-    const statusText = greetStatus === 'danger' ? 'Расходы превышают доходы' : budgetsExceeded > 0 ? (budgetsExceeded + ' ' + (budgetsExceeded === 1 ? 'бюджет превышен' : 'бюджета превышено')) : savingsRate > 0.3 ? 'Отличный темп сбережений!' : 'Темп трат нормальный'
-    const fmt = (n: number) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(n)
-    const daysWord = daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'
-    let greetMessage = greetWord + firstName + '! До конца месяца ' + daysLeft + ' ' + daysWord + '. ' + statusEmoji + ' ' + statusText + '.'
-    if (income > 0 && expense > 0 && income > expense) greetMessage += ' Потрачено ' + fmt(expense) + ' из ' + fmt(income) + '.'
-    const totalAssets = wallet.accounts.reduce((s, a) => s + Math.max(0, Number(a.balance)), 0)
-    const totalDebtsAmount = debts.reduce((s, d) => s + Number(d.amount) - Number(d.paidAmount), 0)
-    return {
-      score: {
-        score, label: scoreLabel, savingsScore, budgetScore, goalScore, consistencyScore,
-        trend: 0,  // simplified: no trend calc in dashboardData
-        breakdown: [
-          { name: 'Норма сбережений', score: savingsScore, max: 40, hint: Math.round(savingsRate * 100) + '% от дохода (цель 20%+)' },
-          { name: 'Соблюдение бюджетов', score: budgetScore, max: 30, hint: budgets.length > 0 ? (budgetScore === 30 ? 'Все бюджеты соблюдены' : 'Часть бюджетов превышена') : 'Бюджеты не настроены' },
-          { name: 'Прогресс целей', score: goalScore, max: 15, hint: goals.length > 0 ? (goals.length + ' активных целей') : 'Цели не настроены' },
-          { name: 'Стабильность трат', score: consistencyScore, max: 15, hint: 'vs прошлый месяц' },
-        ],
-      },
-      forecast: { projectedExpense, projectedIncome, projectedBalance: projectedIncome - projectedExpense, vsLastMonth: expenseDiff, status: forecastStatus, daysLeft, dayOfMonth, daysInMonth },
-      comparison: { expenseDiff, win: expenseDiff < -5, projectedExpense, prevMonthExpense: prevExp, income, expense, prevIncome: prevInc },
-      greeting: { message: greetMessage, status: greetStatus, statusEmoji },
-      netWorthSummary: { totalAssets: Math.round(totalAssets), totalDebts: Math.round(totalDebtsAmount), netWorth: Math.round(totalAssets - totalDebtsAmount), monthDelta: Math.round(income - expense) },
-      budgets: budgetResults.map((r) => ({ ...r.budget, spentAmount: r.spent, percentage: Number(r.budget.amount) > 0 ? Math.round(r.spent / Number(r.budget.amount) * 100) : 0 })),
-      goals,
+    try {
+      const userId = ctx.user.id
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+      const prevMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
+      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+      const dayOfMonth = now.getDate()
+      const daysLeft = daysInMonth - dayOfMonth
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId }, include: { accounts: { select: { id: true, name: true, balance: true, type: true, currency: true } } } })
+      if (!wallet) return null
+      const accountIds = wallet.accounts.map((a) => a.id)
+      const [thisIncome, thisExpense, prevIncome, prevExpense, budgets, goals, debts] = await Promise.all([
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: monthStart } }, _sum: { amount: true } }),
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } }),
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
+        ctx.prisma.budget.findMany({ where: { isActive: true, wallet: { userId } }, include: { category: true, wallet: { include: { accounts: { select: { id: true } } } } } }),
+        ctx.prisma.goal.findMany({ where: { userId, isCompleted: false } }),
+        ctx.prisma.debt.findMany({ where: { userId, type: 'BORROWED', status: { in: ['ACTIVE', 'PARTIALLY_REPAID'] } }, select: { counterparty: true, amount: true, paidAmount: true } }),
+      ])
+      const income = Number(thisIncome._sum.amount ?? 0)
+      const expense = Number(thisExpense._sum.amount ?? 0)
+      const prevExp = Number(prevExpense._sum.amount ?? 0)
+      const prevInc = Number(prevIncome._sum.amount ?? 0)
+      const budgetResults = await Promise.all(budgets.map(async (b) => {
+        const ids = b.wallet.accounts.map((a) => a.id)
+        const agg = await ctx.prisma.transaction.aggregate({ where: { accountId: { in: ids }, categoryId: b.categoryId, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } })
+        const spent = Number(agg._sum.amount ?? 0)
+        return { exceeded: spent > Number(b.amount), spent, budget: b }
+      }))
+      const budgetsExceeded = budgetResults.filter((r) => r.exceeded).length
+      const savingsRate = income > 0 ? Math.max(0, (income - expense) / income) : 0
+      const savingsScore = Math.min(40, Math.round((savingsRate / 0.2) * 40))
+      const budgetScore = budgets.length > 0 ? Math.round(((budgets.length - budgetsExceeded) / budgets.length) * 30) : 30
+      const goalScore = goals.length > 0 ? Math.round(goals.reduce((s, g) => s + Math.min(1, Number(g.currentAmount) / Math.max(1, Number(g.targetAmount))), 0) / goals.length * 15) : 15
+      const ratio = daysInMonth / Math.max(dayOfMonth, 1)
+      const currProjected = expense * ratio
+      const consistencyScore = prevExp > 0 ? (currProjected / prevExp <= 1.0 ? 15 : currProjected / prevExp <= 1.1 ? 12 : currProjected / prevExp <= 1.2 ? 9 : currProjected / prevExp <= 1.4 ? 5 : 0) : 15
+      const score = savingsScore + budgetScore + goalScore + consistencyScore
+      const scoreLabel = score >= 85 ? 'Отличное здоровье 💚' : score >= 70 ? 'Хорошее здоровье 🟡' : score >= 50 ? 'Есть над чем работать 🟠' : 'Требует внимания 🔴'
+      const projectedExpense = Math.round(expense * ratio)
+      const projectedIncome = Math.round(income * ratio)
+      const forecastStatus = prevExp > 0 ? (projectedExpense / prevExp > 1.2 ? 'danger' : projectedExpense / prevExp > 1.05 ? 'warning' : 'good') : 'good'
+      const expenseDiff = prevExp > 0 ? Math.round((projectedExpense - prevExp) / prevExp * 100) : 0
+      const hour = now.getHours()
+      const greetWord = hour < 12 ? 'Доброе утро' : hour < 18 ? 'Добрый день' : 'Добрый вечер'
+      const firstName = ctx.user.name ? (', ' + ctx.user.name.split(' ')[0]) : ''
+      const greetStatus = income > 0 && expense > income ? 'danger' : budgetsExceeded > 0 ? 'warning' : 'good'
+      const statusEmoji = greetStatus === 'danger' ? '🔴' : greetStatus === 'warning' ? '🟡' : savingsRate > 0.3 ? '💚' : '🟢'
+      const statusText = greetStatus === 'danger' ? 'Расходы превышают доходы' : budgetsExceeded > 0 ? (budgetsExceeded + ' ' + (budgetsExceeded === 1 ? 'бюджет превышен' : 'бюджета превышено')) : savingsRate > 0.3 ? 'Отличный темп сбережений!' : 'Темп трат нормальный'
+      const fmt = (n: number) => new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(n)
+      const daysWord = daysLeft === 1 ? 'день' : daysLeft < 5 ? 'дня' : 'дней'
+      let greetMessage = greetWord + firstName + '! До конца месяца ' + daysLeft + ' ' + daysWord + '. ' + statusEmoji + ' ' + statusText + '.'
+      if (income > 0 && expense > 0 && income > expense) greetMessage += ' Потрачено ' + fmt(expense) + ' из ' + fmt(income) + '.'
+      const totalAssets = wallet.accounts.reduce((s, a) => s + Math.max(0, Number(a.balance)), 0)
+      const totalDebtsAmount = debts.reduce((s, d) => s + Number(d.amount) - Number(d.paidAmount), 0)
+      return {
+        score: {
+          score, label: scoreLabel, savingsScore, budgetScore, goalScore, consistencyScore,
+          trend: 0,  // simplified: no trend calc in dashboardData
+          breakdown: [
+            { name: 'Норма сбережений', score: savingsScore, max: 40, hint: Math.round(savingsRate * 100) + '% от дохода (цель 20%+)' },
+            { name: 'Соблюдение бюджетов', score: budgetScore, max: 30, hint: budgets.length > 0 ? (budgetScore === 30 ? 'Все бюджеты соблюдены' : 'Часть бюджетов превышена') : 'Бюджеты не настроены' },
+            { name: 'Прогресс целей', score: goalScore, max: 15, hint: goals.length > 0 ? (goals.length + ' активных целей') : 'Цели не настроены' },
+            { name: 'Стабильность трат', score: consistencyScore, max: 15, hint: 'vs прошлый месяц' },
+          ],
+        },
+        forecast: { projectedExpense, projectedIncome, projectedBalance: projectedIncome - projectedExpense, vsLastMonth: expenseDiff, status: forecastStatus, daysLeft, dayOfMonth, daysInMonth },
+        comparison: { expenseDiff, win: expenseDiff < -5, projectedExpense, prevMonthExpense: prevExp, income, expense, prevIncome: prevInc },
+        greeting: { message: greetMessage, status: greetStatus, statusEmoji },
+        netWorthSummary: { totalAssets: Math.round(totalAssets), totalDebts: Math.round(totalDebtsAmount), netWorth: Math.round(totalAssets - totalDebtsAmount), monthDelta: Math.round(income - expense) },
+        budgets: budgetResults.map((r) => ({ ...r.budget, spentAmount: r.spent, percentage: Number(r.budget.amount) > 0 ? Math.round(r.spent / Number(r.budget.amount) * 100) : 0 })),
+        goals,
+      }
+    } catch (e) {
+      console.error('[dashboardData] error:', e)
+      return null
     }
   }),
 
