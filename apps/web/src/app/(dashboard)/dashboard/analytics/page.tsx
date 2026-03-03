@@ -95,8 +95,7 @@ export default function AnalyticsPage() {
 
   // Top counterparties
   const { data: topCounterpartiesRaw } = trpc.wallet.getTopCounterparties.useQuery(
-    { walletId: walletId!, limit: 10, dateFrom: monthStart, dateTo: monthEnd },
-    { enabled: !!walletId }
+    { period: period as '1m' | '3m' },
   )
 
   // Process cash flow data for chart

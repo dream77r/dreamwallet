@@ -18,7 +18,7 @@ export function ForecastWidget({ data, isLoading }: { data?: any, isLoading?: bo
     good: "text-green-600 bg-green-50 border-green-100 dark:bg-green-950/20 dark:border-green-900/30",
     warning: "text-yellow-600 bg-yellow-50 border-yellow-100 dark:bg-yellow-950/20 dark:border-yellow-900/30",
     danger: "text-red-600 bg-red-50 border-red-100 dark:bg-red-950/20 dark:border-red-900/30",
-  }[data.status]
+  }[data.status as 'good' | 'warning' | 'danger'] ?? 'text-green-600 bg-green-50 border-green-100'
 
   const progressPct = Math.min(100, (data.dayOfMonth / data.daysInMonth) * 100)
 
