@@ -327,12 +327,20 @@ export const walletRouter = router({
       const expense = Number(thisExpense._sum.amount ?? 0)
       const prevExp = Number(prevExpense._sum.amount ?? 0)
       const prevInc = Number(prevIncome._sum.amount ?? 0)
-      const budgetResults = await Promise.all(budgets.map(async (b) => {
-        const ids = b.wallet.accounts.map((a) => a.id)
-        const agg = await ctx.prisma.transaction.aggregate({ where: { accountId: { in: ids }, categoryId: b.categoryId, type: 'EXPENSE', date: { gte: monthStart } }, _sum: { amount: true } })
-        const spent = Number(agg._sum.amount ?? 0)
+      // Batch: один groupBy вместо N запросов
+      const budgetCategoryIds = budgets.map((b) => b.categoryId).filter(Boolean) as string[]
+      const budgetSpending = budgetCategoryIds.length > 0
+        ? await ctx.prisma.transaction.groupBy({
+            by: ['categoryId'],
+            where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: monthStart }, categoryId: { in: budgetCategoryIds } },
+            _sum: { amount: true },
+          })
+        : []
+      const spendMap = new Map(budgetSpending.map((s) => [s.categoryId, Number(s._sum.amount ?? 0)]))
+      const budgetResults = budgets.map((b) => {
+        const spent = spendMap.get(b.categoryId ?? '') ?? 0
         return { exceeded: spent > Number(b.amount), spent, budget: b }
-      }))
+      })
       const budgetsExceeded = budgetResults.filter((r) => r.exceeded).length
       const savingsRate = income > 0 ? Math.max(0, (income - expense) / income) : 0
       const savingsScore = Math.min(40, Math.round((savingsRate / 0.2) * 40))
