@@ -34,6 +34,7 @@ import Link from 'next/link'
 import { AiInsights } from '@/components/dashboard/ai-insights'
 import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidget'
 import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
+import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWidget'
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
@@ -326,10 +327,11 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Financial Score + Forecast */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+      {/* Financial Score + Forecast + Month Comparison */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         <FinancialScoreWidget />
         <ForecastWidget />
+        <MonthComparisonWidget />
       </div>
 
       {/* Budget + Recent transactions */}
