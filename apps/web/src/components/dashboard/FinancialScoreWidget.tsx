@@ -57,10 +57,10 @@ export function FinancialScoreWidget({ data, isLoading }: { data?: { score: numb
           <p className="text-sm text-muted-foreground mt-1">{data.label}</p>
           {/* Trend */}
           <div className="flex items-center gap-1 mt-1">
-            {data.trend > 0 ? (
-              <><TrendingUp className="h-3.5 w-3.5 text-green-500" /><span className="text-xs text-green-500">+{data.trend}%</span></>
-            ) : data.trend < 0 ? (
-              <><TrendingDown className="h-3.5 w-3.5 text-red-500" /><span className="text-xs text-red-500">{data.trend}%</span></>
+            {(data.trend ?? 0) > 0 ? (
+              <><TrendingUp className="h-3.5 w-3.5 text-green-500" /><span className="text-xs text-green-500">+{data.trend ?? 0}%</span></>
+            ) : (data.trend ?? 0) < 0 ? (
+              <><TrendingDown className="h-3.5 w-3.5 text-red-500" /><span className="text-xs text-red-500">{data.trend ?? 0}%</span></>
             ) : (
               <><Minus className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">без изменений</span></>
             )}
@@ -69,7 +69,7 @@ export function FinancialScoreWidget({ data, isLoading }: { data?: { score: numb
 
         {/* Breakdown */}
         <div className="space-y-2">
-          {data.breakdown.map((item) => (
+          {(data.breakdown ?? []).map((item) => (
             <div key={item.name}>
               <div className="flex justify-between text-xs mb-1">
                 <span className="text-muted-foreground">{item.name}</span>

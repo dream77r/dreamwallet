@@ -265,36 +265,28 @@ ${summary || 'Транзакции не найдены.'}
 
   parseReceipt: protectedProcedure
     .input(z.object({ imageBase64: z.string() }))
-    .mutation(async ({ ctx, input }) => {
+    .mutation(async ({ _ctx, input }) => {
       try {
-        const { getAiClient } = await import('@/lib/ai-models')
-        const client = await getAiClient(ctx.prisma)
-        if (!client) {
-          // Fallback если нет AI клиента
-          return { amount: 0, description: 'Чек', date: new Date().toISOString().split('T')[0], category: 'Другое' }
-        }
-        const response = await client.chat.completions.create({
-          model: client.model,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: 'Распознай чек на изображении. Верни ТОЛЬКО JSON без markdown: {"amount": число, "description": "краткое описание покупки", "date": "YYYY-MM-DD", "category": "название категории на русском"}. Если не можешь распознать — верни {"amount": 0, "description": "Чек", "date": "' + new Date().toISOString().split('T')[0] + '", "category": "Другое"}',
-                },
-                {
-                  type: 'image_url',
-                  image_url: { url: `data:image/jpeg;base64,${input.imageBase64}` },
-                },
-              ],
-            },
-          ],
-          max_tokens: 200,
+        // Use OpenRouter with vision model
+        const apiKey = process.env.OPENROUTER_API_KEY
+        if (!apiKey) return { amount: 0, description: 'Чек', date: new Date().toISOString().split('T')[0], category: 'Другое' }
+        const today = new Date().toISOString().split('T')[0]
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + apiKey, 'Content-Type': 'application/json', 'HTTP-Referer': process.env.NEXT_PUBLIC_APP_URL ?? '', 'X-Title': 'DreamWallet' },
+          body: JSON.stringify({
+            model: 'openai/gpt-4o',
+            max_tokens: 200,
+            messages: [{ role: 'user', content: [
+              { type: 'text', text: 'Распознай чек. Верни ТОЛЬКО JSON: {"amount": число, "description": "описание", "date": "YYYY-MM-DD", "category": "категория на русском"}. Если не чек — {"amount": 0, "description": "Чек", "date": "' + today + '", "category": "Другое"}' },
+              { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,' + input.imageBase64 } },
+            ]}],
+          }),
         })
-        const text = response.choices[0]?.message?.content ?? ''
-        const parsed = JSON.parse(text.trim())
-        return parsed
+        if (!res.ok) return { amount: 0, description: 'Чек', date: today, category: 'Другое' }
+        const data = await res.json() as { choices: Array<{ message: { content: string } }> }
+        const text = data.choices[0]?.message?.content ?? '{}'
+        return JSON.parse(text.trim()) as { amount: number, description: string, date: string, category: string }
       } catch {
         return { amount: 0, description: 'Чек', date: new Date().toISOString().split('T')[0], category: 'Другое' }
       }

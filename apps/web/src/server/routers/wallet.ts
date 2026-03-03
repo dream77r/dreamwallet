@@ -314,7 +314,7 @@ export const walletRouter = router({
       ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
       ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: prevMonthStart, lte: prevMonthEnd } }, _sum: { amount: true } }),
       ctx.prisma.budget.findMany({ where: { isActive: true, wallet: { userId } }, include: { category: true, wallet: { include: { accounts: { select: { id: true } } } } } }),
-      ctx.prisma.goal.findMany({ where: { wallet: { userId }, isCompleted: false } }),
+      ctx.prisma.goal.findMany({ where: { userId, isCompleted: false } }),
       ctx.prisma.debt.findMany({ where: { userId, type: 'BORROWED', status: { in: ['ACTIVE', 'PARTIALLY_REPAID'] } }, select: { counterparty: true, amount: true, paidAmount: true } }),
     ])
     const income = Number(thisIncome._sum.amount ?? 0)
