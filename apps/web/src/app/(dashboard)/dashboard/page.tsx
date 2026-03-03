@@ -347,9 +347,9 @@ export default function DashboardPage() {
 
       {/* Financial Score + Forecast + Month Comparison */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <FinancialScoreWidget />
-        <ForecastWidget />
-        <MonthComparisonWidget />
+        <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
+        <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
+        <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
       </div>
 
       {/* Budget + Recent transactions */}

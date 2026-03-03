@@ -9,8 +9,7 @@ function formatAmount(n: number) {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(n)
 }
 
-export function MonthComparisonWidget() {
-  const { data, isLoading } = trpc.wallet.monthComparison.useQuery()
+export function MonthComparisonWidget({ data, isLoading }: { data?: any, isLoading?: boolean }) {
 
   if (isLoading) return <Skeleton className="h-48 w-full" />
   if (!data) return null

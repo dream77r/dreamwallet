@@ -9,8 +9,7 @@ function formatAmount(n: number) {
   return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(n)
 }
 
-export function ForecastWidget() {
-  const { data, isLoading } = trpc.wallet.forecast.useQuery()
+export function ForecastWidget({ data, isLoading }: { data?: any, isLoading?: boolean }) {
 
   if (isLoading) return <Skeleton className="h-36 w-full" />
   if (!data) return null

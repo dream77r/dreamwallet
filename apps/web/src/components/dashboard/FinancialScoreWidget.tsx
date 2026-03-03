@@ -4,8 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 
-export function FinancialScoreWidget() {
-  const { data, isLoading } = trpc.score.get.useQuery()
+export function FinancialScoreWidget({ data, isLoading }: { data?: { score: number, label: string, savingsScore: number, budgetScore: number, goalScore: number, consistencyScore: number } | null, isLoading?: boolean }) {
 
   if (isLoading) return <Skeleton className="h-48 w-full" />
 
