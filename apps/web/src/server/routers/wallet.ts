@@ -194,6 +194,18 @@ export const walletRouter = router({
         net: data.income - data.expense,
       }))
     }),
+
+  forecast: protectedProcedure.query(async ({ ctx }) => {
+    return forecastQuery(ctx.prisma, ctx.user.id)
+  }),
+
+  monthComparison: protectedProcedure.query(async ({ ctx }) => {
+    return monthComparisonQuery(ctx.prisma, ctx.user.id)
+  }),
+
+  netWorth: protectedProcedure.query(async ({ ctx }) => {
+    return netWorthQuery(ctx.prisma, ctx.user.id)
+  }),
 })
 
 // Monthly forecast — проецируем текущий темп трат на конец месяца
@@ -239,11 +251,7 @@ export const forecastQuery = async (prisma: any, userId: string) => {
   const prevExpenseAgg = await prisma.transaction.aggregate({
     where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: prevStart, lte: prevEnd } },
     _sum: { amount: true },
-  
-  forecast: protectedProcedure.query(async ({ ctx }) => {
-    return forecastQuery(ctx.prisma, ctx.user.id)
-  }),
-})
+  })
   const prevMonthExpense = Number(prevExpenseAgg._sum.amount ?? 0)
 
   // Статус: нормально / осторожно / тревога
@@ -321,11 +329,7 @@ export const monthComparisonQuery = async (prisma: any, userId: string) => {
     incomeDiff,   // % изменение доходов
     win,          // показывать конфетти/похвалу
     monthName: new Intl.DateTimeFormat('ru-RU', { month: 'long' }).format(now),
-    prevMonthName: new Intl.DateTimeFormat('ru-RU', { month: 'long' 
-  monthComparison: protectedProcedure.query(async ({ ctx }) => {
-    return monthComparisonQuery(ctx.prisma, ctx.user.id)
-  }),
-}).format(prevMonthStart),
+    prevMonthName: new Intl.DateTimeFormat('ru-RU', { month: 'long' }).format(prevMonthStart),
   }
 }
 
@@ -372,10 +376,6 @@ export const netWorthQuery = async (prisma: any, userId: string) => {
     debts: debts.map((d: any) => ({
       counterparty: d.counterparty,
       remaining: Math.round(Number(d.amount) - Number(d.paidAmount)),
-    
-  netWorth: protectedProcedure.query(async ({ ctx }) => {
-    return netWorthQuery(ctx.prisma, ctx.user.id)
-  }),
-})),
+    })),
   }
 }
