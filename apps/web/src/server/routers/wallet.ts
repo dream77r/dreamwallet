@@ -144,6 +144,48 @@ export const walletRouter = router({
       })
     }),
 
+  // Get top counterparties for a period
+  getTopCounterparties: protectedProcedure
+    .input(z.object({
+      walletId: z.string().cuid(),
+      limit: z.number().int().min(1).max(50).default(10),
+      dateFrom: z.coerce.date().optional(),
+      dateTo: z.coerce.date().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const accounts = await ctx.prisma.account.findMany({
+        where: { walletId: input.walletId, isArchived: false },
+        select: { id: true },
+      })
+      const accountIds = accounts.map(a => a.id)
+
+      const result = await ctx.prisma.transaction.groupBy({
+        by: ['counterparty'],
+        where: {
+          accountId: { in: accountIds },
+          type: 'EXPENSE',
+          NOT: [
+            { counterparty: null },
+            { counterparty: "" }
+          ],
+          ...(input.dateFrom || input.dateTo ? {
+            date: {
+              ...(input.dateFrom && { gte: input.dateFrom }),
+              ...(input.dateTo && { lte: input.dateTo }),
+            }
+          } : {}),
+        },
+        _sum: { amount: true },
+        orderBy: { _sum: { amount: 'desc' } },
+        take: input.limit,
+      })
+
+      return result.map(r => ({
+        name: r.counterparty || 'Unknown',
+        amount: Number(r._sum?.amount ?? 0),
+      }))
+    }),
+
   // Cash flow for last 12 months
   getCashFlow: protectedProcedure
     .input(z.object({
@@ -160,13 +202,14 @@ export const walletRouter = router({
       const now = new Date()
       const startDate = new Date(now.getFullYear(), now.getMonth() - input.months + 1, 1)
 
-      const transactions = await ctx.prisma.transaction.findMany({
+      const dailyStats = await ctx.prisma.transaction.groupBy({
+        by: ['date', 'type'],
         where: {
           accountId: { in: accountIds },
           type: { in: ['INCOME', 'EXPENSE'] },
           date: { gte: startDate },
         },
-        select: { date: true, type: true, amount: true },
+        _sum: { amount: true },
       })
 
       // Group by month
@@ -177,13 +220,14 @@ export const walletRouter = router({
         monthMap.set(key, { income: 0, expense: 0 })
       }
 
-      for (const tx of transactions) {
-        const d = new Date(tx.date)
+      for (const stat of dailyStats) {
+        const d = new Date(stat.date)
         const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
         const entry = monthMap.get(key)
         if (entry) {
-          if (tx.type === 'INCOME') entry.income += Number(tx.amount)
-          else entry.expense += Number(tx.amount)
+          const amount = Number(stat._sum.amount ?? 0)
+          if (stat.type === 'INCOME') entry.income += amount
+          else entry.expense += amount
         }
       }
 
@@ -261,7 +305,7 @@ export const forecastQuery = async (prisma: any, userId: string) => {
 
   const status: 'good' | 'warning' | 'danger' =
     vsLastMonth > 0.2 ? 'danger' :
-    vsLastMonth > 0.05 ? 'warning' : 'good'
+      vsLastMonth > 0.05 ? 'warning' : 'good'
 
   const daysLeft = daysInMonth - dayOfMonth
 

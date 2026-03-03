@@ -94,8 +94,8 @@ export default function AnalyticsPage() {
   )
 
   // Top counterparties
-  const { data: recentTxs } = trpc.transaction.list.useQuery(
-    { walletId: walletId!, pageSize: 500, page: 1 },
+  const { data: topCounterpartiesRaw } = trpc.wallet.getTopCounterparties.useQuery(
+    { walletId: walletId!, limit: 10 },
     { enabled: !!walletId }
   )
 
@@ -156,18 +156,9 @@ export default function AnalyticsPage() {
     : 0
 
   const topCounterparties = useMemo(() => {
-    if (!recentTxs?.items) return []
-    const map = new Map<string, number>()
-    for (const tx of recentTxs.items) {
-      const name = tx.counterparty?.trim()
-      if (!name) continue
-      if (tx.type !== 'EXPENSE') continue
-      map.set(name, (map.get(name) ?? 0) + Number(tx.amount))
-    }
-    return Array.from(map.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10)
-  }, [recentTxs])
+    if (!topCounterpartiesRaw) return []
+    return topCounterpartiesRaw.map(c => [c.name, c.amount] as [string, number])
+  }, [topCounterpartiesRaw])
 
   const maxCounterparty = topCounterparties.length > 0 ? topCounterparties[0][1] : 0
 
