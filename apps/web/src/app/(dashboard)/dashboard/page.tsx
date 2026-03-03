@@ -374,14 +374,15 @@ export default function DashboardPage() {
               </div>
             ) : (
               budgets.map((budget) => {
-                const over = budget.spentAmount > budget.amount
+                const budgetAmount = Number(budget.amount)
+                const over = budget.spentAmount > budgetAmount
                 const pct = Math.min(budget.percentage, 100)
                 return (
                   <div key={budget.id} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium">{budget.category.name}</span>
                       <span className={`text-xs ${over ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                        {formatAmount(budget.spentAmount)} / {formatAmount(budget.amount)}
+                        {formatAmount(budget.spentAmount)} / {formatAmount(budgetAmount)}
                       </span>
                     </div>
                     <Progress
@@ -391,9 +392,9 @@ export default function DashboardPage() {
                     <div className="flex justify-between text-xs text-muted-foreground">
                       <span>{pct}% использовано</span>
                       {over ? (
-                        <span className="text-red-600">Превышен на {formatAmount(budget.spentAmount - budget.amount)}</span>
+                        <span className="text-red-600">Превышен на {formatAmount(budget.spentAmount - budgetAmount)}</span>
                       ) : (
-                        <span>Остаток {formatAmount(budget.amount - budget.spentAmount)}</span>
+                        <span>Остаток {formatAmount(budgetAmount - budget.spentAmount)}</span>
                       )}
                     </div>
                   </div>
