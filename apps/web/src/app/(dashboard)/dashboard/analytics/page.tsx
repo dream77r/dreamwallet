@@ -95,7 +95,7 @@ export default function AnalyticsPage() {
 
   // Top counterparties
   const { data: topCounterpartiesRaw } = trpc.wallet.getTopCounterparties.useQuery(
-    { walletId: walletId!, limit: 10 },
+    { walletId: walletId!, limit: 10, dateFrom: monthStart, dateTo: monthEnd },
     { enabled: !!walletId }
   )
 
