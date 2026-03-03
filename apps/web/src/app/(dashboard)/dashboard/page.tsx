@@ -68,6 +68,26 @@ function getCurrentMonthLabel() {
   return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`
 }
 
+
+function SmartGreeting({ data, isLoading }: { data: any, isLoading: boolean }) {
+  if (isLoading) return (
+    <div className="space-y-1">
+      <div className="h-7 w-72 animate-pulse bg-muted rounded" />
+      <div className="h-4 w-44 animate-pulse bg-muted rounded" />
+    </div>
+  )
+  if (!data) return <div><h1 className="text-2xl font-semibold">Обзор</h1></div>
+  const borderColor = data.status === 'good' ? 'border-l-green-500' : data.status === 'warning' ? 'border-l-yellow-500' : 'border-l-red-500'
+  return (
+    <div className={`border-l-4 pl-3 ${borderColor}`}>
+      <p className="text-lg font-semibold leading-snug max-w-xl">{data.message}</p>
+      <p className="text-xs text-muted-foreground mt-0.5">
+        {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
+      </p>
+    </div>
+  )
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const { start: monthStart, end: monthEnd } = useMemo(() => getCurrentMonthRange(), [])
@@ -110,6 +130,7 @@ export default function DashboardPage() {
 
   // 6. Get recent transactions
   const { data: goals } = trpc.goals.list.useQuery()
+  const { data: greeting, isLoading: greetingLoading } = trpc.wallet.smartGreeting.useQuery()
 
   const { data: recentTxData, isLoading: txLoading } = trpc.transaction.list.useQuery({
     page: 1,
@@ -145,11 +166,8 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Обзор</h1>
-          <p className="text-muted-foreground text-sm">{monthLabel}</p>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <SmartGreeting data={greeting} isLoading={greetingLoading} />
         <TransactionForm />
       </div>
 
