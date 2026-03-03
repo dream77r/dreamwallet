@@ -191,141 +191,70 @@ export default function AnalyticsPage() {
       {mainTab === 'report' && <ReportTab />}
 
       {mainTab === 'analytics' && <>
-      <div className="flex justify-end">
-        <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-          <TabsList>
-            {(Object.entries(periodConfig) as [Period, { label: string }][]).map(([key, cfg]) => (
-              <TabsTrigger key={key} value={key}>{cfg.label}</TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      </div>
+        <div className="flex justify-end">
+          <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
+            <TabsList>
+              {(Object.entries(periodConfig) as [Period, { label: string }][]).map(([key, cfg]) => (
+                <TabsTrigger key={key} value={key}>{cfg.label}</TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </div>
 
-      {/* KPI Summary */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          {
-            label: 'Доходы', value: totalIncome, color: 'text-green-600',
-            change: incomeChange, goodWhenPositive: true,
-          },
-          {
-            label: 'Расходы', value: totalExpense, color: 'text-red-600',
-            change: expenseChange, goodWhenPositive: false,
-          },
-          {
-            label: 'Накоплено', value: totalSavings,
-            color: totalSavings >= 0 ? 'text-green-600' : 'text-red-600',
-            change: null, goodWhenPositive: true,
-          },
-          {
-            label: 'Норма сбережений', value: null, rate: savingsRate,
-            color: savingsRate >= 20 ? 'text-green-600' : savingsRate >= 10 ? 'text-yellow-600' : 'text-red-600',
-            change: null, goodWhenPositive: true,
-          },
-        ].map(({ label, value, rate, color, change, goodWhenPositive }) => (
-          <Card key={label}>
-            <CardContent className="pt-5 pb-4">
-              <p className="text-xs text-muted-foreground mb-1">{label}</p>
-              {isLoading ? <Skeleton className="h-7 w-28" /> : (
-                <p className={`text-xl font-semibold ${color}`}>
-                  {value !== null && value !== undefined ? formatAmount(value) : `${rate}%`}
-                </p>
-              )}
-              {change !== null && change !== undefined && (
-                <div className="flex items-center gap-1 mt-1 text-xs">
-                  {change > 0 ? (
-                    <><TrendingUp className={`h-3 w-3 ${goodWhenPositive ? 'text-green-600' : 'text-red-500'}`} />
-                    <span className={goodWhenPositive ? 'text-green-600' : 'text-red-500'}>+{change}%</span></>
-                  ) : change < 0 ? (
-                    <><TrendingDown className={`h-3 w-3 ${goodWhenPositive ? 'text-red-500' : 'text-green-600'}`} />
-                    <span className={goodWhenPositive ? 'text-red-500' : 'text-green-600'}>{change}%</span></>
-                  ) : (
-                    <><Minus className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">0%</span></>
-                  )}
-                  <span className="text-muted-foreground">к пред. периоду</span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Income vs Expense chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Доходы и расходы</CardTitle>
-          <CardDescription>По месяцам за {periodConfig[period].label.toLowerCase()}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
-            <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
-              Нет данных за выбранный период
-            </div>
-          ) : (
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={chartData} barCategoryGap="35%">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} />
-                <Legend />
-                <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          )}
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Category breakdown */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Расходы по категориям</CardTitle>
-            <CardDescription>Этот месяц vs прошлый месяц</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {!thisCategoryData ? (
-              Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)
-            ) : categoryBreakdown.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Нет расходов в этом месяце</p>
-            ) : (
-              categoryBreakdown.sort((a, b) => b.thisMonth - a.thisMonth).map((cat) => {
-                const pct = maxCategory > 0 ? (cat.thisMonth / maxCategory) * 100 : 0
-                const change = cat.lastMonth > 0
-                  ? Math.round(((cat.thisMonth - cat.lastMonth) / cat.lastMonth) * 100)
-                  : null
-                return (
-                  <div key={cat.id}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <div className="flex items-center gap-2">
-                        <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
-                        <span className="text-sm font-medium">{cat.category}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {change !== null && (
-                          <span className={`text-xs ${change > 0 ? 'text-red-500' : change < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
-                            {change > 0 ? '+' : ''}{change}%
-                          </span>
-                        )}
-                        <span className="text-sm font-semibold w-[90px] text-right">{formatAmount(cat.thisMonth)}</span>
-                      </div>
-                    </div>
-                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
-                    </div>
+        {/* KPI Summary */}
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[
+            {
+              label: 'Доходы', value: totalIncome, color: 'text-green-600',
+              change: incomeChange, goodWhenPositive: true,
+            },
+            {
+              label: 'Расходы', value: totalExpense, color: 'text-red-600',
+              change: expenseChange, goodWhenPositive: false,
+            },
+            {
+              label: 'Накоплено', value: totalSavings,
+              color: totalSavings >= 0 ? 'text-green-600' : 'text-red-600',
+              change: null, goodWhenPositive: true,
+            },
+            {
+              label: 'Норма сбережений', value: null, rate: savingsRate,
+              color: savingsRate >= 20 ? 'text-green-600' : savingsRate >= 10 ? 'text-yellow-600' : 'text-red-600',
+              change: null, goodWhenPositive: true,
+            },
+          ].map(({ label, value, rate, color, change, goodWhenPositive }) => (
+            <Card key={label}>
+              <CardContent className="pt-5 pb-4">
+                <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                {isLoading ? <Skeleton className="h-7 w-28" /> : (
+                  <p className={`text-xl font-semibold ${color}`}>
+                    {value !== null && value !== undefined ? formatAmount(value) : `${rate}%`}
+                  </p>
+                )}
+                {change !== null && change !== undefined && (
+                  <div className="flex items-center gap-1 mt-1 text-xs">
+                    {change > 0 ? (
+                      <><TrendingUp className={`h-3 w-3 ${goodWhenPositive ? 'text-green-600' : 'text-red-500'}`} />
+                        <span className={goodWhenPositive ? 'text-green-600' : 'text-red-500'}>+{change}%</span></>
+                    ) : change < 0 ? (
+                      <><TrendingDown className={`h-3 w-3 ${goodWhenPositive ? 'text-red-500' : 'text-green-600'}`} />
+                        <span className={goodWhenPositive ? 'text-red-500' : 'text-green-600'}>{change}%</span></>
+                    ) : (
+                      <><Minus className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">0%</span></>
+                    )}
+                    <span className="text-muted-foreground">к пред. периоду</span>
                   </div>
-                )
-              })
-            )}
-          </CardContent>
-        </Card>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        {/* Savings trend */}
+        {/* Income vs Expense chart */}
         <Card>
           <CardHeader>
-            <CardTitle>Динамика сбережений</CardTitle>
-            <CardDescription>Сумма и норма накоплений по месяцам</CardDescription>
+            <CardTitle>Доходы и расходы</CardTitle>
+            <CardDescription>По месяцам за {periodConfig[period].label.toLowerCase()}</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
@@ -334,96 +263,121 @@ export default function AnalyticsPage() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={280}>
-                <LineChart data={chartData}>
+                <BarChart data={chartData} barCategoryGap="35%">
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis yAxisId="amount" orientation="left" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                  <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip formatter={((value: number | undefined, name: string) => { if (value === undefined) return ""; return name === 'Накоплено' ? formatAmount(value as number) : `${value}%`; }) as never} />
+                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                  <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} />
                   <Legend />
-                  <Line yAxisId="amount" type="monotone" dataKey="savings" name="Накоплено" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  <Line yAxisId="rate" type="monotone" dataKey="savingsRate" name="Норма, %" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                </LineChart>
+                  <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* Top counterparties */}
-      {topCounterparties.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Топ контрагентов</CardTitle>
-            <CardDescription>Где вы тратите больше всего</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topCounterparties.map(([name, amount]) => {
-              const pct = maxCounterparty > 0 ? (amount / maxCounterparty) * 100 : 0
-              return (
-                <div key={name}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm font-medium truncate max-w-[200px]">{name}</span>
-                    <span className="text-sm font-semibold text-red-500">{formatAmount(amount)}</span>
-                  </div>
-                  <div className="h-2 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-primary transition-all"
-                      style={{ width: `${pct}%` }}
-                    />
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
-
-      {/* Top-5 Expense Categories */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Топ категорий расходов</CardTitle>
-          <CardDescription>Топ-5 категорий за {periodConfig[period].label.toLowerCase()}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {!topCategoriesRaw ? (
-            <Skeleton className="h-[250px] md:h-[350px] w-full" />
-          ) : topCategories.length === 0 ? (
-            <div className="flex h-[250px] md:h-[350px] items-center justify-center text-muted-foreground text-sm">
-              Нет расходов за выбранный период
-            </div>
-          ) : (
-            <div className="min-h-[250px] md:min-h-[350px]">
-            <ResponsiveContainer width="100%" height={250} className="md:!h-[350px]">
-              <BarChart data={topCategories} layout="vertical" margin={{ left: 20, right: 40 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-                <XAxis type="number" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} width={120} />
-                <Tooltip
-                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ""}
-                  labelStyle={{ fontWeight: 600 }}
-                  content={({ active, payload }) => {
-                    if (!active || !payload?.length) return null
-                    const d = payload[0].payload as { name: string; amount: number; percentage: number }
-                    return (
-                      <div className="rounded-lg border bg-background px-3 py-2 shadow-sm">
-                        <p className="text-sm font-semibold">{d.name}</p>
-                        <p className="text-sm">{formatAmount(d.amount)}</p>
-                        <p className="text-xs text-muted-foreground">{d.percentage}% от расходов</p>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Category breakdown */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Расходы по категориям</CardTitle>
+              <CardDescription>Этот месяц vs прошлый месяц</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!thisCategoryData ? (
+                Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)
+              ) : categoryBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Нет расходов в этом месяце</p>
+              ) : (
+                categoryBreakdown.sort((a, b) => b.thisMonth - a.thisMonth).map((cat) => {
+                  const pct = maxCategory > 0 ? (cat.thisMonth / maxCategory) * 100 : 0
+                  const change = cat.lastMonth > 0
+                    ? Math.round(((cat.thisMonth - cat.lastMonth) / cat.lastMonth) * 100)
+                    : null
+                  return (
+                    <div key={cat.id}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: cat.color }} />
+                          <span className="text-sm font-medium">{cat.category}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {change !== null && (
+                            <span className={`text-xs ${change > 0 ? 'text-red-500' : change < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                              {change > 0 ? '+' : ''}{change}%
+                            </span>
+                          )}
+                          <span className="text-sm font-semibold w-[90px] text-right">{formatAmount(cat.thisMonth)}</span>
+                        </div>
                       </div>
-                    )
-                  }}
-                />
-                <Bar dataKey="amount" name="Сумма" radius={[0, 4, 4, 0]}>
-                  {topCategories.map((entry, index) => (
-                    <Cell key={index} fill={entry.fill} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: cat.color }} />
+                      </div>
+                    </div>
+                  )
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Savings trend */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Динамика сбережений</CardTitle>
+              <CardDescription>Сумма и норма накоплений по месяцам</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
+                <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
+                  Нет данных за выбранный период
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={280}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="amount" orientation="left" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                    <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
+                    <Tooltip formatter={((value: number | undefined, name: string) => { if (value === undefined) return ""; return name === 'Накоплено' ? formatAmount(value as number) : `${value}%`; }) as never} />
+                    <Legend />
+                    <Line yAxisId="amount" type="monotone" dataKey="savings" name="Накоплено" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    <Line yAxisId="rate" type="monotone" dataKey="savingsRate" name="Норма, %" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Top counterparties */}
+        {topCounterparties.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Топ контрагентов</CardTitle>
+              <CardDescription>Где вы тратите больше всего</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {topCounterparties.map(([name, amount]) => {
+                const pct = maxCounterparty > 0 ? (amount / maxCounterparty) * 100 : 0
+                return (
+                  <div key={name}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-medium truncate max-w-[200px]">{name}</span>
+                      <span className="text-sm font-semibold text-red-500">{formatAmount(amount)}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+        )}
       </>}
     </div>
   )
@@ -568,7 +522,7 @@ function ReportTab() {
               </CardContent>
             </Card>
           )}
-        </>      )}
+        </>)}
     </div>
   )
 }

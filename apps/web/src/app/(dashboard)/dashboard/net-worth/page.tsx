@@ -105,7 +105,7 @@ export default function NetWorthPage() {
               <p className="text-sm text-muted-foreground py-4 text-center">Нет счетов с положительным балансом</p>
             ) : (
               <>
-                {data.assets.map((asset, i) => (
+                {data.assets.map((asset: any, i: number) => (
                   <div key={i} className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">{asset.name}</p>
@@ -138,7 +138,7 @@ export default function NetWorthPage() {
               <p className="text-sm text-muted-foreground py-4 text-center">Нет непогашенных долгов</p>
             ) : (
               <>
-                {data.debts.map((debt, i) => (
+                {data.debts.map((debt: any, i: number) => (
                   <div key={i} className="flex items-center justify-between">
                     <p className="text-sm font-medium">{debt.counterparty}</p>
                     <p className="text-sm font-semibold text-red-600">

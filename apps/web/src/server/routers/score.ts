@@ -57,7 +57,7 @@ export const scoreRouter = router({
 
     // === 3. Goal Progress (15 pts) ===
     const goals = await ctx.prisma.goal.findMany({
-      where: { wallet: { userId: ctx.user.id }, isCompleted: false },
+      where: { userId: ctx.user.id, isCompleted: false },
     })
     let goalScore = 15 // full if no goals (не штрафуем)
     if (goals.length > 0) {
@@ -106,9 +106,9 @@ export const scoreRouter = router({
 
     const label =
       total >= 85 ? 'Отличное здоровье 💚' :
-      total >= 70 ? 'Хорошее здоровье 🟡' :
-      total >= 50 ? 'Есть над чем работать 🟠' :
-      'Требует внимания 🔴'
+        total >= 70 ? 'Хорошее здоровье 🟡' :
+          total >= 50 ? 'Есть над чем работать 🟠' :
+            'Требует внимания 🔴'
 
     return {
       score: total,
