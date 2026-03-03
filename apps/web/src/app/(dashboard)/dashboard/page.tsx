@@ -130,6 +130,7 @@ export default function DashboardPage() {
 
   // 6. Get recent transactions
   const { data: goals } = trpc.goals.list.useQuery()
+  const { data: dash, isLoading: dashLoading } = trpc.wallet.dashboardData.useQuery(undefined, { staleTime: 30_000 })
   const { data: greeting, isLoading: greetingLoading } = trpc.wallet.smartGreeting.useQuery()
 
   const { data: recentTxData, isLoading: txLoading } = trpc.transaction.list.useQuery({

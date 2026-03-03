@@ -157,7 +157,7 @@ export default function AnalyticsPage() {
 
   const topCounterparties = useMemo(() => {
     if (!topCounterpartiesRaw) return []
-    return topCounterpartiesRaw.map(c => [c.name, c.amount] as [string, number])
+    return topCounterpartiesRaw.map((c: { name: string; amount: number }) => [c.name, c.amount] as [string, number])
   }, [topCounterpartiesRaw])
 
   const maxCounterparty = topCounterparties.length > 0 ? topCounterparties[0][1] : 0
@@ -349,7 +349,7 @@ export default function AnalyticsPage() {
               <CardDescription>Где вы тратите больше всего</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              {topCounterparties.map(([name, amount]) => {
+              {topCounterparties.map(([name, amount]: [string, number]) => {
                 const pct = maxCounterparty > 0 ? (amount / maxCounterparty) * 100 : 0
                 return (
                   <div key={name}>

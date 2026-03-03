@@ -354,7 +354,16 @@ export const walletRouter = router({
     const totalAssets = wallet.accounts.reduce((s, a) => s + Math.max(0, Number(a.balance)), 0)
     const totalDebtsAmount = debts.reduce((s, d) => s + Number(d.amount) - Number(d.paidAmount), 0)
     return {
-      score: { score, label: scoreLabel, savingsScore, budgetScore, goalScore, consistencyScore },
+      score: {
+        score, label: scoreLabel, savingsScore, budgetScore, goalScore, consistencyScore,
+        trend: 0,  // simplified: no trend calc in dashboardData
+        breakdown: [
+          { name: 'Норма сбережений', score: savingsScore, max: 40, hint: Math.round(savingsRate * 100) + '% от дохода (цель 20%+)' },
+          { name: 'Соблюдение бюджетов', score: budgetScore, max: 30, hint: budgets.length > 0 ? (budgetScore === 30 ? 'Все бюджеты соблюдены' : 'Часть бюджетов превышена') : 'Бюджеты не настроены' },
+          { name: 'Прогресс целей', score: goalScore, max: 15, hint: goals.length > 0 ? (goals.length + ' активных целей') : 'Цели не настроены' },
+          { name: 'Стабильность трат', score: consistencyScore, max: 15, hint: 'vs прошлый месяц' },
+        ],
+      },
       forecast: { projectedExpense, projectedIncome, projectedBalance: projectedIncome - projectedExpense, vsLastMonth: expenseDiff, status: forecastStatus, daysLeft, dayOfMonth, daysInMonth },
       comparison: { expenseDiff, win: expenseDiff < -5, projectedExpense, prevMonthExpense: prevExp, income, expense, prevIncome: prevInc },
       greeting: { message: greetMessage, status: greetStatus, statusEmoji },
@@ -363,5 +372,32 @@ export const walletRouter = router({
       goals,
     }
   }),
+
+  getTopCounterparties: protectedProcedure
+    .input(z.object({ period: z.enum(['1m', '3m']).default('1m') }))
+    .query(async ({ ctx, input }) => {
+      const now = new Date()
+      const from = input.period === '1m'
+        ? new Date(now.getFullYear(), now.getMonth(), 1)
+        : new Date(now.getFullYear(), now.getMonth() - 3, 1)
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
+      if (!wallet) return []
+      const accounts = await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } })
+      const accountIds = accounts.map((a) => a.id)
+      const txs = await ctx.prisma.transaction.findMany({
+        where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: from }, description: { not: null } },
+        select: { description: true, amount: true },
+      })
+      const map = new Map<string, number>()
+      for (const tx of txs) {
+        if (!tx.description) continue
+        const key = tx.description.trim().slice(0, 40)
+        map.set(key, (map.get(key) ?? 0) + Number(tx.amount))
+      }
+      return Array.from(map.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 10)
+        .map(([name, amount]) => ({ name, amount: Math.round(amount) }))
+    }),
 
 })

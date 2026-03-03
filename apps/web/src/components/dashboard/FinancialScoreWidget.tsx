@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 
-export function FinancialScoreWidget({ data, isLoading }: { data?: { score: number, label: string, savingsScore: number, budgetScore: number, goalScore: number, consistencyScore: number } | null, isLoading?: boolean }) {
+export function FinancialScoreWidget({ data, isLoading }: { data?: { score: number, label: string, savingsScore: number, budgetScore: number, goalScore: number, consistencyScore: number, trend?: number, breakdown?: Array<{ name: string, score: number, max: number, hint: string }> } | null, isLoading?: boolean }) {
 
   if (isLoading) return <Skeleton className="h-48 w-full" />
 
