@@ -4,8 +4,9 @@ import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TrendingUp, TrendingDown, Calendar, Wallet } from 'lucide-react'
+import { TrendingUp, TrendingDown, Calendar, Wallet, AlertTriangle, ArrowUpDown } from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -14,12 +15,14 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
+  Dot,
 } from 'recharts'
 import { trpc } from '@/lib/trpc/client'
-import { format, addDays, addWeeks, addMonths, addYears, isAfter, isBefore } from 'date-fns'
+import { format, parseISO } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
-type DayRange = 30 | 90
+type DayRange = 30 | 60 | 90
 
 function formatAmount(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -29,134 +32,67 @@ function formatAmount(amount: number) {
   }).format(amount)
 }
 
-// Конвертация schedule cron → следующие даты
-function getOccurrences(schedule: string, from: Date, to: Date): Date[] {
-  const dates: Date[] = []
-  let cursor = new Date(from)
-  cursor.setHours(9, 0, 0, 0)
+function formatDate(dateStr: string) {
+  return format(parseISO(dateStr), 'd MMM', { locale: ru })
+}
 
-  // Определяем частоту по cron
-  let adder: (d: Date) => Date
-  if (schedule === '0 9 * * *') adder = (d) => addDays(d, 1)
-  else if (schedule === '0 9 * * 1') adder = (d) => addWeeks(d, 1)
-  else if (schedule === '0 9 1 */3 *') adder = (d) => addMonths(d, 3)
-  else if (schedule === '0 9 1 1 *') adder = (d) => addYears(d, 1)
-  else adder = (d) => addMonths(d, 1) // monthly default
-
-  // Сдвинем начальную точку к следующему периоду
-  while (isBefore(cursor, from)) {
-    cursor = adder(cursor)
+// Кастомная точка — красная если баланс < 0
+const CustomDot = (props: any) => {
+  const { cx, cy, payload } = props
+  if (payload?.balance < 0) {
+    return <Dot cx={cx} cy={cy} r={4} fill="#ef4444" stroke="#fff" strokeWidth={1.5} />
   }
+  return null
+}
 
-  while (!isAfter(cursor, to)) {
-    dates.push(new Date(cursor))
-    cursor = adder(cursor)
-  }
-
-  return dates
+// Кастомный тултип
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null
+  const d = payload[0]?.payload
+  return (
+    <div className="rounded-lg border bg-background p-3 shadow-md text-sm">
+      <p className="font-semibold mb-1">{label}</p>
+      <p className={d?.balance < 0 ? 'text-red-500 font-bold' : 'text-foreground'}>
+        Баланс: {formatAmount(d?.balance ?? 0)}
+      </p>
+      {d?.income > 0 && <p className="text-green-600">+{formatAmount(d.income)}</p>}
+      {d?.expense > 0 && <p className="text-red-500">−{formatAmount(d.expense)}</p>}
+    </div>
+  )
 }
 
 export default function ForecastPage() {
   const [days, setDays] = useState<DayRange>(30)
 
-  const { data: wallet } = trpc.wallet.get.useQuery()
-  const walletId = wallet?.id
+  const { data, isLoading } = trpc.cashflow.forecast.useQuery({ days })
 
-  const { data: accounts, isLoading: accountsLoading } = trpc.account.list.useQuery(
-    { walletId: walletId! },
-    { enabled: !!walletId }
-  )
+  const chartData = useMemo(() => {
+    if (!data) return []
+    const step = days === 30 ? 2 : days === 60 ? 3 : 5
+    return data.forecast
+      .filter((_, i) => i % step === 0 || i === data.forecast.length - 1)
+      .map((d) => ({
+        label: formatDate(d.date),
+        balance: d.running_balance,
+        income: d.income,
+        expense: d.expense,
+      }))
+  }, [data, days])
 
-  const { data: recurringRules, isLoading: recurringLoading } = trpc.recurring.list.useQuery()
+  const events = useMemo(() => {
+    if (!data) return []
+    return data.forecast.flatMap((day) =>
+      day.events.map((ev) => ({ ...ev, date: day.date }))
+    )
+  }, [data])
 
-  const isLoading = accountsLoading || recurringLoading
-
-  const currentBalance = useMemo(() => {
-    if (!accounts) return 0
-    return accounts.reduce((sum, acc) => sum + Number(acc.balance), 0)
-  }, [accounts])
-
-  // Генерируем события на N дней вперёд
-  const { events, chartData, endBalance } = useMemo(() => {
-    if (!recurringRules) return { events: [], chartData: [], endBalance: currentBalance }
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const endDate = addDays(today, days)
-
-    // Собираем все события
-    const allEvents: Array<{
-      date: Date
-      name: string
-      amount: number
-      type: 'INCOME' | 'EXPENSE'
-    }> = []
-
-    for (const rule of recurringRules) {
-      if (!rule.isActive) continue
-      const occurrences = getOccurrences(rule.schedule, today, endDate)
-      for (const date of occurrences) {
-        allEvents.push({
-          date,
-          name: rule.name,
-          amount: Number(rule.amount),
-          type: rule.type as 'INCOME' | 'EXPENSE',
-        })
-      }
-    }
-
-    allEvents.sort((a, b) => a.date.getTime() - b.date.getTime())
-
-    // Строим баланс по дням
-    const dayMap: Map<string, number> = new Map()
-    let runningBalance = currentBalance
-
-    // Инициируем все дни
-    for (let i = 0; i <= days; i++) {
-      const d = addDays(today, i)
-      dayMap.set(format(d, 'yyyy-MM-dd'), 0)
-    }
-
-    for (const ev of allEvents) {
-      const key = format(ev.date, 'yyyy-MM-dd')
-      const delta = ev.type === 'INCOME' ? ev.amount : -ev.amount
-      dayMap.set(key, (dayMap.get(key) ?? 0) + delta)
-    }
-
-    // Накопительная сумма
-    const chartPoints: Array<{ label: string; balance: number }> = []
-    const dayEntries = Array.from(dayMap.entries()).sort()
-
-    let balance = currentBalance
-    for (const [dateStr, delta] of dayEntries) {
-      balance += delta
-      const d = new Date(dateStr)
-      chartPoints.push({
-        label: format(d, 'd MMM', { locale: ru }),
-        balance: Math.round(balance),
-      })
-    }
-
-    runningBalance = balance
-
-    // Фильтруем — показываем каждый N-й день для читаемости
-    const step = days === 30 ? 3 : 7
-    const filteredChart = chartPoints.filter((_, i) => i % step === 0 || i === chartPoints.length - 1)
-
-    return { events: allEvents, chartData: filteredChart, endBalance: runningBalance }
-  }, [recurringRules, currentBalance, days])
-
-  const totalIncome = useMemo(
-    () => events.filter((e) => e.type === 'INCOME').reduce((s, e) => s + e.amount, 0),
-    [events]
-  )
-  const totalExpense = useMemo(
-    () => events.filter((e) => e.type === 'EXPENSE').reduce((s, e) => s + e.amount, 0),
-    [events]
-  )
+  const isNegative = (data?.summary.min_balance ?? 0) < 0
+  const currentBalance = data?.current_balance ?? 0
+  const summary = data?.summary
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Прогноз денежного потока</h1>
@@ -165,13 +101,26 @@ export default function ForecastPage() {
         <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as DayRange)}>
           <TabsList>
             <TabsTrigger value="30">30 дней</TabsTrigger>
+            <TabsTrigger value="60">60 дней</TabsTrigger>
             <TabsTrigger value="90">90 дней</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
+      {/* Warning if min balance < 0 */}
+      {!isLoading && isNegative && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>
+            Прогнозируемый дефицит{' '}
+            <strong>{formatDate(summary!.min_balance_date)}</strong>:{' '}
+            <strong>{formatAmount(summary!.min_balance)}</strong>. Проверьте регулярные расходы.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
@@ -182,23 +131,48 @@ export default function ForecastPage() {
             </CardTitle>
           </CardHeader>
         </Card>
+
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
-              <TrendingUp className="h-4 w-4 text-green-600" /> Поступит за {days} дней
+              <TrendingUp className="h-4 w-4 text-green-600" /> Поступит
             </CardDescription>
             <CardTitle className="text-xl text-green-600">
-              {isLoading ? <Skeleton className="h-7 w-32" /> : `+${formatAmount(totalIncome)}`}
+              {isLoading ? <Skeleton className="h-7 w-32" /> : `+${formatAmount(summary?.total_income ?? 0)}`}
             </CardTitle>
           </CardHeader>
         </Card>
+
         <Card>
           <CardHeader className="pb-2">
             <CardDescription className="flex items-center gap-1.5">
-              <TrendingDown className="h-4 w-4 text-red-500" /> Уйдёт за {days} дней
+              <TrendingDown className="h-4 w-4 text-red-500" /> Уйдёт
             </CardDescription>
             <CardTitle className="text-xl text-red-500">
-              {isLoading ? <Skeleton className="h-7 w-32" /> : `-${formatAmount(totalExpense)}`}
+              {isLoading ? <Skeleton className="h-7 w-32" /> : `−${formatAmount(summary?.total_expense ?? 0)}`}
+            </CardTitle>
+          </CardHeader>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardDescription className="flex items-center gap-1.5">
+              <AlertTriangle className={`h-4 w-4 ${isNegative ? 'text-red-500' : 'text-yellow-500'}`} />
+              Мин. баланс
+            </CardDescription>
+            <CardTitle className={`text-xl ${isNegative ? 'text-red-500' : ''}`}>
+              {isLoading ? (
+                <Skeleton className="h-7 w-32" />
+              ) : (
+                <>
+                  {formatAmount(summary?.min_balance ?? 0)}
+                  {summary?.min_balance_date && (
+                    <p className="text-xs text-muted-foreground font-normal mt-0.5">
+                      {formatDate(summary.min_balance_date)}
+                    </p>
+                  )}
+                </>
+              )}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -209,10 +183,16 @@ export default function ForecastPage() {
         <CardHeader>
           <CardTitle>Прогноз баланса</CardTitle>
           <CardDescription>
-            Ожидаемый баланс через {days} дней:{' '}
-            <span className={endBalance >= currentBalance ? 'text-green-600 font-semibold' : 'text-red-500 font-semibold'}>
-              {formatAmount(endBalance)}
-            </span>
+            {isLoading ? (
+              <Skeleton className="h-4 w-48" />
+            ) : (
+              <>
+                Чистый результат за {days} дней:{' '}
+                <span className={`font-semibold ${(summary?.net ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                  {(summary?.net ?? 0) >= 0 ? '+' : ''}{formatAmount(summary?.net ?? 0)}
+                </span>
+              </>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -220,7 +200,8 @@ export default function ForecastPage() {
             <Skeleton className="h-[260px] w-full" />
           ) : chartData.length === 0 ? (
             <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">
-              Нет регулярных платежей — добавьте их на странице «Регулярные»
+              Нет регулярных платежей — добавьте их на странице{' '}
+              <a href="/dashboard/recurring" className="underline ml-1">Регулярные</a>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
@@ -232,23 +213,24 @@ export default function ForecastPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis dataKey="label" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11 }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                 />
-                <Tooltip
-                  formatter={((value: number | undefined) => value != null ? [formatAmount(value), 'Баланс'] : '') as never}
-                  labelStyle={{ fontWeight: 600 }}
-                />
+                <Tooltip content={<CustomTooltip />} />
+                {/* Нулевая линия */}
+                <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.6} />
                 <Area
                   type="monotone"
                   dataKey="balance"
                   stroke="hsl(var(--chart-2))"
                   strokeWidth={2}
                   fill="url(#balanceGrad)"
+                  dot={<CustomDot />}
+                  activeDot={{ r: 5 }}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -273,30 +255,41 @@ export default function ForecastPage() {
             </div>
           ) : events.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-8">
-              Нет запланированных платежей. Добавьте регулярные платежи →{' '}
-              <a href="/dashboard/recurring" className="underline">Регулярные</a>
+              Нет запланированных платежей.{' '}
+              <a href="/dashboard/recurring" className="underline">Добавьте регулярные →</a>
             </p>
           ) : (
             <div className="divide-y">
               {events.map((ev, i) => (
                 <div key={i} className="flex items-center justify-between py-3">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-8 w-8 items-center justify-center rounded-full text-white text-xs ${ev.type === 'INCOME' ? 'bg-green-500' : 'bg-red-400'}`}>
+                    <div
+                      className={`flex h-8 w-8 items-center justify-center rounded-full text-white text-xs font-bold ${
+                        ev.type === 'INCOME' ? 'bg-green-500' : 'bg-red-400'
+                      }`}
+                    >
                       {ev.type === 'INCOME' ? '↑' : '↓'}
                     </div>
                     <div>
                       <p className="text-sm font-medium">{ev.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(ev.date, 'd MMMM', { locale: ru })}
+                        {format(parseISO(ev.date), 'd MMMM', { locale: ru })}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant={ev.type === 'INCOME' ? 'default' : 'destructive'} className="text-xs">
+                    <Badge
+                      variant={ev.type === 'INCOME' ? 'default' : 'destructive'}
+                      className="text-xs"
+                    >
                       {ev.type === 'INCOME' ? 'Доход' : 'Расход'}
                     </Badge>
-                    <span className={`text-sm font-semibold ${ev.type === 'INCOME' ? 'text-green-600' : 'text-red-500'}`}>
-                      {ev.type === 'INCOME' ? '+' : '-'}{formatAmount(ev.amount)}
+                    <span
+                      className={`text-sm font-semibold ${
+                        ev.type === 'INCOME' ? 'text-green-600' : 'text-red-500'
+                      }`}
+                    >
+                      {ev.type === 'INCOME' ? '+' : '−'}{formatAmount(ev.amount)}
                     </span>
                   </div>
                 </div>

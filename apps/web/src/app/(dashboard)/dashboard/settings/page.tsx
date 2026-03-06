@@ -584,6 +584,21 @@ export default function SettingsPage() {
       {/* Push Notifications */}
       <PushNotificationsSection />
 
+      {/* CSV Templates */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Шаблоны импорта CSV</CardTitle>
+          <CardDescription>Управление сохранёнными маппингами колонок для импорта выписок</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <a href="/dashboard/settings/csv-templates">
+            <button className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 transition-colors">
+              Управление шаблонами
+            </button>
+          </a>
+        </CardContent>
+      </Card>
+
       {/* Telegram */}
       <TelegramSection />
 
