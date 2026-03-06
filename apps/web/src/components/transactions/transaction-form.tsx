@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Pencil, Plus } from 'lucide-react'
+import { Pencil, Plus, X } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
@@ -31,6 +31,7 @@ interface TransactionData {
   date: Date | string
   description?: string | null
   categoryId?: string | null
+  tags?: Array<{ tag: { name: string } }>
 }
 
 interface TransactionFormProps {
@@ -62,6 +63,10 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
   })
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [categoryId, setCategoryId] = useState(initialData?.categoryId ?? '')
+  const [tags, setTags] = useState<string[]>(() =>
+    initialData?.tags?.map(t => t.tag.name) ?? []
+  )
+  const [tagInput, setTagInput] = useState('')
 
   useEffect(() => {
     if (open && initialData) {
@@ -72,6 +77,7 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
       setDate(new Date(initialData.date).toISOString().split('T')[0])
       setDescription(initialData.description ?? '')
       setCategoryId(initialData.categoryId ?? '')
+      setTags(initialData.tags?.map(t => t.tag.name) ?? [])
     }
   }, [open, initialData])
 
@@ -114,6 +120,28 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
     setDate(new Date().toISOString().split('T')[0])
     setDescription('')
     setCategoryId('')
+    setTags([])
+    setTagInput('')
+  }
+
+  function handleTagKeyDown(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      addTag()
+    } else if (e.key === 'Backspace' && tagInput === '' && tags.length > 0) {
+      setTags(prev => prev.slice(0, -1))
+    }
+  }
+
+  function addTag() {
+    const name = tagInput.trim().toLowerCase()
+    if (!name || tags.includes(name) || tags.length >= 10) return
+    setTags(prev => [...prev, name])
+    setTagInput('')
+  }
+
+  function removeTag(name: string) {
+    setTags(prev => prev.filter(t => t !== name))
   }
 
   function handleSubmit(e: React.FormEvent) {
@@ -133,6 +161,7 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
         date: new Date(date),
         description: description || undefined,
         categoryId: categoryId || undefined,
+        tags,
       })
     } else {
       createMutation.mutate({
@@ -143,6 +172,7 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
         description: description || undefined,
         categoryId: categoryId || undefined,
         isRecurring: false,
+        tags,
       })
     }
   }
@@ -250,6 +280,38 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
               </Select>
             </div>
           )}
+
+          {/* Tags */}
+          <div className="space-y-2">
+            <Label>Теги</Label>
+            <div className="flex flex-wrap gap-1.5 rounded-md border border-input bg-background px-3 py-2 min-h-[40px] focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-0">
+              {tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => removeTag(tag)}
+                    className="ml-0.5 rounded-full p-0.5 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors"
+                  >
+                    <X className="h-2.5 w-2.5" />
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                placeholder={tags.length === 0 ? 'Введите тег, Enter для добавления...' : ''}
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                onBlur={addTag}
+                className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Enter или Backspace для управления тегами</p>
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setOpen(false)}>
