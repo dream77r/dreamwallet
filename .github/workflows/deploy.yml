@@ -38,6 +38,9 @@ jobs:
             echo "⚙️ Generating Prisma client..."
             pnpm --filter @dreamwallet/db db:generate
 
+            echo "🧹 Cleaning old build..."
+            rm -rf apps/web/.next apps/worker/dist
+
             echo "🔨 Building packages..."
             pnpm --filter @dreamwallet/db build
             pnpm --filter @dreamwallet/web build
