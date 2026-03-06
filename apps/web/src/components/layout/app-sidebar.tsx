@@ -38,6 +38,7 @@ import {
   HandCoins,
   CalendarClock,
   Landmark,
+  TrendingUp,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
@@ -57,6 +58,7 @@ const mainNav = [
   { title: 'Прогноз', href: '/dashboard/forecast', icon: TrendingUp },
   { title: 'Аналитика', href: '/dashboard/analytics', icon: PieChart },
   { title: 'Активы', href: '/dashboard/net-worth', icon: Landmark },
+  { title: 'Прогноз', href: '/dashboard/forecast', icon: TrendingUp },
   { title: 'AI Советник', href: '/dashboard/ai-chat', icon: BrainCircuit },
   { title: 'Импорт', href: '/dashboard/import', icon: Upload },
 ]

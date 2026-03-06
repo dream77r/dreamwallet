@@ -242,7 +242,7 @@ export default function TransactionsPage() {
     <div className="space-y-6">
       {editingTx && (
         <TransactionForm
-          initialData={{ id: editingTx.id, type: editingTx.type as 'INCOME' | 'EXPENSE' | 'TRANSFER', accountId: editingTx.accountId, amount: editingTx.amount, date: editingTx.date, description: editingTx.description, categoryId: editingTx.categoryId }}
+          initialData={{ id: editingTx.id, type: editingTx.type as 'INCOME' | 'EXPENSE' | 'TRANSFER', accountId: editingTx.accountId, amount: editingTx.amount, date: editingTx.date, description: editingTx.description, categoryId: editingTx.categoryId, tags: editingTx.tags }}
           open={!!editingId}
           onOpenChange={(o) => { if (!o) setEditingId(null) }}
         />
@@ -453,6 +453,7 @@ export default function TransactionsPage() {
                 <TableHead className="hidden md:table-cell">Категория</TableHead>
                 <TableHead>Счёт</TableHead>
                 <TableHead className="hidden md:table-cell">Тип</TableHead>
+                <TableHead className="hidden lg:table-cell">Теги</TableHead>
                 <TableHead className="text-right pr-6">Сумма</TableHead>
                 <TableHead className="w-[50px]"></TableHead>
               </TableRow>
@@ -526,6 +527,20 @@ export default function TransactionsPage() {
                         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${typeBadgeVariants[type]}`}>
                           {typeLabels[type]}
                         </span>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        <div className="flex flex-wrap gap-1">
+                          {tx.tags?.map((t: { tag: { id: string; name: string; color?: string | null } }) => (
+                            <button
+                              key={t.tag.id}
+                              onClick={() => { setTagFilter(t.tag.name); setPage(1) }}
+                              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
+                              style={t.tag.color ? { backgroundColor: t.tag.color + '20', color: t.tag.color } : {}}
+                            >
+                              {t.tag.name}
+                            </button>
+                          ))}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <span className={`font-semibold text-sm ${
