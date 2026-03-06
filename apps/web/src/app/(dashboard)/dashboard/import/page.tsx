@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -23,6 +25,14 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   Upload,
   FileText,
   CheckCircle2,
@@ -35,9 +45,13 @@ import {
   Loader2,
   History,
   Inbox,
+  BookmarkPlus,
+  BookmarkCheck,
+  Layers,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { trpc } from '@/lib/trpc/client'
+import { toast } from 'sonner'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -48,7 +62,7 @@ const steps = [
   { id: 4, label: 'Подтверждение' },
 ]
 
-const templates = [
+const bankTemplates = [
   { value: 'tinkoff', label: 'Тинькофф Банк' },
   { value: 'sber', label: 'Сбербанк' },
   { value: 'alfa', label: 'Альфа-Банк' },
@@ -80,6 +94,129 @@ interface ParseResult {
   fileContent: string
 }
 
+// ─── Save Template Modal ─────────────────────────────────────────────────────
+
+interface SaveTemplateModalProps {
+  open: boolean
+  onClose: () => void
+  mapping: Record<string, string>
+  delimiter: string
+  dateFormat: string
+  skipRows: number
+  existingTemplateId: string | null
+  existingTemplateName: string
+}
+
+function SaveTemplateModal({
+  open,
+  onClose,
+  mapping,
+  delimiter,
+  dateFormat,
+  skipRows,
+  existingTemplateId,
+  existingTemplateName,
+}: SaveTemplateModalProps) {
+  const utils = trpc.useUtils()
+  const [name, setName] = useState(existingTemplateName || '')
+  const [mode, setMode] = useState<'new' | 'overwrite'>('new')
+
+  const createMutation = trpc.csvTemplates.create.useMutation({
+    onSuccess: ({ duplicateName }) => {
+      utils.csvTemplates.list.invalidate()
+      toast.success('Шаблон сохранён')
+      if (duplicateName) toast.warning('Шаблон с таким названием уже существует — создан дубликат')
+      onClose()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+
+  const updateMutation = trpc.csvTemplates.update.useMutation({
+    onSuccess: () => {
+      utils.csvTemplates.list.invalidate()
+      toast.success('Шаблон обновлён')
+      onClose()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+
+  function handleSave() {
+    const payload = {
+      name: name.trim(),
+      columnMap: mapping,
+      dateFormat,
+      delimiter,
+      skipRows,
+    }
+
+    if (mode === 'overwrite' && existingTemplateId) {
+      updateMutation.mutate({ id: existingTemplateId, ...payload })
+    } else {
+      createMutation.mutate(payload)
+    }
+  }
+
+  const isPending = createMutation.isPending || updateMutation.isPending
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Сохранить шаблон маппинга</DialogTitle>
+          <DialogDescription>
+            Шаблон позволит быстро настроить маппинг при следующем импорте из того же источника.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {existingTemplateId && (
+            <div className="flex gap-2">
+              <Button
+                variant={mode === 'overwrite' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => { setMode('overwrite'); setName(existingTemplateName) }}
+              >
+                Перезаписать «{existingTemplateName}»
+              </Button>
+              <Button
+                variant={mode === 'new' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => { setMode('new'); setName('') }}
+              >
+                Сохранить как новый
+              </Button>
+            </div>
+          )}
+
+          {(mode === 'new' || !existingTemplateId) && (
+            <div className="space-y-1.5">
+              <Label htmlFor="tpl-name">Название шаблона</Label>
+              <Input
+                id="tpl-name"
+                placeholder="Например: Тинькофф основной"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+                autoFocus
+              />
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Отмена</Button>
+          <Button onClick={handleSave} disabled={!name.trim() || isPending}>
+            {isPending && <Loader2 className="h-4 w-4 animate-spin" />}
+            Сохранить
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────
+
 export default function ImportPage() {
   const router = useRouter()
   const [step, setStep] = useState<Step>(1)
@@ -95,14 +232,27 @@ export default function ImportPage() {
     imported: number; skipped: number; errors: number; totalRows: number
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
+
+  // CSV Template state
+  const [selectedCsvTemplateId, setSelectedCsvTemplateId] = useState<string>('none')
+  const [showSaveModal, setShowSaveModal] = useState(false)
+
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Fetch user accounts for target selection
   const { data: accounts } = trpc.account.listAll.useQuery()
   const importMutation = trpc.import.start.useMutation()
-
-  // Import history
   const { data: importHistory, isLoading: historyLoading } = trpc.import.history.useQuery()
+  const { data: csvTemplates } = trpc.csvTemplates.list.useQuery()
+
+  const selectedCsvTemplate = csvTemplates?.find((t) => t.id === selectedCsvTemplateId)
+
+  function applyTemplate(templateId: string) {
+    setSelectedCsvTemplateId(templateId)
+    const tpl = csvTemplates?.find((t) => t.id === templateId)
+    if (tpl && parseResult) {
+      setMapping(tpl.columnMap as Record<string, string>)
+    }
+  }
 
   async function handleFileUpload(selectedFile: File) {
     setFile(selectedFile)
@@ -126,9 +276,15 @@ export default function ImportPage() {
 
       const result: ParseResult = await response.json()
       setParseResult(result)
-      setMapping(result.suggestedMapping)
 
-      // Auto-select first account
+      // If a CSV template is selected — apply it, otherwise use suggested mapping
+      if (selectedCsvTemplateId && selectedCsvTemplateId !== 'none') {
+        const tpl = csvTemplates?.find((t) => t.id === selectedCsvTemplateId)
+        setMapping(tpl ? (tpl.columnMap as Record<string, string>) : result.suggestedMapping)
+      } else {
+        setMapping(result.suggestedMapping)
+      }
+
       if (accounts && accounts.length > 0 && !selectedAccountId) {
         setSelectedAccountId(accounts[0].id)
       }
@@ -184,6 +340,7 @@ export default function ImportPage() {
     setMapping({})
     setImportResult(null)
     setError(null)
+    setSelectedCsvTemplateId('none')
   }
 
   const canProceed = step === 1
@@ -249,6 +406,40 @@ export default function ImportPage() {
       {/* Step 1: Upload */}
       {step === 1 && (
         <div className="space-y-4">
+          {/* CSV Template selector */}
+          {csvTemplates && csvTemplates.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-muted-foreground" />
+                  <CardTitle className="text-base">Шаблон маппинга</CardTitle>
+                </div>
+                <CardDescription>Выберите сохранённый шаблон для автозаполнения маппинга колонок</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Select value={selectedCsvTemplateId} onValueChange={applyTemplate}>
+                  <SelectTrigger className="w-full sm:w-[320px]">
+                    <SelectValue placeholder="Без шаблона" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Без шаблона —</SelectItem>
+                    {csvTemplates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>
+                        {tpl.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedCsvTemplate && (
+                  <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                    <BookmarkCheck className="h-3.5 w-3.5 text-green-600" />
+                    Маппинг из шаблона «{selectedCsvTemplate.name}» будет применён автоматически
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Шаблон банка</CardTitle>
@@ -260,7 +451,7 @@ export default function ImportPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {templates.map((t) => (
+                  {bankTemplates.map((t) => (
                     <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
                   ))}
                 </SelectContent>
@@ -363,7 +554,7 @@ export default function ImportPage() {
                 <CardTitle className="text-base">Предпросмотр данных</CardTitle>
                 <CardDescription>{parseResult.totalRows} строк · файл: {parseResult.fileName}</CardDescription>
               </div>
-              <Badge variant="secondary">{templates.find(t => t.value === template)?.label}</Badge>
+              <Badge variant="secondary">{bankTemplates.find(t => t.value === template)?.label}</Badge>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -399,10 +590,50 @@ export default function ImportPage() {
       {step === 3 && parseResult && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Маппинг колонок</CardTitle>
-            <CardDescription>Укажите, какие колонки файла соответствуют полям системы</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Маппинг колонок</CardTitle>
+                <CardDescription>Укажите, какие колонки файла соответствуют полям системы</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSaveModal(true)}
+                className="gap-1.5"
+              >
+                <BookmarkPlus className="h-4 w-4" />
+                Сохранить шаблон
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-3">
+            {/* Template quick-apply on mapping step */}
+            {csvTemplates && csvTemplates.length > 0 && (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                <Layers className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Select
+                  value={selectedCsvTemplateId}
+                  onValueChange={(v) => {
+                    setSelectedCsvTemplateId(v)
+                    if (v !== 'none') {
+                      const tpl = csvTemplates.find((t) => t.id === v)
+                      if (tpl) setMapping(tpl.columnMap as Record<string, string>)
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8 border-none bg-transparent shadow-none p-0 focus:ring-0 w-auto min-w-[180px]">
+                    <SelectValue placeholder="Применить шаблон..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— Без шаблона —</SelectItem>
+                    {csvTemplates.map((tpl) => (
+                      <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {parseResult.headers.map((col) => (
               <div key={col} className="flex items-center gap-4">
                 <div className="flex-1 flex items-center gap-2 p-3 rounded-lg bg-muted text-sm">
@@ -473,7 +704,7 @@ export default function ImportPage() {
                 <div className="space-y-2">
                   {[
                     { label: 'Файл', value: parseResult?.fileName },
-                    { label: 'Шаблон', value: templates.find(t => t.value === template)?.label },
+                    { label: 'Шаблон', value: bankTemplates.find(t => t.value === template)?.label },
                     { label: 'Строк', value: `${parseResult?.totalRows} строк` },
                     { label: 'Счёт', value: accounts?.find(a => a.id === selectedAccountId)?.name },
                     {
@@ -483,6 +714,9 @@ export default function ImportPage() {
                         .map(([k, v]) => `${k} → ${targetFields.find(f => f.value === v)?.label}`)
                         .join(', '),
                     },
+                    ...(selectedCsvTemplate
+                      ? [{ label: 'CSV шаблон', value: selectedCsvTemplate.name }]
+                      : []),
                   ].map(({ label, value }) => (
                     <div key={label} className="flex gap-2 text-sm">
                       <span className="text-muted-foreground w-28 flex-shrink-0">{label}:</span>
@@ -598,6 +832,20 @@ export default function ImportPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Save Template Modal */}
+      {showSaveModal && (
+        <SaveTemplateModal
+          open={showSaveModal}
+          onClose={() => setShowSaveModal(false)}
+          mapping={mapping}
+          delimiter=";"
+          dateFormat="DD.MM.YYYY"
+          skipRows={0}
+          existingTemplateId={selectedCsvTemplateId !== 'none' ? selectedCsvTemplateId : null}
+          existingTemplateName={selectedCsvTemplate?.name ?? ''}
+        />
+      )}
     </div>
   )
 }
