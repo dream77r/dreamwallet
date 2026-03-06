@@ -34,7 +34,8 @@ jobs:
             cd /home/dreamwallet/projects/dreamwallet
             
             echo "📦 Pulling latest code..."
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
             
             echo "📥 Installing dependencies..."
             pnpm install --frozen-lockfile
