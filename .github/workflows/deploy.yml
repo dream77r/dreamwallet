@@ -14,57 +14,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup SSH
-        uses: webfactory/ssh-agent@v0.9.0
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
         with:
-          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
-
-      - name: Add server to known hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H 151.241.234.248 >> ~/.ssh/known_hosts
-
-      - name: Deploy
-        run: |
-          ssh dreamwallet@151.241.234.248 << 'ENDSSH'
+          host: 151.241.234.248
+          username: dreamwallet
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          command_timeout: 15m
+          script: |
             set -e
             cd /home/dreamwallet/projects/dreamwallet
-            
+
             echo "📦 Pulling latest code..."
             git fetch origin main
             git reset --hard origin/main
-            
+
             echo "📥 Installing dependencies..."
             pnpm install --frozen-lockfile
-            
+
             echo "🗄️ Applying DB migrations..."
             pnpm --filter @dreamwallet/db exec prisma db push --accept-data-loss
-            
+
             echo "⚙️ Generating Prisma client..."
             pnpm --filter @dreamwallet/db db:generate
-            
+
             echo "🔨 Building packages..."
             pnpm --filter @dreamwallet/db build
             pnpm --filter @dreamwallet/web build
             pnpm --filter @dreamwallet/worker build
-            
-            echo "📁 Copying static assets for standalone..."
+
+            echo "📁 Copying static assets..."
             cp -r apps/web/public apps/web/.next/standalone/apps/web/public
             cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
-            
+
             echo "🚀 Restarting services..."
             pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
             pm2 save
-            
+
             echo "✅ Deploy complete!"
-          ENDSSH
 
       - name: Health check
         run: |
-          sleep 10
+          sleep 15
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://dreamwallet.brewos.ru)
           echo "HTTP Status: $STATUS"
           if [ "$STATUS" != "200" ] && [ "$STATUS" != "307" ]; then
