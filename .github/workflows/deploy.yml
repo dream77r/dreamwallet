@@ -38,8 +38,12 @@ jobs:
             echo "⚙️ Generating Prisma client..."
             pnpm --filter @dreamwallet/db db:generate
 
+            echo "💾 Disk usage:"
+            df -h .
+
             echo "🧹 Cleaning old build..."
             rm -rf apps/web/.next apps/worker/dist
+            pnpm store prune 2>/dev/null || true
 
             echo "🔨 Building packages..."
             pnpm --filter @dreamwallet/db build
