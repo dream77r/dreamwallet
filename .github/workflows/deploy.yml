@@ -41,8 +41,12 @@ jobs:
             echo "💾 Disk usage:"
             df -h .
 
+            echo "🔪 Killing zombie build processes..."
+            pkill -f "next build" || true
+            sleep 2
+
             echo "🧹 Cleaning old build..."
-            rm -rf apps/web/.next apps/worker/dist
+            rm -rf apps/web/.next apps/web/.next/lock apps/worker/dist
             pnpm store prune 2>/dev/null || true
 
             echo "🔨 Building packages..."
