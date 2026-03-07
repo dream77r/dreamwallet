@@ -20,6 +20,7 @@ import { insightsRouter } from './insights'
 import { aiRouter } from './ai'
 import { scoreRouter } from './score'
 import { csvTemplatesRouter } from './csv-templates'
+import { forecastRouter } from './forecast'
 
 export const appRouter = router({
   wallet: walletRouter,
@@ -43,6 +44,7 @@ export const appRouter = router({
   ai: aiRouter,
   score: scoreRouter,
   csvTemplates: csvTemplatesRouter,
+  forecast: forecastRouter,
 })
 
 export type AppRouter = typeof appRouter
