@@ -28,6 +28,7 @@ model User {
   currency      String    @default("RUB")
   timezone      String    @default("Europe/Moscow")
   locale        String    @default("ru")
+  dashboardLayout Json?   @map("dashboard_layout")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
