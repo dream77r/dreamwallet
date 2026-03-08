@@ -43,6 +43,7 @@ import {
   X,
   Download,
   Camera,
+  Sparkles,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -93,6 +94,15 @@ function TransactionsPage() {
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [isAutoCategorizing, setIsAutoCategorizing] = useState(false)
+  const autoCategorize = trpc.transaction.autoCategorize.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message)
+      utils.transaction.list.invalidate()
+    },
+    onError: (e) => toast.error('Ошибка: ' + e.message),
+    onSettled: () => setIsAutoCategorizing(false),
+  })
   const searchParams = useSearchParams()
   useEffect(() => {
     if (searchParams.get('action') === 'new') {

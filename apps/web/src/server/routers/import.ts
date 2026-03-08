@@ -86,6 +86,41 @@ export const importRouter = router({
       })
       const categoryMap = new Map(categories.map(c => [c.name.toLowerCase(), c.id]))
 
+      
+      // ── Keyword-based auto-categorization ──────────────────────────────────
+      const KEYWORD_RULES: Array<{ patterns: string[]; category: string; type?: string }> = [
+        { patterns: ['пятёрочка','пятерочка','магнит','перекрёсток','перекресток','вкусвилл','ашан','лента','дикси','metro','окей','spar','спар','fix price','фикс прайс','светофор','globus'], category: 'Продукты' },
+        { patterns: ['яндекс такси','yandex taxi','uber','ситимобил','таксовичкоф','rutaxi','indriver','bolt'], category: 'Транспорт' },
+        { patterns: ['метро','московский метрополитен','мосметро','электричка','ржд','rzd','аэроэкспресс'], category: 'Транспорт' },
+        { patterns: ['аптека','pharmacy','36,6','36.6','горздрав','ригла','eapteka','сбераптека','здравсити'], category: 'Здоровье' },
+        { patterns: ['мвидео','м.видео','эльдорадо','dns','днс','citilink','ситилинк','re:store','apple store'], category: 'Электроника' },
+        { patterns: ['ozon','озон','wildberries','aliexpress','lamoda','яндекс маркет','sbermegamarket','мегамаркет'], category: 'Покупки' },
+        { patterns: ['зарплата','зп ','salary','аванс'], category: 'Зарплата', type: 'INCOME' },
+        { patterns: ['кафе','ресторан','restaurant','cafe','coffee','кофе','пицца','pizza','суши','sushi','burger','бургер','kfc','макдоналдс','mcdonald','subway','додо','dodo','шоколадница'], category: 'Кафе и рестораны' },
+        { patterns: ['ростелеком','мтс','мегафон','билайн','tele2','теле2','yota','йота'], category: 'Связь' },
+        { patterns: ['netflix','spotify','яндекс плюс','кинопоиск','ivi','okko','vk музыка','premier'], category: 'Подписки' },
+        { patterns: ['жкх','коммунальн','электроэнергия','газ газпром','водоканал','управляющая компания','тсж'], category: 'ЖКХ' },
+        { patterns: ['газпром нефть','лукойл','роснефть','azs','азс','заправк','бензин'], category: 'Авто' },
+        { patterns: ['фитнес','fitness','worldclass','бассейн','тренажер','yoga','йога','crossfit'], category: 'Спорт' },
+        { patterns: ['кино','cinema','театр','концерт','kassir','кассир','ticketland'], category: 'Развлечения' },
+        { patterns: ['авиабилет','аэрофлот','s7','pobeda','победа','booking','букинг','airbnb','отель','hotel'], category: 'Путешествия' },
+      ]
+      function matchCategory(text: string, txType: string): string | null {
+        const lower = text.toLowerCase()
+        for (const rule of KEYWORD_RULES) {
+          if (rule.type && rule.type !== txType) continue
+          if (rule.patterns.some(p => lower.includes(p))) {
+            // find in user categories
+            for (const cat of categories) {
+              if (cat.name.toLowerCase().includes(rule.category.toLowerCase().split(' ')[0]) && cat.type === txType) {
+                return cat.id
+              }
+            }
+          }
+        }
+        return null
+      }
+
       for (const row of rows) {
         try {
           const dateStr = row[reverseMap.date] || ''
@@ -115,6 +150,12 @@ export const importRouter = router({
           let categoryId: string | null = null
           if (categoryName) {
             categoryId = categoryMap.get(categoryName.toLowerCase()) || null
+          }
+          // Fallback: keyword-based auto-categorization
+          if (!categoryId) {
+            const searchText = [description, counterparty].filter(Boolean).join(' ')
+            const type = amount > 0 ? 'INCOME' : 'EXPENSE'
+            categoryId = matchCategory(searchText, type)
           }
 
           await ctx.prisma.transaction.create({
