@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <AppSidebar />
       <SidebarInset>
         {/* iOS-style header — frosted glass */}
-        <header className="flex h-14 shrink-0 items-center gap-2 bg-white/80 backdrop-blur-xl border-b border-gray-100 px-4 sticky top-0 z-40">
+        <header className="flex h-14 shrink-0 items-center gap-2 bg-background/80 backdrop-blur-xl border-b border-border px-4 sticky top-0 z-40">
           {/* Sidebar trigger — скрывается на мобильных */}
           <SidebarTrigger className="-ml-1 hidden md:flex" />
           <Separator orientation="vertical" className="mr-2 h-4 hidden md:flex" />

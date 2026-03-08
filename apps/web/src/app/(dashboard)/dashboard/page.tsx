@@ -106,7 +106,7 @@ function BalanceWidget({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {/* Главная карточка — баланс */}
-      <Card className="bg-white rounded-2xl shadow-sm border-0 sm:col-span-2 lg:col-span-1">
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none sm:col-span-2 lg:col-span-1">
         <CardHeader className="pb-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Общий баланс</p>
           {isLoading ? (
@@ -129,7 +129,7 @@ function BalanceWidget({
         </CardContent>
       </Card>
 
-      <Card className="bg-white rounded-2xl shadow-sm border-0">
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
         <CardHeader className="pb-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Доходы</p>
           {isLoading ? (
@@ -148,7 +148,7 @@ function BalanceWidget({
         </CardContent>
       </Card>
 
-      <Card className="bg-white rounded-2xl shadow-sm border-0">
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
         <CardHeader className="pb-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Расходы</p>
           {isLoading ? (
@@ -167,7 +167,7 @@ function BalanceWidget({
         </CardContent>
       </Card>
 
-      <Card className="bg-white rounded-2xl shadow-sm border-0">
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
         <CardHeader className="pb-1">
           <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Чистый доход</p>
           {isLoading ? (
@@ -206,7 +206,7 @@ function CashflowWidget({
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-2 bg-white rounded-2xl shadow-sm border-0">
+      <Card className="lg:col-span-2 bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-bold tracking-tight">Денежный поток</CardTitle>
           <CardDescription className="text-xs font-medium text-gray-400">Доходы и расходы за 12 месяцев</CardDescription>
@@ -242,7 +242,7 @@ function CashflowWidget({
         </CardContent>
       </Card>
 
-      <Card className="bg-white rounded-2xl shadow-sm border-0">
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-bold tracking-tight">Расходы по категориям</CardTitle>
           <CardDescription className="text-xs font-medium text-gray-400">{monthLabel}</CardDescription>
@@ -298,7 +298,7 @@ function BudgetsWidget({
   monthLabel: string
 }) {
   return (
-    <Card className="bg-white rounded-2xl shadow-sm border-0">
+    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-bold tracking-tight">Бюджеты</CardTitle>
         <CardDescription className="text-xs font-medium text-gray-400">Прогресс на {monthLabel}</CardDescription>
@@ -365,7 +365,7 @@ function RecentTransactionsWidget({
   isLoading: boolean
 }) {
   return (
-    <Card className="bg-white rounded-2xl shadow-sm border-0">
+    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
       <CardHeader className="pb-2">
         <CardTitle className="text-base font-bold tracking-tight">Последние транзакции</CardTitle>
         <CardDescription className="text-xs font-medium text-gray-400">5 последних операций</CardDescription>
@@ -392,7 +392,7 @@ function RecentTransactionsWidget({
                 <div key={tx.id}>
                   <div className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-green-500/10 dark:bg-green-500/20' : 'bg-red-500/10 dark:bg-red-500/20'}`}>
                         {isIncome ? (
                           <ArrowUpRight className="h-5 w-5 text-green-600" />
                         ) : (
@@ -443,7 +443,7 @@ function GoalsWidget({
   if (!active.length) return null
 
   return (
-    <Card className="bg-white rounded-2xl shadow-sm border-0">
+    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold tracking-tight">Финансовые цели</CardTitle>
@@ -460,7 +460,7 @@ function GoalsWidget({
             const pct = Math.min(100, Math.round((current / target) * 100))
             const color = goal.color ?? '#6366f1'
             return (
-              <div key={goal.id} className="space-y-2 rounded-2xl bg-gray-50 p-4">
+              <div key={goal.id} className="space-y-2 rounded-2xl bg-muted/50 p-4">
                 <div className="flex items-center gap-2">
                   <span className="text-xl leading-none">{goal.icon ?? '🎯'}</span>
                   <div className="min-w-0 flex-1">

@@ -308,7 +308,7 @@ function TransactionsPage() {
 
       {/* Summary row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="bg-white rounded-2xl shadow-sm border-0">
+        <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
           <CardContent className="pt-5 pb-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Доходы</p>
             {isLoading ? (
@@ -318,7 +318,7 @@ function TransactionsPage() {
             )}
           </CardContent>
         </Card>
-        <Card className="bg-white rounded-2xl shadow-sm border-0">
+        <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
           <CardContent className="pt-5 pb-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Расходы</p>
             {isLoading ? (
@@ -328,7 +328,7 @@ function TransactionsPage() {
             )}
           </CardContent>
         </Card>
-        <Card className="bg-white rounded-2xl shadow-sm border-0">
+        <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
           <CardContent className="pt-5 pb-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Итого</p>
             {isLoading ? (
@@ -343,7 +343,7 @@ function TransactionsPage() {
       </div>
 
       {/* Filters */}
-      <Card className="bg-white rounded-2xl shadow-sm border-0">
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
         <CardContent className="pt-5 pb-4">
           <div className="flex flex-wrap gap-3 items-center">
             <div className="relative flex-1 min-w-[200px]">
@@ -471,7 +471,7 @@ function TransactionsPage() {
 
 
       {/* Mobile list — iOS Apple Wallet style */}
-      <div className="md:hidden space-y-1 bg-white rounded-2xl shadow-sm overflow-hidden">
+      <div className="md:hidden space-y-1 bg-card rounded-2xl shadow-sm overflow-hidden dark:shadow-none">
         {isLoading ? (
           <div className="p-4 space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -528,7 +528,7 @@ function TransactionsPage() {
 
       {/* Desktop table */}
       {/* Desktop table — hidden on mobile */}
-      <div className="hidden md:block"><Card className="bg-white rounded-2xl shadow-sm border-0 overflow-hidden">
+      <div className="hidden md:block"><Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
