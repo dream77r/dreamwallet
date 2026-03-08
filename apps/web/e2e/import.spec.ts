@@ -49,7 +49,7 @@ test.describe('Импорт транзакций (CSV)', () => {
 
   test('загрузка CSV файла', async ({ authedPage: page }) => {
     const fileInput = page.locator('input[type="file"]').first()
-    if (!await fileInput.isAttached({ timeout: 3_000 }).catch(() => false)) {
+    if (!await fileInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
       test.skip()
       return
     }
@@ -67,7 +67,7 @@ test.describe('Импорт транзакций (CSV)', () => {
 
   test('маппинг колонок (если присутствует в UI)', async ({ authedPage: page }) => {
     const fileInput = page.locator('input[type="file"]').first()
-    if (!await fileInput.isAttached({ timeout: 3_000 }).catch(() => false)) {
+    if (!await fileInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
       test.skip()
       return
     }
@@ -91,7 +91,7 @@ test.describe('Импорт транзакций (CSV)', () => {
 
   test('кнопка сброса/отмены очищает форму', async ({ authedPage: page }) => {
     const fileInput = page.locator('input[type="file"]').first()
-    if (!await fileInput.isAttached({ timeout: 3_000 }).catch(() => false)) {
+    if (!await fileInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
       test.skip()
       return
     }
@@ -110,7 +110,7 @@ test.describe('Импорт транзакций (CSV)', () => {
 
   test('неверный формат файла показывает ошибку', async ({ authedPage: page }) => {
     const fileInput = page.locator('input[type="file"]').first()
-    if (!await fileInput.isAttached({ timeout: 3_000 }).catch(() => false)) {
+    if (!await fileInput.isVisible({ timeout: 3_000 }).catch(() => false)) {
       test.skip()
       return
     }

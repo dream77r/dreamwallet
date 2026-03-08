@@ -1,7 +1,8 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
 import webpush from 'web-push'
-import type { PrismaClient } from '@prisma/client'
+import type { prisma as PrismaType } from '@dreamwallet/db'
+type PrismaClient = typeof PrismaType
 
 // Configure VAPID
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? ''
