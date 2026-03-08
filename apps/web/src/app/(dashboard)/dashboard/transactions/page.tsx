@@ -289,6 +289,19 @@ function TransactionsPage() {
             <Download className="h-4 w-4 mr-2" />
             {exportQuery.isFetching ? 'Экспорт...' : 'CSV'}
           </Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="bg-indigo-500 hover:bg-indigo-600 text-white"
+            disabled={isAutoCategorizing}
+            onClick={() => {
+              setIsAutoCategorizing(true)
+              autoCategorize.mutate({ useAI: true })
+            }}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            {isAutoCategorizing ? 'Обрабатываю...' : 'AI категории'}
+          </Button>
           <TransactionForm />
         </div>
       </div>
