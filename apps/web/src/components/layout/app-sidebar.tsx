@@ -81,17 +81,17 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar variant="inset">
-      <SidebarHeader>
+    <Sidebar variant="inset" className="border-r border-gray-100">
+      <SidebarHeader className="border-b border-gray-100 pb-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <Wallet className="h-4 w-4" />
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                  <Wallet className="h-5 w-5" strokeWidth={1.5} />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">DreamWallet</span>
+                  <span className="font-bold text-base tracking-tight">DreamWallet</span>
                   <span className="text-xs text-muted-foreground">Финансы</span>
                 </div>
               </Link>
@@ -100,77 +100,118 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-1">
         <SidebarGroup>
-          <SidebarGroupLabel>Личные финансы</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-gray-400 px-3 py-2">
+            Личные финансы
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname === item.href}>
-                    <Link href={item.href}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {mainNav.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={`rounded-xl mx-1 px-3 py-2.5 transition-all duration-150 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className="h-5 w-5" strokeWidth={isActive ? 2 : 1.5} />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="mx-3 bg-gray-100" />
 
         <SidebarGroup>
-          <SidebarGroupLabel>Бизнес</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-xs font-semibold uppercase tracking-wider text-gray-400 px-3 py-2">
+            Бизнес
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {projectNav.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton asChild isActive={pathname.startsWith(item.href)}>
-                    <Link href={item.href}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {projectNav.map((item) => {
+                const isActive = pathname.startsWith(item.href)
+                return (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      className={`rounded-xl mx-1 px-3 py-2.5 transition-all duration-150 ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-600 font-medium'
+                          : 'text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      <Link href={item.href}>
+                        <item.icon className="h-5 w-5" strokeWidth={isActive ? 2 : 1.5} />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-gray-100 pt-2 px-1">
         <SidebarMenu>
           {isAdmin && (
             <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={pathname.startsWith('/admin')}>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/admin')}
+                className="rounded-xl mx-1 px-3 py-2.5 text-gray-700 hover:bg-gray-100"
+              >
                 <Link href="/admin">
-                  <Shield className="h-4 w-4" />
+                  <Shield className="h-5 w-5" strokeWidth={1.5} />
                   <span>Админка</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           )}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/pricing'}>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === '/dashboard/pricing'}
+              className="rounded-xl mx-1 px-3 py-2.5 text-gray-700 hover:bg-gray-100"
+            >
               <Link href="/dashboard/pricing">
-                <Sparkles className="h-4 w-4" />
+                <Sparkles className="h-5 w-5" strokeWidth={1.5} />
                 <span>Тарифы</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild isActive={pathname === '/dashboard/settings'}>
+            <SidebarMenuButton
+              asChild
+              isActive={pathname === '/dashboard/settings'}
+              className="rounded-xl mx-1 px-3 py-2.5 text-gray-700 hover:bg-gray-100"
+            >
               <Link href="/dashboard/settings">
-                <Settings className="h-4 w-4" />
+                <Settings className="h-5 w-5" strokeWidth={1.5} />
                 <span>Настройки</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton onClick={handleSignOut}>
-              <LogOut className="h-4 w-4" />
+            <SidebarMenuButton
+              onClick={handleSignOut}
+              className="rounded-xl mx-1 px-3 py-2.5 text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
+            >
+              <LogOut className="h-5 w-5" strokeWidth={1.5} />
               <span>Выйти</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
