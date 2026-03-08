@@ -537,31 +537,54 @@ export const transactionRouter = router({
       const model = userRecord?.aiModel ?? defaultModelRow?.value ?? 'anthropic/claude-haiku-4-5'
 
       const categoryList = categories.map(c => `${c.icon ? c.icon + ' ' : ''}${c.name}`).join(', ')
-      const prompt = `Ты финансовый аналитик. Определи категорию транзакции.
 
-Тип операции: ${input.type === 'EXPENSE' ? 'РАСХОД' : 'ДОХОД'}
+      const systemPrompt = `Ты финансовый аналитик. Определяй категорию транзакции по описанию платежа из российских банков. Всегда отвечай JSON без markdown.`
+
+      const prompt = `Тип операции: ${input.type === 'EXPENSE' ? 'РАСХОД' : 'ДОХОД'}
 Описание: "${input.description}"${input.amount !== undefined ? `\nСумма: ${input.amount} руб` : ''}
 
 Доступные категории: ${categoryList}
 
+Примеры (описание → категория):
+- "ПЯТЕРОЧКА", "МАГНИТ", "ПЕРЕКРЕСТОК", "ВКУСВИЛЛ", "АШАН", "ЛЕНТА" → Продукты
+- "ЯНДЕКС.ТАКСИ", "UBER", "СИТИМОБИЛ", "INDRIVER", "BOLT" → Транспорт
+- "NETFLIX", "SPOTIFY", "КИНОПОИСК", "IVI", "ЯНДЕКС ПЛЮС" → Подписки
+- "АПТЕКА", "36.6", "ГОРЗДРАВ", "РИГЛА", "ЕАПТЕКА" → Здоровье
+- "KFC", "МАКДОНАЛДС", "БУРГЕР КИНГ", "ВКУСНО И ТОЧКА", "ДОДО ПИЦЦА", "ШОКОЛАДНИЦА" → Кафе и рестораны
+- "OZON", "WILDBERRIES", "ЯНДЕКС МАРКЕТ", "ALIEXPRESS", "LAMODA" → Покупки
+- "ЗАРПЛАТА", "ЗП", "АВАНС", "ВЫПЛАТА ЗА" → Зарплата
+- "М.ВИДЕО", "ДНС", "СИТИЛИНК", "ЭЛЬДОРАДО" → Электроника
+- "ЛУКОЙЛ АЗС", "ГАЗПРОМ НЕФТЬ", "РОСНЕФТЬ АЗС", "BP АЗС" → Авто
+- "МТС", "МЕГАФОН", "БИЛАЙН", "ТЕЛЕ2", "РОСТЕЛЕКОМ" → Связь
+- "ЖКХ", "ЭЛЕКТРОЭНЕРГИЯ", "ГАЗ", "ВОДОКАНАЛ", "УК " → ЖКХ
+- "ФИТНЕС", "WORLDCLASS", "ПЛАНЕТА ФИТНЕС", "YOGA" → Спорт
+- "АЭРОФЛОТ", "S7", "ПОБЕДА", "BOOKING.COM", "ОТЕЛЬ" → Путешествия
+- "КИНО", "ТЕАТР", "КОНЦЕРТ", "KASSIR.RU" → Развлечения
+
 Правила:
 - Выбирай категорию строго из списка выше
-- confidence = твоя уверенность (0.0–1.0)
-- Если описание — банковский шум или перевод → confidence < 0.3
-- Для супермаркетов/доставки еды → высокая уверенность
+- confidence = уверенность (0.0–1.0)
+- Банковский шум или перевод → confidence < 0.3
 
 Ответь ТОЛЬКО JSON (без markdown): { "categoryName": "название из списка", "confidence": 0.85 }`
 
+      const categorySuggestionSchema = z.object({
+        categoryName: z.string(),
+        confidence: z.number().min(0).max(1),
+      })
+
       try {
-        const raw = await callOpenRouter({ model, prompt, maxTokens: 100 })
+        const raw = await callOpenRouter({ model, prompt, systemPrompt, maxTokens: 150 })
         if (!raw) return null
 
         const match = raw.match(/\{[\s\S]*\}/)
         if (!match) return null
 
-        const parsed = JSON.parse(match[0]) as { categoryName: string; confidence: number }
-        const categoryName = String(parsed.categoryName).trim()
-        const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0))
+        const parsedJson = categorySuggestionSchema.safeParse(JSON.parse(match[0]))
+        if (!parsedJson.success) return null
+
+        const categoryName = String(parsedJson.data.categoryName).trim()
+        const confidence = Math.min(1, Math.max(0, Number(parsedJson.data.confidence) || 0))
 
         // Find matching category (case-insensitive, strip icon prefix)
         const found = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase())

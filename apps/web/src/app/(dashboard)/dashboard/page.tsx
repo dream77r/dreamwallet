@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   TrendingUp,
@@ -84,11 +83,11 @@ function SmartGreeting({ data, isLoading }: { data: { message: string; status: s
       <div className="h-4 w-44 animate-pulse bg-muted rounded-xl" />
     </div>
   )
-  if (!data) return <div><h1 className="text-2xl font-bold tracking-tight">Обзор</h1></div>
-  const borderColor = data.status === 'good' ? 'border-l-green-500' : data.status === 'warning' ? 'border-l-yellow-500' : 'border-l-red-500'
+  if (!data) return <div><h1 className="text-[28px] font-bold tracking-tight">Обзор</h1></div>
+  const borderColor = data.status === 'good' ? 'border-l-[#34C759]' : data.status === 'warning' ? 'border-l-yellow-500' : 'border-l-[#FF3B30]'
   return (
     <div className={`border-l-4 pl-3 ${borderColor}`}>
-      <p className="text-lg font-bold tracking-tight leading-snug max-w-xl">{data.message}</p>
+      <p className="text-[28px] font-bold tracking-tight leading-snug max-w-xl">{data.message}</p>
       <p className="text-xs text-muted-foreground mt-0.5 font-medium">
         {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
       </p>
@@ -108,91 +107,69 @@ function BalanceWidget({
   isLoading: boolean
 }) {
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {/* Главная карточка — баланс */}
-      <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-md border-0 sm:col-span-2 lg:col-span-1">
-        <CardHeader className="pb-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Общий баланс</p>
-          {isLoading ? (
-            <Skeleton className="h-10 w-36 rounded-xl" />
-          ) : (
-            <p className="text-4xl font-bold tabular-nums tracking-tight text-white">
-              {formatAmount(stats?.totalBalance ?? 0, wallet?.currency)}
-            </p>
+    <div className="space-y-3">
+      {/* Main balance card — clean white, iOS style */}
+      <div className="bg-white rounded-3xl shadow-card p-6 animate-fade-up">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8E8E93] mb-1">Общий баланс</p>
+        {isLoading ? (
+          <div className="h-12 w-48 animate-pulse bg-black/[0.06] rounded-xl mb-4" />
+        ) : (
+          <p className="text-[42px] font-bold tracking-tight text-[#1C1C1E] leading-none mb-4">
+            {formatAmount(stats?.totalBalance ?? 0, wallet?.currency)}
+          </p>
+        )}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-7 h-7 rounded-lg bg-[#34C759]/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-[#34C759]" />
+            </div>
+            {isLoading ? <div className="h-4 w-20 animate-pulse bg-black/[0.06] rounded" /> : (
+              <div>
+                <p className="text-[11px] text-[#8E8E93] font-medium">Доходы</p>
+                <p className="text-sm font-bold text-[#34C759]">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-7 h-7 rounded-lg bg-[#FF3B30]/10 flex items-center justify-center">
+              <TrendingDown className="h-4 w-4 text-[#FF3B30]" />
+            </div>
+            {isLoading ? <div className="h-4 w-20 animate-pulse bg-black/[0.06] rounded" /> : (
+              <div>
+                <p className="text-[11px] text-[#8E8E93] font-medium">Расходы</p>
+                <p className="text-sm font-bold text-[#FF3B30]">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
+              </div>
+            )}
+          </div>
+          {stats && stats.monthIncome > 0 && (
+            <div className="ml-auto">
+              <p className="text-[11px] text-[#8E8E93] font-medium text-right">Сохранено</p>
+              <p className="text-sm font-bold text-[#007AFF] text-right">
+                {Math.round((stats.monthNet / stats.monthIncome) * 100)}%
+              </p>
+            </div>
           )}
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-1 text-indigo-200 text-sm">
-            <Wallet className="h-4 w-4" />
+        </div>
+      </div>
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { label: 'Чистый доход', value: formatAmount(Math.abs(stats?.monthNet ?? 0), wallet?.currency), prefix: (stats?.monthNet ?? 0) >= 0 ? '+' : '-', color: (stats?.monthNet ?? 0) >= 0 ? '#34C759' : '#FF3B30', icon: ArrowLeftRight, bg: (stats?.monthNet ?? 0) >= 0 ? '#34C759' : '#FF3B30' },
+          { label: 'Счётов', value: String(wallet?.accounts.length ?? 0), prefix: '', color: '#007AFF', icon: Wallet, bg: '#007AFF' },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white rounded-2xl p-4 animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: stat.bg + '1A' }}>
+              <stat.icon className="h-5 w-5" style={{ color: stat.bg }} />
+            </div>
             {isLoading ? (
-              <Skeleton className="h-4 w-16 rounded" />
+              <div className="h-6 w-16 animate-pulse bg-black/[0.06] rounded mb-1" />
             ) : (
-              <span className="font-medium">{wallet?.accounts.length ?? 0} {wallet?.accounts.length === 1 ? 'счёт' : 'счёта'}</span>
+              <p className="text-xl font-bold" style={{ color: stat.color }}>{stat.prefix}{stat.value}</p>
             )}
+            <p className="text-xs text-[#8E8E93] font-medium">{stat.label}</p>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-        <CardHeader className="pb-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Доходы</p>
-          {isLoading ? (
-            <Skeleton className="h-8 w-36 rounded-xl" />
-          ) : (
-            <p className="text-2xl font-bold tabular-nums text-green-600">
-              +{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
-            <TrendingUp className="h-4 w-4" />
-            <span>За этот месяц</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-        <CardHeader className="pb-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Расходы</p>
-          {isLoading ? (
-            <Skeleton className="h-8 w-36 rounded-xl" />
-          ) : (
-            <p className="text-2xl font-bold tabular-nums text-red-500">
-              -{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-1 text-red-500 text-sm font-medium">
-            <TrendingDown className="h-4 w-4" />
-            <span>За этот месяц</span>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-        <CardHeader className="pb-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Чистый доход</p>
-          {isLoading ? (
-            <Skeleton className="h-8 w-36 rounded-xl" />
-          ) : (
-            <p className={`text-2xl font-bold tabular-nums ${(stats?.monthNet ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-              {(stats?.monthNet ?? 0) >= 0 ? '+' : '-'}{formatAmount(stats?.monthNet ?? 0, wallet?.currency)}
-            </p>
-          )}
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-1 text-muted-foreground text-sm font-medium">
-            <ArrowLeftRight className="h-4 w-4" />
-            {stats && stats.monthIncome > 0 ? (
-              <span>Сохранено {Math.round((stats.monthNet / stats.monthIncome) * 100)}%</span>
-            ) : (
-              <span>Нет данных</span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+        ))}
+      </div>
     </div>
   )
 }
@@ -210,12 +187,12 @@ function CashflowWidget({
 }) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <Card className="lg:col-span-2 bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-bold tracking-tight">Денежный поток</CardTitle>
-          <CardDescription className="text-xs font-medium text-gray-400">Доходы и расходы за 12 месяцев</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="lg:col-span-2 bg-white rounded-3xl p-5 shadow-card border-0">
+        <div className="pb-2">
+          <p className="text-base font-bold tracking-tight">Денежный поток</p>
+          <p className="text-xs font-medium text-[#8E8E93]">Доходы и расходы за 12 месяцев</p>
+        </div>
+        <div>
           {isLoading ? (
             <Skeleton className="h-[260px] w-full rounded-xl" />
           ) : cashFlowData.length === 0 ? (
@@ -236,22 +213,22 @@ function CashflowWidget({
                 <Tooltip
                   formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
                   labelStyle={{ fontWeight: 600 }}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', backgroundColor: '#ffffff', color: '#1C1C1E' }}
                 />
-                <Bar dataKey="income" name="Доходы" fill="#22c55e" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="expense" name="Расходы" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="income" name="Доходы" fill="#34C759" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="expense" name="Расходы" fill="#FF3B30" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-bold tracking-tight">Расходы по категориям</CardTitle>
-          <CardDescription className="text-xs font-medium text-gray-400">{monthLabel}</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="bg-white rounded-3xl p-5 shadow-card border-0">
+        <div className="pb-2">
+          <p className="text-base font-bold tracking-tight">Расходы по категориям</p>
+          <p className="text-xs font-medium text-[#8E8E93]">{monthLabel}</p>
+        </div>
+        <div>
           {isLoading ? (
             <Skeleton className="h-[260px] w-full rounded-xl" />
           ) : categoryData.length === 0 ? (
@@ -281,13 +258,13 @@ function CashflowWidget({
                 />
                 <Tooltip
                   formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', backgroundColor: '#ffffff', color: '#1C1C1E' }}
                 />
               </PieChart>
             </ResponsiveContainer>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
@@ -369,64 +346,61 @@ function RecentTransactionsWidget({
   isLoading: boolean
 }) {
   return (
-    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-bold tracking-tight">Последние транзакции</CardTitle>
-        <CardDescription className="text-xs font-medium text-gray-400">5 последних операций</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="bg-white rounded-3xl shadow-card border-0 overflow-hidden">
+      <div className="px-5 pt-5 pb-3">
+        <p className="text-base font-bold tracking-tight">Последние транзакции</p>
+        <p className="text-xs font-medium text-[#8E8E93]">5 последних операций</p>
+      </div>
+      <div>
         {isLoading ? (
-          <div className="space-y-3">
+          <div className="space-y-3 px-5 pb-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <Skeleton key={i} className="h-14 w-full rounded-xl" />
             ))}
           </div>
         ) : !transactions?.length ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground px-5 pb-5">
             <ArrowLeftRight className="h-8 w-8" />
             <p className="text-sm font-medium">Нет транзакций</p>
           </div>
         ) : (
-          <div className="space-y-1">
-            {transactions.map((tx, i) => {
+          <div className="divide-y divide-black/[0.06]">
+            {transactions.map((tx) => {
               const isIncome = tx.type === 'INCOME'
               const amount = Number(tx.amount)
               const dateLabel = new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
               return (
-                <div key={tx.id}>
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-green-500/10 dark:bg-green-500/20' : 'bg-red-500/10 dark:bg-red-500/20'}`}>
-                        {isIncome ? (
-                          <ArrowUpRight className="h-5 w-5 text-green-600" />
-                        ) : (
-                          <ArrowDownRight className="h-5 w-5 text-red-500" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold leading-tight">
-                          {tx.description ?? tx.counterparty ?? (isIncome ? 'Доход' : 'Расход')}
-                        </p>
-                        <p className="text-xs text-muted-foreground font-medium">
-                          {tx.category?.name ?? 'Без категории'} · {dateLabel}
-                        </p>
-                      </div>
+                <div key={tx.id} className="flex items-center justify-between px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-[#34C759]/10' : 'bg-[#FF3B30]/10'}`}>
+                      {isIncome ? (
+                        <ArrowUpRight className="h-5 w-5 text-[#34C759]" />
+                      ) : (
+                        <ArrowDownRight className="h-5 w-5 text-[#FF3B30]" />
+                      )}
                     </div>
-                    <div className="text-right">
-                      <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
-                        {isIncome ? '+' : '-'}{formatAmount(amount, tx.currency)}
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">
+                        {tx.description ?? tx.counterparty ?? (isIncome ? 'Доход' : 'Расход')}
                       </p>
-                      <p className="text-xs text-muted-foreground font-medium">{tx.account.name}</p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {tx.category?.name ?? 'Без категории'} · {dateLabel}
+                      </p>
                     </div>
                   </div>
-                  {i < (transactions?.length ?? 0) - 1 && <Separator className="bg-gray-50" />}
+                  <div className="text-right">
+                    <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+                      {isIncome ? '+' : '-'}{formatAmount(amount, tx.currency)}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium">{tx.account.name}</p>
+                  </div>
                 </div>
               )
             })}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -451,7 +425,7 @@ function GoalsWidget({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-bold tracking-tight">Финансовые цели</CardTitle>
-          <Link href="/dashboard/goals" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
+          <Link href="/dashboard/goals" className="text-xs font-semibold text-[#007AFF] hover:text-[#007AFF]/80 transition-colors">
             Все цели →
           </Link>
         </div>
@@ -462,7 +436,7 @@ function GoalsWidget({
             const current = Number(goal.currentAmount)
             const target = Number(goal.targetAmount)
             const pct = Math.min(100, Math.round((current / target) * 100))
-            const color = goal.color ?? '#6366f1'
+            const color = goal.color ?? '#007AFF'
             return (
               <div key={goal.id} className="space-y-2 rounded-2xl bg-muted/50 p-4">
                 <div className="flex items-center gap-2">
@@ -591,7 +565,7 @@ export default function DashboardPage() {
     : null
 
   return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+    <div className="space-y-4 animate-fade-up">
       <div className="flex items-center justify-between gap-4">
         <SmartGreeting data={dash?.greeting} isLoading={dashLoading} />
         <div className="flex items-center gap-2">
