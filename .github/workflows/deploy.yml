@@ -52,7 +52,11 @@ jobs:
 
             echo "🔨 Building packages..."
             pnpm --filter @dreamwallet/db build
+            # Next.js deletes .next/static during build init — watch and recreate it
+            (while true; do mkdir -p apps/web/.next/static/dreamwallet-stable 2>/dev/null; sleep 0.1; done) &
+            MKDIR_PID=$!
             pnpm --filter @dreamwallet/web build
+            kill $MKDIR_PID 2>/dev/null || true
             pnpm --filter @dreamwallet/worker build
 
             echo "📁 Copying static assets..."
