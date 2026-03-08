@@ -36,7 +36,7 @@ import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidge
 import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
 import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWidget'
 import { DashboardCustomizer, DashboardCustomizerSkeleton } from '@/components/dashboard/DashboardCustomizer'
-import type { WidgetConfig } from '@/server/routers/dashboard'
+type WidgetConfig = { id: string; enabled: boolean; order: number }
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
