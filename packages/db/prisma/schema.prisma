@@ -700,7 +700,10 @@ model TelegramConnection {
   username     String?
   firstName    String?  @map("first_name")
   linkedAt     DateTime @default(now()) @map("linked_at")
-  isActive     Boolean  @default(true) @map("is_active")
+  isActive            Boolean   @default(true)  @map("is_active")
+  notifyTransactions  Boolean   @default(true)  @map("notify_transactions")
+  notifyBudgets       Boolean   @default(true)  @map("notify_budgets")
+  notifyGoals         Boolean   @default(false) @map("notify_goals")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

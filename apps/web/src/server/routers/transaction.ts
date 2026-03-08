@@ -2,6 +2,8 @@ import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import { createTransactionSchema, updateTransactionSchema, transactionFiltersSchema } from '@dreamwallet/shared'
+import { sendTelegramMessage, formatAmount } from '@/lib/telegram-notify'
+import { checkBudgetAlerts } from './budget-alerts'
 
 export const transactionRouter = router({
   // List transactions with filters and pagination
@@ -199,6 +201,41 @@ export const transactionRouter = router({
 
         return created
       })
+
+      // Telegram уведомление о транзакции (fire-and-forget)
+      void (async () => {
+        try {
+          const tgConn = await ctx.prisma.telegramConnection.findUnique({
+            where: { userId: ctx.user.id, isActive: true },
+          })
+          if (tgConn?.notifyTransactions) {
+            const category = transaction.categoryId
+              ? await ctx.prisma.category.findUnique({ where: { id: transaction.categoryId } })
+              : null
+            const amount = formatAmount(Number(transaction.amount), transaction.currency)
+            let msg: string
+            if (transaction.type === 'EXPENSE') {
+              msg = `💸 <b>Расход:</b> -${amount}`
+              if (category) msg += `\n📁 ${category.name}`
+              if (transaction.description) msg += `\n📝 ${transaction.description}`
+            } else if (transaction.type === 'INCOME') {
+              msg = `💰 <b>Доход:</b> +${amount}`
+              if (category) msg += `\n📁 ${category.name}`
+              if (transaction.description) msg += `\n📝 ${transaction.description}`
+            } else {
+              return
+            }
+            await sendTelegramMessage(tgConn.chatId, msg)
+          }
+
+          // Проверка бюджетов
+          if (transaction.type === 'EXPENSE') {
+            await checkBudgetAlerts(ctx.prisma, ctx.user.id, transaction.accountId)
+          }
+        } catch (err) {
+          console.error('[transaction.create] Ошибка Telegram-уведомления:', err)
+        }
+      })()
 
       return transaction
     }),
