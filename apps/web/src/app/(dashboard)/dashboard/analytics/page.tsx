@@ -38,10 +38,7 @@ const periodConfig: Record<Period, { label: string; months: number }> = {
 }
 
 const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
-const CHART_COLORS = [
-  'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))', 'hsl(var(--chart-5))', '#6366f1', '#8b5cf6', '#ec4899',
-]
+const CHART_COLORS = ['#6366f1','#22c55e','#f59e0b','#ec4899','#14b8a6','#f97316','#8b5cf6','#06b6d4','#ef4444','#a3e635']
 
 function formatAmount(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -257,10 +254,10 @@ export default function AnalyticsPage() {
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                   <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
                   <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                  <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} />
+                  <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} contentStyle={{ borderRadius: 12, border: 'none', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }} />
                   <Legend />
-                  <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="income" name="Доходы" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="expense" name="Расходы" fill="#6366f1" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}

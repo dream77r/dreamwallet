@@ -238,8 +238,8 @@ function CashflowWidget({
                   labelStyle={{ fontWeight: 600 }}
                   contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }}
                 />
-                <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="income" name="Доходы" fill="#22c55e" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="expense" name="Расходы" fill="#6366f1" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}

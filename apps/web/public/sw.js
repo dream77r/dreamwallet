@@ -2,7 +2,7 @@
 // Strategies: Cache First (static), Network First (API), Stale While Revalidate (pages)
 // + Background Sync for offline transactions
 
-const CACHE_VERSION = 'v1'
+const CACHE_VERSION = 'v3'
 const STATIC_CACHE = `dreamwallet-static-${CACHE_VERSION}`
 const API_CACHE = `dreamwallet-api-${CACHE_VERSION}`
 const PAGES_CACHE = `dreamwallet-pages-${CACHE_VERSION}`

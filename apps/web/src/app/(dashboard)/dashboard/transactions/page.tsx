@@ -79,6 +79,23 @@ const typeIcons: Record<TxType, React.ReactNode> = {
   TRANSFER: <ArrowLeftRight className="h-3.5 w-3.5 text-blue-600" />,
 }
 
+function getDisplayDescription(description: string | null, counterparty: string | null, fallback: string): string {
+  const isBankGarbage = (s: string) => 
+    s.includes('Операция по карте') || s.includes('место совершения операции') || s.includes('дата создания транзакции')
+  
+  if (description && !isBankGarbage(description)) {
+    return description.slice(0, 50) + (description.length > 50 ? '...' : '')
+  }
+  if (counterparty && counterparty.length > 0) return counterparty.slice(0, 50)
+  if (description && isBankGarbage(description)) {
+    // Try to extract merchant from garbage
+    const match = description.match(/место совершения операции:\s*(?:[A-Z]{2}\/[^/]+\/)?([^,]+)/i)
+    if (match) return match[1].trim().slice(0, 50)
+  }
+  return fallback
+}
+
+
 function formatAmount(amount: number, currency = 'RUB') {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -500,18 +517,18 @@ function TransactionsPage() {
             return (
               <div key={tx.id}>
                 <div
-                  className="flex items-center justify-between px-4 py-3 active:bg-gray-50 transition-colors"
+                  className="flex items-center justify-between px-4 py-3 active:bg-muted transition-colors"
                   onClick={() => setEditingId(tx.id)}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-                      type === 'INCOME' ? 'bg-green-50' : type === 'EXPENSE' ? 'bg-red-50' : 'bg-blue-50'
+                      type === 'INCOME' ? 'bg-green-500/15' : type === 'EXPENSE' ? 'bg-red-500/15' : 'bg-blue-500/15'
                     }`}>
                       {typeIcons[type]}
                     </div>
                     <div>
                       <p className="text-sm font-semibold leading-tight">
-                        {(tx.description || tx.counterparty || typeLabels[type] || "").slice(0, 60) + ((tx.description || tx.counterparty || "").length > 60 ? "..." : "")}
+                        {getDisplayDescription(tx.description ?? null, tx.counterparty ?? null, typeLabels[type] ?? "")}
                       </p>
                       <p className="text-xs text-muted-foreground font-medium mt-0.5">
                         {tx.category?.name ?? 'Без категории'} · {dateLabel}
@@ -614,7 +631,7 @@ function TransactionsPage() {
                             {typeIcons[type]}
                           </div>
                           <span className="font-medium text-sm">
-                            {(tx.description || tx.counterparty || typeLabels[type] || "").slice(0, 60) + ((tx.description || tx.counterparty || "").length > 60 ? "..." : "")}
+                            {getDisplayDescription(tx.description ?? null, tx.counterparty ?? null, typeLabels[type] ?? "")}
                           </span>
                         </div>
                       </TableCell>
