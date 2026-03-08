@@ -613,9 +613,14 @@ export const transactionRouter = router({
 
       const catByName = new Map(categories.map(c => [c.name.toLowerCase(), c]))
 
+      // Get user's account ids (Transaction has no direct userId)
+      const userWallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id }, select: { id: true } })
+      const userAccounts = userWallet ? await ctx.prisma.account.findMany({ where: { walletId: userWallet.id }, select: { id: true } }) : []
+      const userAccountIds = userAccounts.map(a => a.id)
+
       // Find uncategorized transactions
       const where = {
-        userId: ctx.user.id,
+        accountId: { in: userAccountIds },
         categoryId: null as null | string,
         ...(input.transactionIds?.length ? { id: { in: input.transactionIds } } : {}),
       }
