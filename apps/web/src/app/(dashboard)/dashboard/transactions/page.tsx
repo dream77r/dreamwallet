@@ -630,6 +630,7 @@ function TransactionsPage() {
         </div>
       </div>
     </div>
+  )
 }
 
 export default function TransactionsPageWrapper() {
