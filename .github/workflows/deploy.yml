@@ -47,7 +47,7 @@ jobs:
             echo "🧹 Cleaning old build..."
             rm -rf apps/worker/dist
             rm -rf apps/web/.next/cache
-            mkdir -p apps/web/.next/static
+            mkdir -p apps/web/.next/static/dreamwallet-stable
             pnpm store prune 2>/dev/null || true
 
             echo "🔨 Building packages..."

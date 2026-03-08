@@ -20,6 +20,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['@dreamwallet/db', '@dreamwallet/shared'],
+  generateBuildId: async () => 'dreamwallet-stable',
   experimental: {
     serverActions: {
       bodySizeLimit: '10mb',
