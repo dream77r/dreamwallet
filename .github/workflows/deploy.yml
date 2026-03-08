@@ -50,7 +50,7 @@ jobs:
 
             echo "🔨 Building packages..."
             pnpm --filter @dreamwallet/db build
-            pnpm --filter @dreamwallet/web build
+            NEXT_TURBOPACK=false pnpm --filter @dreamwallet/web build
             pnpm --filter @dreamwallet/worker build
 
             echo "📁 Copying static assets..."
