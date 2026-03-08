@@ -73,16 +73,16 @@ function getCurrentMonthLabel() {
 function SmartGreeting({ data, isLoading }: { data: { message: string; status: string } | undefined; isLoading: boolean }) {
   if (isLoading) return (
     <div className="space-y-1">
-      <div className="h-7 w-72 animate-pulse bg-muted rounded" />
-      <div className="h-4 w-44 animate-pulse bg-muted rounded" />
+      <div className="h-7 w-72 animate-pulse bg-muted rounded-xl" />
+      <div className="h-4 w-44 animate-pulse bg-muted rounded-xl" />
     </div>
   )
-  if (!data) return <div><h1 className="text-2xl font-semibold">Обзор</h1></div>
+  if (!data) return <div><h1 className="text-2xl font-bold tracking-tight">Обзор</h1></div>
   const borderColor = data.status === 'good' ? 'border-l-green-500' : data.status === 'warning' ? 'border-l-yellow-500' : 'border-l-red-500'
   return (
     <div className={`border-l-4 pl-3 ${borderColor}`}>
-      <p className="text-lg font-semibold leading-snug max-w-xl">{data.message}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">
+      <p className="text-lg font-bold tracking-tight leading-snug max-w-xl">{data.message}</p>
+      <p className="text-xs text-muted-foreground mt-0.5 font-medium">
         {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
       </p>
     </div>
@@ -101,82 +101,83 @@ function BalanceWidget({
   isLoading: boolean
 }) {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Общий баланс</CardDescription>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Главная карточка — баланс */}
+      <Card className="bg-white rounded-2xl shadow-sm border-0 sm:col-span-2 lg:col-span-1">
+        <CardHeader className="pb-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Общий баланс</p>
           {isLoading ? (
-            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-10 w-36 rounded-xl" />
           ) : (
-            <CardTitle className="text-2xl">
+            <p className="text-4xl font-bold tabular-nums tracking-tight">
               {formatAmount(stats?.totalBalance ?? 0, wallet?.currency)}
-            </CardTitle>
+            </p>
           )}
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-1 text-muted-foreground text-sm">
-            <Wallet className="h-3.5 w-3.5" />
+            <Wallet className="h-4 w-4" />
             {isLoading ? (
-              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-16 rounded" />
             ) : (
-              <span>{wallet?.accounts.length ?? 0} {wallet?.accounts.length === 1 ? 'счёт' : 'счёта'}</span>
+              <span className="font-medium">{wallet?.accounts.length ?? 0} {wallet?.accounts.length === 1 ? 'счёт' : 'счёта'}</span>
             )}
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Доходы за месяц</CardDescription>
+      <Card className="bg-white rounded-2xl shadow-sm border-0">
+        <CardHeader className="pb-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Доходы</p>
           {isLoading ? (
-            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-8 w-36 rounded-xl" />
           ) : (
-            <CardTitle className="text-2xl text-green-600">
+            <p className="text-2xl font-bold tabular-nums text-green-600">
               +{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}
-            </CardTitle>
+            </p>
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-1 text-green-600 text-sm">
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>Доходы текущего месяца</span>
+          <div className="flex items-center gap-1 text-green-600 text-sm font-medium">
+            <TrendingUp className="h-4 w-4" />
+            <span>За этот месяц</span>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Расходы за месяц</CardDescription>
+      <Card className="bg-white rounded-2xl shadow-sm border-0">
+        <CardHeader className="pb-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Расходы</p>
           {isLoading ? (
-            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-8 w-36 rounded-xl" />
           ) : (
-            <CardTitle className="text-2xl text-red-600">
+            <p className="text-2xl font-bold tabular-nums text-red-500">
               -{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}
-            </CardTitle>
+            </p>
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-1 text-red-600 text-sm">
-            <TrendingDown className="h-3.5 w-3.5" />
-            <span>Расходы текущего месяца</span>
+          <div className="flex items-center gap-1 text-red-500 text-sm font-medium">
+            <TrendingDown className="h-4 w-4" />
+            <span>За этот месяц</span>
           </div>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardDescription>Чистый доход</CardDescription>
+      <Card className="bg-white rounded-2xl shadow-sm border-0">
+        <CardHeader className="pb-1">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Чистый доход</p>
           {isLoading ? (
-            <Skeleton className="h-8 w-36" />
+            <Skeleton className="h-8 w-36 rounded-xl" />
           ) : (
-            <CardTitle className={`text-2xl ${(stats?.monthNet ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p className={`text-2xl font-bold tabular-nums ${(stats?.monthNet ?? 0) >= 0 ? 'text-green-600' : 'text-red-500'}`}>
               {(stats?.monthNet ?? 0) >= 0 ? '+' : '-'}{formatAmount(stats?.monthNet ?? 0, wallet?.currency)}
-            </CardTitle>
+            </p>
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-1 text-muted-foreground text-sm">
-            <ArrowLeftRight className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1 text-muted-foreground text-sm font-medium">
+            <ArrowLeftRight className="h-4 w-4" />
             {stats && stats.monthIncome > 0 ? (
               <span>Сохранено {Math.round((stats.monthNet / stats.monthIncome) * 100)}%</span>
             ) : (
@@ -201,17 +202,17 @@ function CashflowWidget({
   monthLabel: string
 }) {
   return (
-    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-      <Card className="lg:col-span-2">
-        <CardHeader>
-          <CardTitle>Денежный поток</CardTitle>
-          <CardDescription>Доходы и расходы за 12 месяцев</CardDescription>
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <Card className="lg:col-span-2 bg-white rounded-2xl shadow-sm border-0">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-bold tracking-tight">Денежный поток</CardTitle>
+          <CardDescription className="text-xs font-medium text-gray-400">Доходы и расходы за 12 месяцев</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <Skeleton className="h-[260px] w-full" />
+            <Skeleton className="h-[260px] w-full rounded-xl" />
           ) : cashFlowData.length === 0 ? (
-            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">
+            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm font-medium">
               Нет данных за последние 12 месяцев
             </div>
           ) : (
@@ -228,25 +229,26 @@ function CashflowWidget({
                 <Tooltip
                   formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
                   labelStyle={{ fontWeight: 600 }}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
                 />
-                <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Расходы по категориям</CardTitle>
-          <CardDescription>{monthLabel}</CardDescription>
+      <Card className="bg-white rounded-2xl shadow-sm border-0">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base font-bold tracking-tight">Расходы по категориям</CardTitle>
+          <CardDescription className="text-xs font-medium text-gray-400">{monthLabel}</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <Skeleton className="h-[260px] w-full" />
+            <Skeleton className="h-[260px] w-full rounded-xl" />
           ) : categoryData.length === 0 ? (
-            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">
+            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm font-medium">
               Нет расходов в этом месяце
             </div>
           ) : (
@@ -268,9 +270,12 @@ function CashflowWidget({
                 <Legend
                   iconType="circle"
                   iconSize={8}
-                  formatter={(value) => <span style={{ fontSize: 11 }}>{value}</span>}
+                  formatter={(value) => <span style={{ fontSize: 11, fontWeight: 500 }}>{value}</span>}
                 />
-                <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} />
+                <Tooltip
+                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           )}
@@ -290,23 +295,23 @@ function BudgetsWidget({
   monthLabel: string
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Бюджеты</CardTitle>
-        <CardDescription>Прогресс на {monthLabel}</CardDescription>
+    <Card className="bg-white rounded-2xl shadow-sm border-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-bold tracking-tight">Бюджеты</CardTitle>
+        <CardDescription className="text-xs font-medium text-gray-400">Прогресс на {monthLabel}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-4">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="space-y-1.5">
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-2 w-full" />
+              <Skeleton className="h-4 w-full rounded-lg" />
+              <Skeleton className="h-2 w-full rounded-full" />
             </div>
           ))
         ) : !budgets || budgets.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
             <PiggyBank className="h-8 w-8" />
-            <p className="text-sm">Бюджеты не настроены</p>
+            <p className="text-sm font-medium">Бюджеты не настроены</p>
           </div>
         ) : (
           budgets.map((budget) => {
@@ -316,16 +321,16 @@ function BudgetsWidget({
             return (
               <div key={budget.id} className="space-y-1.5">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{budget.category.name}</span>
-                  <span className={`text-xs ${over ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
+                  <span className="font-semibold">{budget.category.name}</span>
+                  <span className={`text-xs font-medium ${over ? 'text-red-500' : 'text-muted-foreground'}`}>
                     {formatAmount(budget.spentAmount)} / {formatAmount(budgetAmount)}
                   </span>
                 </div>
-                <Progress value={pct} className={`h-2 ${over ? '[&>div]:bg-red-500' : ''}`} />
-                <div className="flex justify-between text-xs text-muted-foreground">
+                <Progress value={pct} className={`h-2 ${over ? '[&>div]:bg-red-500' : '[&>div]:bg-indigo-500'}`} />
+                <div className="flex justify-between text-xs text-muted-foreground font-medium">
                   <span>{pct}% использовано</span>
                   {over ? (
-                    <span className="text-red-600">Превышен на {formatAmount(budget.spentAmount - budgetAmount)}</span>
+                    <span className="text-red-500">Превышен на {formatAmount(budget.spentAmount - budgetAmount)}</span>
                   ) : (
                     <span>Остаток {formatAmount(budgetAmount - budget.spentAmount)}</span>
                   )}
@@ -357,22 +362,22 @@ function RecentTransactionsWidget({
   isLoading: boolean
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Последние транзакции</CardTitle>
-        <CardDescription>5 последних операций</CardDescription>
+    <Card className="bg-white rounded-2xl shadow-sm border-0">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-bold tracking-tight">Последние транзакции</CardTitle>
+        <CardDescription className="text-xs font-medium text-gray-400">5 последних операций</CardDescription>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 5 }).map((_, i) => (
-              <Skeleton key={i} className="h-12 w-full" />
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
             ))}
           </div>
         ) : !transactions?.length ? (
           <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
             <ArrowLeftRight className="h-8 w-8" />
-            <p className="text-sm">Нет транзакций</p>
+            <p className="text-sm font-medium">Нет транзакций</p>
           </div>
         ) : (
           <div className="space-y-1">
@@ -382,32 +387,32 @@ function RecentTransactionsWidget({
               const dateLabel = new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
               return (
                 <div key={tx.id}>
-                  <div className="flex items-center justify-between py-2.5">
+                  <div className="flex items-center justify-between py-3">
                     <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isIncome ? 'bg-green-100' : 'bg-red-100'}`}>
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
                         {isIncome ? (
-                          <ArrowUpRight className="h-4 w-4 text-green-600" />
+                          <ArrowUpRight className="h-5 w-5 text-green-600" />
                         ) : (
-                          <ArrowDownRight className="h-4 w-4 text-red-600" />
+                          <ArrowDownRight className="h-5 w-5 text-red-500" />
                         )}
                       </div>
                       <div>
-                        <p className="text-sm font-medium leading-tight">
+                        <p className="text-sm font-semibold leading-tight">
                           {tx.description ?? tx.counterparty ?? (isIncome ? 'Доход' : 'Расход')}
                         </p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-xs text-muted-foreground font-medium">
                           {tx.category?.name ?? 'Без категории'} · {dateLabel}
                         </p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`text-sm font-semibold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                      <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-green-600' : 'text-red-500'}`}>
                         {isIncome ? '+' : '-'}{formatAmount(amount, tx.currency)}
                       </p>
-                      <p className="text-xs text-muted-foreground">{tx.account.name}</p>
+                      <p className="text-xs text-muted-foreground font-medium">{tx.account.name}</p>
                     </div>
                   </div>
-                  {i < (transactions?.length ?? 0) - 1 && <Separator />}
+                  {i < (transactions?.length ?? 0) - 1 && <Separator className="bg-gray-50" />}
                 </div>
               )
             })}
@@ -435,35 +440,35 @@ function GoalsWidget({
   if (!active.length) return null
 
   return (
-    <Card>
+    <Card className="bg-white rounded-2xl shadow-sm border-0">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle>Финансовые цели</CardTitle>
-          <Link href="/dashboard/goals" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+          <CardTitle className="text-base font-bold tracking-tight">Финансовые цели</CardTitle>
+          <Link href="/dashboard/goals" className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">
             Все цели →
           </Link>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {active.slice(0, 3).map((goal) => {
             const current = Number(goal.currentAmount)
             const target = Number(goal.targetAmount)
             const pct = Math.min(100, Math.round((current / target) * 100))
-            const color = goal.color ?? '#3B82F6'
+            const color = goal.color ?? '#6366f1'
             return (
-              <div key={goal.id} className="space-y-2 rounded-lg border p-3">
+              <div key={goal.id} className="space-y-2 rounded-2xl bg-gray-50 p-4">
                 <div className="flex items-center gap-2">
-                  <span className="text-lg leading-none">{goal.icon ?? '🎯'}</span>
+                  <span className="text-xl leading-none">{goal.icon ?? '🎯'}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{goal.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="truncate text-sm font-bold">{goal.name}</p>
+                    <p className="text-xs text-muted-foreground font-medium">
                       {pct}% из {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(target)}
                     </p>
                   </div>
                 </div>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
                 </div>
               </div>
             )
@@ -514,7 +519,6 @@ export default function DashboardPage() {
     sortOrder: 'desc',
   })
 
-  // Dashboard layout
   const { data: layoutData, isLoading: layoutLoading } = trpc.dashboard.getLayout.useQuery()
   const [optimisticLayout, setOptimisticLayout] = useState<WidgetConfig[] | null>(null)
   const layout = optimisticLayout ?? layoutData
@@ -549,17 +553,17 @@ export default function DashboardPage() {
       />
     ),
     score: (
-      <div key="score" className="grid grid-cols-1 gap-6 sm:grid-cols-1">
+      <div key="score" className="grid grid-cols-1 gap-4 sm:grid-cols-1">
         <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
       </div>
     ),
     forecast: (
-      <div key="forecast" className="grid grid-cols-1 gap-6 sm:grid-cols-1">
+      <div key="forecast" className="grid grid-cols-1 gap-4 sm:grid-cols-1">
         <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
       </div>
     ),
     networth: (
-      <div key="networth" className="grid grid-cols-1 gap-6 sm:grid-cols-1">
+      <div key="networth" className="grid grid-cols-1 gap-4 sm:grid-cols-1">
         <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
       </div>
     ),
@@ -580,7 +584,7 @@ export default function DashboardPage() {
     : null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
       <div className="flex items-center justify-between gap-4">
         <SmartGreeting data={dash?.greeting} isLoading={dashLoading} />
         <div className="flex items-center gap-2">
@@ -589,30 +593,30 @@ export default function DashboardPage() {
           ) : layout ? (
             <DashboardCustomizer layout={layout} onLayoutChange={setOptimisticLayout} />
           ) : null}
-          <TransactionForm />
+          <div className="hidden md:block">
+            <TransactionForm />
+          </div>
         </div>
       </div>
 
-      {/* Dynamic widget rendering */}
       {layoutLoading ? (
         <>
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-80 w-full" />
-          <Skeleton className="h-64 w-full" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-80 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
         </>
       ) : sortedWidgets ? (
         sortedWidgets
       ) : (
-        // Fallback: show all widgets in default order
         <>
           {widgetMap['balance']}
           {widgetMap['cashflow']}
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
             <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
             <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
           </div>
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {widgetMap['budgets']}
             {widgetMap['recent-transactions']}
           </div>
@@ -620,7 +624,6 @@ export default function DashboardPage() {
         </>
       )}
 
-      {/* AI Insights always visible */}
       <AiInsights />
     </div>
   )

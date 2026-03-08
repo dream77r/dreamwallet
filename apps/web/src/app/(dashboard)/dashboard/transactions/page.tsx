@@ -249,7 +249,7 @@ function TransactionsPage() {
   const editingTx = transactions.find(t => t.id === editingId)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
       <QuickAddModal open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       {editingTx && (
         <TransactionForm
@@ -260,7 +260,7 @@ function TransactionsPage() {
       )}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Транзакции</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Транзакции</h1>
           <p className="text-muted-foreground text-sm">
             {isLoading ? 'Загрузка...' : `${total} записей`}
           </p>
@@ -284,34 +284,34 @@ function TransactionsPage() {
       </div>
 
       {/* Summary row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="bg-white rounded-2xl shadow-sm border-0">
           <CardContent className="pt-5 pb-4">
-            <p className="text-muted-foreground text-xs mb-1">Доходы</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Доходы</p>
             {isLoading ? (
               <Skeleton className="h-6 w-24" />
             ) : (
-              <p className="text-lg font-semibold text-green-600">+{formatAmount(totalIncome)}</p>
+              <p className="text-xl font-bold tabular-nums text-green-600">+{formatAmount(totalIncome)}</p>
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white rounded-2xl shadow-sm border-0">
           <CardContent className="pt-5 pb-4">
-            <p className="text-muted-foreground text-xs mb-1">Расходы</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Расходы</p>
             {isLoading ? (
               <Skeleton className="h-6 w-24" />
             ) : (
-              <p className="text-lg font-semibold text-red-600">-{formatAmount(totalExpense)}</p>
+              <p className="text-xl font-bold tabular-nums text-red-500">-{formatAmount(totalExpense)}</p>
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="bg-white rounded-2xl shadow-sm border-0">
           <CardContent className="pt-5 pb-4">
-            <p className="text-muted-foreground text-xs mb-1">Итого</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Итого</p>
             {isLoading ? (
               <Skeleton className="h-6 w-24" />
             ) : (
-              <p className={`text-lg font-semibold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <p className={`text-xl font-bold tabular-nums ${net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
                 {net >= 0 ? '+' : '-'}{formatAmount(net)}
               </p>
             )}
@@ -320,7 +320,7 @@ function TransactionsPage() {
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-white rounded-2xl shadow-sm border-0">
         <CardContent className="pt-5 pb-4">
           <div className="flex flex-wrap gap-3 items-center">
             <div className="relative flex-1 min-w-[200px]">
@@ -446,8 +446,66 @@ function TransactionsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Table */}
-      <Card>
+
+      {/* Mobile list — iOS Apple Wallet style */}
+      <div className="md:hidden space-y-1 bg-white rounded-2xl shadow-sm overflow-hidden">
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
+            <span className="text-3xl">💸</span>
+            <p className="font-semibold text-foreground">Нет транзакций</p>
+            <p className="text-sm text-center px-4">Добавьте первую транзакцию чтобы начать отслеживать финансы</p>
+          </div>
+        ) : (
+          transactions.map((tx, i) => {
+            const type = tx.type as TxType
+            const amount = Number(tx.amount)
+            const dateLabel = new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+            return (
+              <div key={tx.id}>
+                <div
+                  className="flex items-center justify-between px-4 py-3 active:bg-gray-50 transition-colors"
+                  onClick={() => setEditingId(tx.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                      type === 'INCOME' ? 'bg-green-50' : type === 'EXPENSE' ? 'bg-red-50' : 'bg-blue-50'
+                    }`}>
+                      {typeIcons[type]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">
+                        {tx.description || tx.counterparty || typeLabels[type]}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium mt-0.5">
+                        {tx.category?.name ?? 'Без категории'} · {dateLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-bold tabular-nums ${
+                      type === 'INCOME' ? 'text-green-600' : type === 'TRANSFER' ? 'text-blue-600' : 'text-red-500'
+                    }`}>
+                      {type === 'INCOME' ? '+' : '-'}{formatAmount(amount, tx.currency)}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium">{tx.account.name}</p>
+                  </div>
+                </div>
+                {i < transactions.length - 1 && <div className="mx-4 h-px bg-gray-50" />}
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* Desktop table */}
+      {/* Desktop table — hidden on mobile */}
+      <div className="hidden md:block"><Card className="bg-white rounded-2xl shadow-sm border-0 overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -589,6 +647,8 @@ function TransactionsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      </div>{/* end desktop table */}
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
