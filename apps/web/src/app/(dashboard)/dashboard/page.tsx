@@ -106,19 +106,19 @@ function BalanceWidget({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {/* Главная карточка — баланс */}
-      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none sm:col-span-2 lg:col-span-1">
+      <Card className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-md border-0 sm:col-span-2 lg:col-span-1">
         <CardHeader className="pb-1">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Общий баланс</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-indigo-200">Общий баланс</p>
           {isLoading ? (
             <Skeleton className="h-10 w-36 rounded-xl" />
           ) : (
-            <p className="text-4xl font-bold tabular-nums tracking-tight">
+            <p className="text-4xl font-bold tabular-nums tracking-tight text-white">
               {formatAmount(stats?.totalBalance ?? 0, wallet?.currency)}
             </p>
           )}
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-1 text-muted-foreground text-sm">
+          <div className="flex items-center gap-1 text-indigo-200 text-sm">
             <Wallet className="h-4 w-4" />
             {isLoading ? (
               <Skeleton className="h-4 w-16 rounded" />
