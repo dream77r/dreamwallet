@@ -537,11 +537,20 @@ export const transactionRouter = router({
       const model = userRecord?.aiModel ?? defaultModelRow?.value ?? 'anthropic/claude-haiku-4-5'
 
       const categoryList = categories.map(c => `${c.icon ? c.icon + ' ' : ''}${c.name}`).join(', ')
-      const prompt = `Ты помощник для категоризации финансовых транзакций.
+      const prompt = `Ты финансовый аналитик. Определи категорию транзакции.
+
+Тип операции: ${input.type === 'EXPENSE' ? 'РАСХОД' : 'ДОХОД'}
+Описание: "${input.description}"${input.amount !== undefined ? `\nСумма: ${input.amount} руб` : ''}
+
 Доступные категории: ${categoryList}
-Транзакция: "${input.description}", тип: ${input.type}${input.amount !== undefined ? `, сумма: ${input.amount}` : ''}
-Ответь ТОЛЬКО JSON без markdown: { "categoryName": "...", "confidence": 0.0-1.0 }
-Выбери наиболее подходящую категорию из списка. Если не уверен — confidence < 0.5.`
+
+Правила:
+- Выбирай категорию строго из списка выше
+- confidence = твоя уверенность (0.0–1.0)
+- Если описание — банковский шум или перевод → confidence < 0.3
+- Для супермаркетов/доставки еды → высокая уверенность
+
+Ответь ТОЛЬКО JSON (без markdown): { "categoryName": "название из списка", "confidence": 0.85 }`
 
       try {
         const raw = await callOpenRouter({ model, prompt, maxTokens: 100 })
@@ -672,12 +681,31 @@ export const transactionRouter = router({
             return `${idx}: type=${tx.type} amount=${tx.amount} desc="${text}"`
           }).join('\n')
 
-          const prompt = `Категоризируй финансовые транзакции. Отвечай ТОЛЬКО JSON массивом без markdown.
-Категории расходов: ${expenseCats}
-Категории доходов: ${incomeCats}
-Транзакции:
+          const prompt = `Ты финансовый аналитик. Твоя задача — точно категоризировать банковские транзакции россиянина.
+
+КАТЕГОРИИ РАСХОДОВ: ${expenseCats}
+КАТЕГОРИИ ДОХОДОВ: ${incomeCats}
+
+ПРАВИЛА:
+1. Анализируй название магазина/сервиса, описание и сумму
+2. Банковские описания часто содержат шум — ищи ключевые слова
+3. Переводы между своими счетами → null
+4. Если не уверен на 70%+ → null (лучше не угадывать)
+5. Учитывай контекст: ночные траты в кафе могут быть ресторан, крупные суммы в супермаркете — продукты
+
+ПРИМЕРЫ РАСПОЗНАВАНИЯ:
+- "PEREKRESTOK", "PYATEROCHKA", "MAGNIT" → Продукты
+- "YANDEX.TAXI", "UBER" → Транспорт  
+- "NETFLIX", "SPOTIFY", "KINOPOISK" → Подписки
+- "APTEKA", "RIGLA", "GORZDRAV" → Здоровье
+- "OZON", "WILDBERRIES" → Покупки
+- "ZP", "SALARY", "ZARPLATA" → Зарплата
+
+ТРАНЗАКЦИИ ДЛЯ КАТЕГОРИЗАЦИИ:
 ${txList}
-Ответ: [{"idx":0,"category":"название или null если неясно"},...]`
+
+Ответь СТРОГО JSON массивом (без markdown, без пояснений):
+[{"idx":0,"category":"точное название из списка или null"},...]`
 
           try {
             const raw = await callOpenRouter({ model, prompt, maxTokens: 500 })
