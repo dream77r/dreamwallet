@@ -4,6 +4,36 @@ import { TRPCError } from '@trpc/server'
 import { createTransactionSchema, updateTransactionSchema, transactionFiltersSchema } from '@dreamwallet/shared'
 import { sendTelegramMessage, formatAmount } from '@/lib/telegram-notify'
 import { checkBudgetAlerts } from './budget-alerts'
+import { callOpenRouter } from './ai'
+import crypto from 'crypto'
+
+// ── In-memory cache for AI category suggestions ─────────────────────────────
+interface CacheEntry {
+  categoryId: string
+  categoryName: string
+  confidence: number
+  expiresAt: number
+}
+const suggestionCache = new Map<string, CacheEntry>()
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+function getCacheKey(description: string, type: string): string {
+  return crypto.createHash('md5').update(description.toLowerCase() + type).digest('hex')
+}
+
+function getFromCache(key: string): CacheEntry | null {
+  const entry = suggestionCache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    suggestionCache.delete(key)
+    return null
+  }
+  return entry
+}
+
+function setInCache(key: string, value: Omit<CacheEntry, 'expiresAt'>): void {
+  suggestionCache.set(key, { ...value, expiresAt: Date.now() + CACHE_TTL_MS })
+}
 
 export const transactionRouter = router({
   // List transactions with filters and pagination
@@ -468,5 +498,72 @@ export const transactionRouter = router({
         orderBy: { date: 'desc' },
         take: limit,
       })
+    }),
+
+  // ── AI Category Suggestion ─────────────────────────────────────────────────
+  suggestCategory: protectedProcedure
+    .input(z.object({
+      description: z.string(),
+      amount: z.number().optional(),
+      type: z.enum(['INCOME', 'EXPENSE']),
+    }))
+    .query(async ({ ctx, input }) => {
+      // Skip if description too short
+      if (input.description.trim().length < 3) {
+        return null
+      }
+
+      // Check cache
+      const cacheKey = getCacheKey(input.description, input.type)
+      const cached = getFromCache(cacheKey)
+      if (cached) {
+        return { categoryId: cached.categoryId, categoryName: cached.categoryName, confidence: cached.confidence }
+      }
+
+      // Get user categories filtered by type
+      const categories = await ctx.prisma.category.findMany({
+        where: { userId: ctx.user.id, type: input.type },
+        select: { id: true, name: true, icon: true },
+      })
+
+      if (categories.length === 0) return null
+
+      // Get user AI model
+      const userRecord = await ctx.prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { aiModel: true },
+      })
+      const defaultModelRow = await ctx.prisma.appSetting.findUnique({ where: { key: 'ai.defaultModel' } })
+      const model = userRecord?.aiModel ?? defaultModelRow?.value ?? 'anthropic/claude-haiku-4-5'
+
+      const categoryList = categories.map(c => `${c.icon ? c.icon + ' ' : ''}${c.name}`).join(', ')
+      const prompt = `Ты помощник для категоризации финансовых транзакций.
+Доступные категории: ${categoryList}
+Транзакция: "${input.description}", тип: ${input.type}${input.amount !== undefined ? `, сумма: ${input.amount}` : ''}
+Ответь ТОЛЬКО JSON без markdown: { "categoryName": "...", "confidence": 0.0-1.0 }
+Выбери наиболее подходящую категорию из списка. Если не уверен — confidence < 0.5.`
+
+      try {
+        const raw = await callOpenRouter({ model, prompt, maxTokens: 100 })
+        if (!raw) return null
+
+        const match = raw.match(/\{[\s\S]*\}/)
+        if (!match) return null
+
+        const parsed = JSON.parse(match[0]) as { categoryName: string; confidence: number }
+        const categoryName = String(parsed.categoryName).trim()
+        const confidence = Math.min(1, Math.max(0, Number(parsed.confidence) || 0))
+
+        // Find matching category (case-insensitive, strip icon prefix)
+        const found = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase())
+        if (!found) return null
+
+        const result = { categoryId: found.id, categoryName: found.name, confidence }
+        setInCache(cacheKey, result)
+        return result
+      } catch {
+        // Graceful degradation
+        return null
+      }
     }),
 })
