@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Mic, MicOff, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import { Mic, MicOff, ArrowUpRight, ArrowDownRight, Sparkles } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -125,6 +125,22 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     { type },
     { enabled: open && step === 'confirm' }
   )
+
+  // AI category suggestion
+  const { data: aiSuggestion } = trpc.transaction.suggestCategory.useQuery(
+    { description, type: type as 'INCOME' | 'EXPENSE', amount: parseFloat(amount) || undefined },
+    {
+      enabled: open && step === 'confirm' && description.trim().length >= 3 && type !== 'TRANSFER',
+      staleTime: 60 * 60 * 1000,
+    }
+  )
+
+  // Auto-apply AI suggestion when confidence > 0.7 and no category set
+  useEffect(() => {
+    if (aiSuggestion && aiSuggestion.confidence > 0.7 && !categoryId) {
+      setCategoryId(aiSuggestion.categoryId)
+    }
+  }, [aiSuggestion, categoryId])
 
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
@@ -388,6 +404,24 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
                   ))}
                 </SelectContent>
               </Select>
+              {/* AI suggestion badge */}
+              {aiSuggestion && aiSuggestion.confidence >= 0.4 && (
+                aiSuggestion.confidence > 0.7 ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                    <Sparkles className="h-3 w-3" />
+                    AI ✨ {aiSuggestion.categoryName}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCategoryId(aiSuggestion.categoryId)}
+                    className="inline-flex items-center gap-1 rounded-full border border-purple-300 px-2.5 py-0.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20 transition-colors"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    AI предлагает: {aiSuggestion.categoryName}
+                  </button>
+                )
+              )}
             </div>
 
             {/* Date */}
