@@ -13,7 +13,7 @@ export const csvTemplatesRouter = router({
   create: protectedProcedure
     .input(z.object({
       name: z.string().min(1).max(100),
-      columnMap: z.record(z.string()),
+      columnMap: z.record(z.string(), z.string()),
       dateFormat: z.string().optional(),
       delimiter: z.string().optional(),
       skipRows: z.number().int().min(0).optional(),
@@ -44,7 +44,7 @@ export const csvTemplatesRouter = router({
     .input(z.object({
       id: z.string(),
       name: z.string().min(1).max(100),
-      columnMap: z.record(z.string()),
+      columnMap: z.record(z.string(), z.string()),
       dateFormat: z.string().optional(),
       delimiter: z.string().optional(),
       skipRows: z.number().int().min(0).optional(),
