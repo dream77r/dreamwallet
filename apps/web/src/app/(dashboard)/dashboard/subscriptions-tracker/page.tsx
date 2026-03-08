@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Skeleton } from '@/components/ui/skeleton'
 import { CalendarClock, Plus } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 
@@ -62,7 +63,22 @@ export default function SubscriptionsTrackerPage() {
 
       {/* Subscription cards */}
       {isLoading ? (
-        <Card><CardContent className="p-8 text-center text-muted-foreground">Загрузка...</CardContent></Card>
+        <div className="space-y-3">
+          {[1, 2, 3].map((i) => (
+            <Card key={i}><CardContent className="p-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 flex-1">
+                  <Skeleton className="h-10 w-10 rounded-xl" />
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-24" />
+                  </div>
+                </div>
+                <Skeleton className="h-6 w-20" />
+              </div>
+            </CardContent></Card>
+          ))}
+        </div>
       ) : subscriptions.length === 0 ? (
         <Card className="flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
           <CalendarClock className="mb-3 h-10 w-10" />
