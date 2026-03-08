@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -51,6 +52,7 @@ import {
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { TransactionForm } from '@/components/transactions/transaction-form'
+import { QuickAddModal } from '@/components/transactions/QuickAddModal'
 
 const PAGE_SIZE = 20
 
@@ -89,6 +91,13 @@ export default function TransactionsPage() {
   const [tagFilter, setTagFilter] = useState<string>('')
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      setQuickAddOpen(true)
+    }
+  }, [searchParams])
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -240,6 +249,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-6">
+      <QuickAddModal open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       {editingTx && (
         <TransactionForm
           initialData={{ id: editingTx.id, type: editingTx.type as 'INCOME' | 'EXPENSE' | 'TRANSFER', accountId: editingTx.accountId, amount: editingTx.amount, date: editingTx.date, description: editingTx.description, categoryId: editingTx.categoryId }}

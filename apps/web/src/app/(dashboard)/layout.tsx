@@ -5,6 +5,7 @@ import { GlobalSearch } from '@/components/layout/global-search'
 import { Separator } from '@/components/ui/separator'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
+import { QuickAddFAB } from '@/components/transactions/QuickAddFAB'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -25,6 +26,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </SidebarInset>
       <OnboardingWizard />
       <InstallPrompt />
+      <QuickAddFAB />
     </SidebarProvider>
   )
 }
