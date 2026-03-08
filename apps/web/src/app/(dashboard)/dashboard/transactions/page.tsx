@@ -44,6 +44,7 @@ import {
   Download,
   Camera,
   Sparkles,
+  Wand2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -95,6 +96,12 @@ function TransactionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [isAutoCategorizing, setIsAutoCategorizing] = useState(false)
+  const [isCleaning, setIsCleaning] = useState(false)
+  const cleanDescriptions = trpc.transaction.cleanDescriptions.useMutation({
+    onSuccess: (data) => { toast.success(data.message); utils.transaction.list.invalidate() },
+    onError: (e) => toast.error('Ошибка: ' + e.message),
+    onSettled: () => setIsCleaning(false),
+  })
   const autoCategorize = trpc.transaction.autoCategorize.useMutation({
     onSuccess: (data) => {
       toast.success(data.message)
@@ -302,45 +309,46 @@ function TransactionsPage() {
             <Sparkles className="h-4 w-4 mr-2" />
             {isAutoCategorizing ? 'Обрабатываю...' : 'AI категории'}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isCleaning}
+            onClick={() => { setIsCleaning(true); cleanDescriptions.mutate() }}
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            {isCleaning ? 'Чищу...' : 'Очистить'}
+          </Button>
           <TransactionForm />
         </div>
       </div>
 
-      {/* Summary row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Доходы</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <p className="text-xl font-bold tabular-nums text-green-600">+{formatAmount(totalIncome)}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Расходы</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <p className="text-xl font-bold tabular-nums text-red-500">-{formatAmount(totalExpense)}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-          <CardContent className="pt-5 pb-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-1">Итого</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <p className={`text-xl font-bold tabular-nums ${net >= 0 ? 'text-green-600' : 'text-red-500'}`}>
-                {net >= 0 ? '+' : '-'}{formatAmount(net)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Summary row — compact single card */}
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
+        <CardContent className="pt-4 pb-4">
+          <div className="grid grid-cols-3 divide-x divide-border">
+            <div className="px-4 first:pl-0">
+              <p className="text-xs text-muted-foreground mb-0.5">Доходы</p>
+              {isLoading ? <Skeleton className="h-6 w-20" /> : (
+                <p className="text-base font-bold tabular-nums text-green-500">+{formatAmount(totalIncome)}</p>
+              )}
+            </div>
+            <div className="px-4">
+              <p className="text-xs text-muted-foreground mb-0.5">Расходы</p>
+              {isLoading ? <Skeleton className="h-6 w-20" /> : (
+                <p className="text-base font-bold tabular-nums text-red-500">-{formatAmount(totalExpense)}</p>
+              )}
+            </div>
+            <div className="px-4">
+              <p className="text-xs text-muted-foreground mb-0.5">Итого</p>
+              {isLoading ? <Skeleton className="h-6 w-20" /> : (
+                <p className={`text-base font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {net >= 0 ? '+' : ''}{formatAmount(net)}
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filters */}
       <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">

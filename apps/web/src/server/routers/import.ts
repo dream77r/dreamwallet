@@ -1,3 +1,4 @@
+import { cleanBankDescription } from '@/lib/bank-description'
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { router, protectedProcedure } from '../trpc'
@@ -125,7 +126,8 @@ export const importRouter = router({
         try {
           const dateStr = row[reverseMap.date] || ''
           const amountStr = row[reverseMap.amount] || ''
-          const description = reverseMap.description !== undefined ? row[reverseMap.description] || '' : ''
+          const rawDescription = reverseMap.description !== undefined ? row[reverseMap.description] || '' : ''
+          const description = cleanBankDescription(rawDescription, reverseMap.counterparty !== undefined ? row[reverseMap.counterparty] || '' : null)
           const counterparty = reverseMap.counterparty !== undefined ? row[reverseMap.counterparty] || '' : undefined
           const categoryName = reverseMap.category !== undefined ? row[reverseMap.category] || '' : ''
 

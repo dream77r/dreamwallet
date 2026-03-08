@@ -742,4 +742,38 @@ ${txList}
       }
     }),
 
+
+  // ── Clean bank descriptions (retroactive) ─────────────────────────────────
+  cleanDescriptions: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const { cleanBankDescription } = await import('@/lib/bank-description')
+      // Get user's account ids
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id }, select: { id: true } })
+      const accounts = wallet ? await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } }) : []
+      const accountIds = accounts.map(a => a.id)
+
+      const txs = await ctx.prisma.transaction.findMany({
+        where: {
+          accountId: { in: accountIds },
+          OR: [
+            { description: { contains: 'Операция по карте' } },
+            { description: { contains: 'место совершения операции' } },
+            { description: { contains: 'дата создания транзакции' } },
+          ],
+        },
+        select: { id: true, description: true, counterparty: true },
+        take: 500,
+      })
+
+      let cleaned = 0
+      for (const tx of txs) {
+        const newDesc = cleanBankDescription(tx.description ?? '', tx.counterparty)
+        if (newDesc !== tx.description && newDesc.length > 0) {
+          await ctx.prisma.transaction.update({ where: { id: tx.id }, data: { description: newDesc } })
+          cleaned++
+        }
+      }
+      return { cleaned, total: txs.length, message: `Очищено ${cleaned} из ${txs.length} описаний` }
+    }),
+
 })

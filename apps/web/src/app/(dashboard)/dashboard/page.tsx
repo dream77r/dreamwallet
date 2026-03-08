@@ -42,12 +42,16 @@ type WidgetId = 'balance' | 'recent-transactions' | 'budgets' | 'cashflow' | 'sc
 type WidgetConfig = { id: WidgetId; enabled: boolean; order: number }
 
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  '#6366f1',
+  '#6366f1', // indigo
+  '#22c55e', // green
+  '#f59e0b', // amber
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#f97316', // orange
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ef4444', // red
+  '#a3e635', // lime
   '#8b5cf6',
 ]
 
@@ -232,7 +236,7 @@ function CashflowWidget({
                 <Tooltip
                   formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
                   labelStyle={{ fontWeight: 600 }}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }}
                 />
                 <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} />
@@ -277,7 +281,7 @@ function CashflowWidget({
                 />
                 <Tooltip
                   formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.08)' }}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.3)', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))' }}
                 />
               </PieChart>
             </ResponsiveContainer>
