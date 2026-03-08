@@ -148,6 +148,12 @@ model Account {
   createdAt      DateTime    @default(now()) @map("created_at")
   updatedAt      DateTime    @updatedAt @map("updated_at")
 
+  // Crypto fields
+  cryptoAddress   String?   @map("crypto_address")
+  cryptoNetwork   String?   @map("crypto_network")
+  cryptoSymbol    String?   @map("crypto_symbol")
+  lastSyncAt      DateTime? @map("last_sync_at")
+
   wallet          Wallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
   bankConnection  BankConnection?
   transactions    Transaction[]   @relation("TransactionAccount")
