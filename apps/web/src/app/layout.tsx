@@ -4,6 +4,7 @@ import { ThemeProvider } from 'next-themes'
 import { Toaster } from '@/components/ui/sonner'
 import { TRPCProvider } from '@/lib/trpc/client'
 import { PwaProvider } from '@/components/pwa-provider'
+import { ServiceWorkerRegistration } from '@/components/pwa/ServiceWorkerRegistration'
 import './globals.css'
 
 const geistSans = Geist({
@@ -21,7 +22,7 @@ export const metadata: Metadata = {
     default: 'DreamWallet',
     template: '%s — DreamWallet',
   },
-  description: 'Управление личными и бизнес-финансами в одном месте',
+  description: 'Личный финансовый помощник',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -29,17 +30,19 @@ export const metadata: Metadata = {
     title: 'DreamWallet',
   },
   icons: {
-    apple: '/icon-192.png',
+    apple: '/icons/icon-192x192.png',
+    icon: [
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/icon-512x512.png', sizes: '512x512', type: 'image/png' },
+    ],
   },
 }
 
 export const viewport: Viewport = {
-  themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FAFAFA' },
-    { media: '(prefers-color-scheme: dark)', color: '#09090B' },
-  ],
+  themeColor: '#6366f1',
   width: 'device-width',
   initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({
@@ -57,6 +60,7 @@ export default function RootLayout({
           </TRPCProvider>
           <Toaster richColors position="top-right" />
         </ThemeProvider>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   )

@@ -4,6 +4,7 @@ import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { GlobalSearch } from '@/components/layout/global-search'
 import { Separator } from '@/components/ui/separator'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
+import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -23,6 +24,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </main>
       </SidebarInset>
       <OnboardingWizard />
+      <InstallPrompt />
     </SidebarProvider>
   )
 }
