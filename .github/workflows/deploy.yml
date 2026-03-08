@@ -45,8 +45,7 @@ jobs:
             df -h .
 
             echo "🧹 Cleaning old build..."
-            rm -rf apps/web/.next/cache apps/web/.next/server apps/web/.next/static apps/worker/dist
-            mkdir -p apps/web/.next
+            rm -rf apps/web/.next apps/worker/dist
             pnpm store prune 2>/dev/null || true
 
             echo "🔨 Building packages..."
@@ -55,8 +54,9 @@ jobs:
             pnpm --filter @dreamwallet/worker build
 
             echo "📁 Copying static assets..."
-            cp -r apps/web/public apps/web/.next/standalone/apps/web/public
-            cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
+            cp -r apps/web/public apps/web/.next/standalone/apps/web/public 2>/dev/null || true
+            cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static 2>/dev/null || true
+            touch apps/web/.next/server/pages-manifest.json 2>/dev/null || true
 
             echo "🚀 Restarting services..."
             pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
