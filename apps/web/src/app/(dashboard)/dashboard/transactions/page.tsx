@@ -480,7 +480,7 @@ function TransactionsPage() {
                     </div>
                     <div>
                       <p className="text-sm font-semibold leading-tight">
-                        {tx.description || tx.counterparty || typeLabels[type]}
+                        {(tx.description || tx.counterparty || typeLabels[type] || "").slice(0, 60) + ((tx.description || tx.counterparty || "").length > 60 ? "..." : "")}
                       </p>
                       <p className="text-xs text-muted-foreground font-medium mt-0.5">
                         {tx.category?.name ?? 'Без категории'} · {dateLabel}
@@ -583,7 +583,7 @@ function TransactionsPage() {
                             {typeIcons[type]}
                           </div>
                           <span className="font-medium text-sm">
-                            {tx.description || tx.counterparty || typeLabels[type]}
+                            {(tx.description || tx.counterparty || typeLabels[type] || "").slice(0, 60) + ((tx.description || tx.counterparty || "").length > 60 ? "..." : "")}
                           </span>
                         </div>
                       </TableCell>
