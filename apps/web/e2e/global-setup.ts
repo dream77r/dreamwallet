@@ -28,7 +28,7 @@ export default async function globalSetup(_config: FullConfig) {
   const context = await browser.newContext()
   const page = await context.newPage()
 
-  const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000'
+  const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3300'
 
   // 1. Регистрируем тест-юзера (если уже существует — ок, ошибку игнорируем)
   await page.request.post(`${baseURL}/api/auth/sign-up/email`, {

@@ -19,7 +19,7 @@ export default defineConfig({
   globalSetup: './e2e/global-setup.ts',
 
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000',
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3300',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -34,7 +34,7 @@ export default defineConfig({
     // Все остальные тесты — с сохранённой сессией (быстро, без логина)
     {
       name: 'app',
-      testMatch: ['**/dashboard.spec.ts', '**/transactions.spec.ts'],
+      testMatch: ['**/dashboard.spec.ts', '**/transactions.spec.ts', '**/navigation.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: AUTH_FILE,
@@ -47,7 +47,7 @@ export default defineConfig({
     ? undefined
     : {
         command: 'pnpm dev',
-        url: 'http://localhost:3000',
+        url: 'http://localhost:3300',
         reuseExistingServer: true,
         timeout: 120_000,
       },
