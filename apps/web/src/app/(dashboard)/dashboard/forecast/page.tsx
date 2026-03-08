@@ -209,7 +209,8 @@ export default function ForecastPage() {
                     width={72}
                   />
                   <Tooltip
-                    formatter={(value: number) => [formatAmount(value), 'Баланс']}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    formatter={(value: any) => [formatAmount(value as number), 'Баланс'] as any}
                     labelStyle={{ fontWeight: 600 }}
                     contentStyle={{ borderRadius: 8, fontSize: 13 }}
                   />

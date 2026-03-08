@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
-import { addDays, format } from 'date-fns'
+import { addDays, format, startOfDay } from 'date-fns'
 import { expandRecurring } from '@/lib/forecast-utils'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -92,7 +92,7 @@ export const forecastRouter = router({
       // ── Compute start balance ───────────────────────────────────────────────
       // For simplicity: treat all balances as same currency (main currency)
       // TODO: add currency conversion when exchange rate service is ready
-      const startBalance = accounts.reduce((sum, a) => sum + Number(a.balance), 0)
+      const startBalance = accounts.reduce((sum: number, a: { balance: unknown }) => sum + Number(a.balance), 0)
 
       // ── Expand recurring rules into events ─────────────────────────────────
       const today = startOfDay(new Date())
