@@ -58,7 +58,7 @@ type Step = 1 | 2 | 3 | 4
 const steps = [
   { id: 1, label: 'Загрузка' },
   { id: 2, label: 'Предпросмотр' },
-  { id: 3, label: 'Маппинг колонок' },
+  { id: 3, label: 'Колонки' },
   { id: 4, label: 'Подтверждение' },
 ]
 
@@ -592,7 +592,7 @@ export default function ImportPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">Маппинг колонок</CardTitle>
+                <CardTitle className="text-base">Колонки</CardTitle>
                 <CardDescription>Укажите, какие колонки файла соответствуют полям системы</CardDescription>
               </div>
               <Button
