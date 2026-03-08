@@ -2,6 +2,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/s
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { GlobalSearch } from '@/components/layout/global-search'
+import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
 import { Separator } from '@/components/ui/separator'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
@@ -15,6 +16,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4" />
+          <WorkspaceSwitcher />
           <div className="ml-auto flex items-center gap-2">
             <GlobalSearch />
             <NotificationsBell />
