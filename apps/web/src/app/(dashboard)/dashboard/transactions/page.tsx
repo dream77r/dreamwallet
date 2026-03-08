@@ -1,4 +1,5 @@
 'use client'
+import { Suspense } from 'react'
 
 import { useState } from 'react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -82,7 +83,7 @@ function formatAmount(amount: number, currency = 'RUB') {
   }).format(Math.abs(amount))
 }
 
-export default function TransactionsPage() {
+function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
@@ -619,5 +620,11 @@ export default function TransactionsPage() {
         </div>
       </div>
     </div>
+
+export default function TransactionsPageWrapper() {
+  return (
+    <Suspense>
+      <TransactionsPage />
+    </Suspense>
   )
 }
