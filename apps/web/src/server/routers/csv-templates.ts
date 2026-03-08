@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
+import { Prisma } from '@prisma/client'
 import { router, protectedProcedure } from '../trpc'
 
 export const csvTemplatesRouter = router({
@@ -28,7 +29,7 @@ export const csvTemplatesRouter = router({
         data: {
           userId: ctx.user.id,
           name: input.name,
-          columnMap: input.columnMap,
+          columnMap: input.columnMap as Prisma.InputJsonValue,
           dateFormat: input.dateFormat,
           delimiter: input.delimiter ?? ',',
           skipRows: input.skipRows ?? 0,
@@ -60,7 +61,7 @@ export const csvTemplatesRouter = router({
         where: { id },
         data: {
           name: data.name,
-          columnMap: data.columnMap,
+          columnMap: data.columnMap as Prisma.InputJsonValue,
           dateFormat: data.dateFormat,
           delimiter: data.delimiter,
           skipRows: data.skipRows,
