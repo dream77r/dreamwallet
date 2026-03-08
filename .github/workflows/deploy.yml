@@ -45,12 +45,13 @@ jobs:
             df -h .
 
             echo "🧹 Cleaning old build..."
-            rm -rf apps/web/.next apps/worker/dist
+            rm -rf apps/worker/dist
+            rm -rf apps/web/.next/cache
             pnpm store prune 2>/dev/null || true
 
             echo "🔨 Building packages..."
             pnpm --filter @dreamwallet/db build
-            NEXT_TURBOPACK=false pnpm --filter @dreamwallet/web build
+            pnpm --filter @dreamwallet/web build
             pnpm --filter @dreamwallet/worker build
 
             echo "📁 Copying static assets..."
