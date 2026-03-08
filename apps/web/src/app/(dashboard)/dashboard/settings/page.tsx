@@ -196,6 +196,7 @@ function PushNotificationsSection() {
 function TelegramSection() {
   const utils = trpc.useUtils()
   const { data: conn, isLoading } = trpc.telegram.getConnection.useQuery()
+  const { data: alertSettings } = trpc.telegram.getAlertSettings.useQuery()
 
   const generateLink = trpc.telegram.generateLinkToken.useMutation({
     onError: (e) => toast.error(e.message),
@@ -204,6 +205,14 @@ function TelegramSection() {
     onSuccess: () => {
       toast.success('Telegram отключён')
       utils.telegram.getConnection.invalidate()
+      utils.telegram.getAlertSettings.invalidate()
+    },
+    onError: (e) => toast.error(e.message),
+  })
+  const updateAlerts = trpc.telegram.updateAlertSettings.useMutation({
+    onSuccess: () => {
+      toast.success('Настройки сохранены')
+      utils.telegram.getAlertSettings.invalidate()
     },
     onError: (e) => toast.error(e.message),
   })
@@ -216,40 +225,85 @@ function TelegramSection() {
     window.open(result.url, '_blank')
   }
 
+  function toggleSetting(key: 'notifyTransactions' | 'notifyBudgets' | 'notifyGoals', value: boolean) {
+    updateAlerts.mutate({ [key]: value })
+  }
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Telegram-бот</CardTitle>
         <CardDescription>Добавляй транзакции текстом или голосом прямо из Telegram</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
         {isLoading ? (
           <Skeleton className="h-10 w-48" />
         ) : conn ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                ✈️
+          <>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                  ✈️
+                </div>
+                <div>
+                  <p className="text-sm font-medium">
+                    {conn.firstName ?? conn.username ?? 'Telegram'} подключён
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {conn.username ? `@${conn.username} · ` : ''}{new Date(conn.linkedAt).toLocaleDateString('ru-RU')}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium">
-                  {conn.firstName ?? conn.username ?? 'Telegram'} подключён
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {conn.username ? `@${conn.username} · ` : ''}{new Date(conn.linkedAt).toLocaleDateString('ru-RU')}
-                </p>
-              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-red-600"
+                onClick={() => disconnect.mutate()}
+                disabled={disconnect.isPending}
+              >
+                Отключить
+              </Button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-red-600"
-              onClick={() => disconnect.mutate()}
-              disabled={disconnect.isPending}
-            >
-              Отключить
-            </Button>
-          </div>
+
+            {alertSettings && (
+              <>
+                <Separator />
+                <div className="space-y-3">
+                  <p className="text-sm font-medium">Уведомления</p>
+                  <div className="space-y-2">
+                    {[
+                      { key: 'notifyTransactions' as const, label: '💸 Транзакции', desc: 'Уведомлять о каждой новой транзакции' },
+                      { key: 'notifyBudgets' as const, label: '⚠️ Бюджеты', desc: 'Алёрт при достижении 80% и 100% бюджета' },
+                      { key: 'notifyGoals' as const, label: '🎯 Цели', desc: 'Обновления по целям накоплений' },
+                    ].map(({ key, label, desc }) => (
+                      <div key={key} className="flex items-center justify-between rounded-lg border p-3">
+                        <div>
+                          <p className="text-sm font-medium">{label}</p>
+                          <p className="text-xs text-muted-foreground">{desc}</p>
+                        </div>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={alertSettings[key]}
+                          onClick={() => toggleSetting(key, !alertSettings[key])}
+                          disabled={updateAlerts.isPending}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50 ${
+                            alertSettings[key] ? 'bg-primary' : 'bg-input'
+                          }`}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${
+                              alertSettings[key] ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">

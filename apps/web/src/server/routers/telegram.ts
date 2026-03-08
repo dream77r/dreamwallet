@@ -37,4 +37,34 @@ export const telegramRouter = router({
     })
     return { success: true }
   }),
+
+  /** Получить настройки алёртов */
+  getAlertSettings: protectedProcedure.query(async ({ ctx }) => {
+    const conn = await ctx.prisma.telegramConnection.findUnique({
+      where: { userId: ctx.user.id },
+      select: { notifyTransactions: true, notifyBudgets: true, notifyGoals: true, isActive: true },
+    })
+    if (!conn) return null
+    return conn
+  }),
+
+  /** Обновить настройки алёртов */
+  updateAlertSettings: protectedProcedure
+    .input(z.object({
+      notifyTransactions: z.boolean().optional(),
+      notifyBudgets:      z.boolean().optional(),
+      notifyGoals:        z.boolean().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const conn = await ctx.prisma.telegramConnection.findUnique({
+        where: { userId: ctx.user.id },
+      })
+      if (!conn) return { success: false, message: 'Telegram не подключён' }
+
+      await ctx.prisma.telegramConnection.update({
+        where: { userId: ctx.user.id },
+        data: input,
+      })
+      return { success: true }
+    }),
 })
