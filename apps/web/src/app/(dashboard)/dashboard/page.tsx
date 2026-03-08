@@ -36,7 +36,8 @@ import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidge
 import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
 import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWidget'
 import { DashboardCustomizer, DashboardCustomizerSkeleton } from '@/components/dashboard/DashboardCustomizer'
-type WidgetConfig = { id: string; enabled: boolean; order: number }
+type WidgetId = 'balance' | 'recent-transactions' | 'budgets' | 'cashflow' | 'score' | 'forecast' | 'networth' | 'goals'
+type WidgetConfig = { id: WidgetId; enabled: boolean; order: number }
 
 const CHART_COLORS = [
   'hsl(var(--chart-1))',
