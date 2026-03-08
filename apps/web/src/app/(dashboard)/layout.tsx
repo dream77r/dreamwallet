@@ -7,7 +7,8 @@ import { Separator } from '@/components/ui/separator'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { QuickAddFAB } from '@/components/transactions/QuickAddFAB'
-import { BottomNav } from '@/components/layout/BottomNav'
+import dynamic from 'next/dynamic'
+const BottomNav = dynamic(() => import('@/components/layout/BottomNav').then(m => m.BottomNav), { ssr: false })
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (

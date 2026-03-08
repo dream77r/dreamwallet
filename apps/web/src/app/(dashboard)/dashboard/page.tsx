@@ -35,7 +35,9 @@ import { AiInsights } from '@/components/dashboard/ai-insights'
 import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidget'
 import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
 import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWidget'
-import { DashboardCustomizer, DashboardCustomizerSkeleton } from '@/components/dashboard/DashboardCustomizer'
+import dynamic from 'next/dynamic'
+const DashboardCustomizer = dynamic(() => import('@/components/dashboard/DashboardCustomizer').then(m => m.DashboardCustomizer), { ssr: false })
+const DashboardCustomizerSkeleton = dynamic(() => import('@/components/dashboard/DashboardCustomizer').then(m => m.DashboardCustomizerSkeleton), { ssr: false })
 type WidgetId = 'balance' | 'recent-transactions' | 'budgets' | 'cashflow' | 'score' | 'forecast' | 'networth' | 'goals'
 type WidgetConfig = { id: WidgetId; enabled: boolean; order: number }
 
