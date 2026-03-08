@@ -17,7 +17,7 @@ export type WidgetId = z.infer<typeof widgetIdSchema>
 export const widgetConfigSchema = z.object({
   id: widgetIdSchema,
   enabled: z.boolean(),
-  order: z.number().int().nonneg(),
+  order: z.number().int().min(0),
 })
 
 export type WidgetConfig = z.infer<typeof widgetConfigSchema>

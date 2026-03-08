@@ -130,7 +130,7 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
   const { data: aiSuggestion } = trpc.transaction.suggestCategory.useQuery(
     { description, type: type as 'INCOME' | 'EXPENSE', amount: parseFloat(amount) || undefined },
     {
-      enabled: open && step === 'confirm' && description.trim().length >= 3 && type !== 'TRANSFER',
+      enabled: open && step === 'confirm' && description.trim().length >= 3,
       staleTime: 60 * 60 * 1000,
     }
   )
