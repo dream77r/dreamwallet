@@ -358,9 +358,15 @@ ${summary || 'Транзакции не найдены.'}
     const threeMonthsAgo = new Date()
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
 
+    const walletAccounts = await ctx.prisma.account.findMany({
+      where: { walletId: wallet.id },
+      select: { id: true },
+    })
+    const walletAccountIds = walletAccounts.map(a => a.id)
+
     const transactions = await ctx.prisma.transaction.findMany({
       where: {
-        account: { walletId: wallet.id },
+        accountId: { in: walletAccountIds },
         date: { gte: threeMonthsAgo },
         type: 'EXPENSE',
       },
@@ -426,15 +432,21 @@ ${txSummary}
     const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59)
 
+    const insightAccounts = await ctx.prisma.account.findMany({
+      where: { walletId: wallet.id },
+      select: { id: true },
+    })
+    const insightAccountIds = insightAccounts.map(a => a.id)
+
     const [thisMonth, lastMonth, budgets] = await Promise.all([
       ctx.prisma.transaction.groupBy({
         by: ['categoryId'],
-        where: { account: { walletId: wallet.id }, type: 'EXPENSE', date: { gte: thisMonthStart } },
+        where: { accountId: { in: insightAccountIds }, type: 'EXPENSE', date: { gte: thisMonthStart } },
         _sum: { amount: true },
       }),
       ctx.prisma.transaction.groupBy({
         by: ['categoryId'],
-        where: { account: { walletId: wallet.id }, type: 'EXPENSE', date: { gte: lastMonthStart, lte: lastMonthEnd } },
+        where: { accountId: { in: insightAccountIds }, type: 'EXPENSE', date: { gte: lastMonthStart, lte: lastMonthEnd } },
         _sum: { amount: true },
       }),
       ctx.prisma.budget.findMany({
@@ -503,10 +515,16 @@ ${txSummary}
     const threeMonthsAgo = new Date()
     threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
 
+    const budgetAccounts = await ctx.prisma.account.findMany({
+      where: { walletId: wallet.id },
+      select: { id: true },
+    })
+    const budgetAccountIds = budgetAccounts.map(a => a.id)
+
     const spending = await ctx.prisma.transaction.groupBy({
       by: ['categoryId'],
       where: {
-        account: { walletId: wallet.id },
+        accountId: { in: budgetAccountIds },
         type: 'EXPENSE',
         date: { gte: threeMonthsAgo },
         categoryId: { not: null },
