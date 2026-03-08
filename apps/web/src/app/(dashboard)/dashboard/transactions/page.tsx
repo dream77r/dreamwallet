@@ -300,72 +300,68 @@ function TransactionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label className="cursor-pointer">
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} />
-            <Button variant="outline" size="sm" asChild disabled={parseReceiptMutation.isPending}>
-              <span>
-                <Camera className="h-4 w-4 mr-2" />
-                {parseReceiptMutation.isPending ? 'Сканирую...' : 'Чек'}
-              </span>
-            </Button>
-          </label>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={exportQuery.isFetching}>
-            <Download className="h-4 w-4 mr-2" />
-            {exportQuery.isFetching ? 'Экспорт...' : 'CSV'}
-          </Button>
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-indigo-500 hover:bg-indigo-600 text-white"
-            disabled={isAutoCategorizing}
-            onClick={() => {
-              setIsAutoCategorizing(true)
-              autoCategorize.mutate({ useAI: true })
-            }}
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            {isAutoCategorizing ? 'Обрабатываю...' : 'AI категории'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isCleaning}
-            onClick={() => { setIsCleaning(true); cleanDescriptions.mutate() }}
-          >
-            <Wand2 className="h-4 w-4 mr-2" />
-            {isCleaning ? 'Чищу...' : 'Очистить'}
-          </Button>
+          {/* Mobile: dropdown menu for secondary actions */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={handleExport} disabled={exportQuery.isFetching}>
+                <Download className="h-4 w-4 mr-2" />
+                {exportQuery.isFetching ? 'Экспорт...' : 'Экспорт CSV'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setIsAutoCategorizing(true); autoCategorize.mutate({ useAI: true }) }}
+                disabled={isAutoCategorizing}
+              >
+                <Sparkles className="h-4 w-4 mr-2 text-indigo-500" />
+                {isAutoCategorizing ? 'Обрабатываю...' : 'AI категории'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setIsCleaning(true); cleanDescriptions.mutate() }}
+                disabled={isCleaning}
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                {isCleaning ? 'Чищу...' : 'Очистить описания'}
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <label className="cursor-pointer w-full flex items-center">
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} />
+                  <Camera className="h-4 w-4 mr-2" />
+                  {parseReceiptMutation.isPending ? 'Сканирую...' : 'Сканировать чек'}
+                </label>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <TransactionForm />
         </div>
       </div>
 
       {/* Summary row — compact single card */}
-      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-        <CardContent className="pt-4 pb-4">
-          <div className="grid grid-cols-3 divide-x divide-border">
-            <div className="px-4 first:pl-0">
-              <p className="text-xs text-muted-foreground mb-0.5">Доходы</p>
-              {isLoading ? <Skeleton className="h-6 w-20" /> : (
-                <p className="text-base font-bold tabular-nums text-green-500">+{formatAmount(totalIncome)}</p>
-              )}
-            </div>
-            <div className="px-4">
-              <p className="text-xs text-muted-foreground mb-0.5">Расходы</p>
-              {isLoading ? <Skeleton className="h-6 w-20" /> : (
-                <p className="text-base font-bold tabular-nums text-red-500">-{formatAmount(totalExpense)}</p>
-              )}
-            </div>
-            <div className="px-4">
-              <p className="text-xs text-muted-foreground mb-0.5">Итого</p>
-              {isLoading ? <Skeleton className="h-6 w-20" /> : (
-                <p className={`text-base font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                  {net >= 0 ? '+' : ''}{formatAmount(net)}
-                </p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="flex gap-2">
+        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground">Доходы</p>
+          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
+            <p className="text-sm font-bold tabular-nums text-green-500">+{formatAmount(totalIncome)}</p>
+          )}
+        </div>
+        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground">Расходы</p>
+          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
+            <p className="text-sm font-bold tabular-nums text-red-500">-{formatAmount(totalExpense)}</p>
+          )}
+        </div>
+        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground">Итого</p>
+          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
+            <p className={`text-sm font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {net >= 0 ? '+' : ''}{formatAmount(net)}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Filters */}
       <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">

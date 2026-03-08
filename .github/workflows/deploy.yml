@@ -61,7 +61,7 @@ jobs:
             touch apps/web/.next/server/pages-manifest.json 2>/dev/null || true
 
             echo "🚀 Restarting services..."
-            pm2 reload ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
+            pm2 restart ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
             pm2 save
 
             echo "✅ Deploy complete!"
