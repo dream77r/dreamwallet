@@ -21,6 +21,7 @@ import {
   CreditCard,
   PieChart,
   FolderKanban,
+  FolderOpen,
   Target,
   Upload,
   Settings,
@@ -63,6 +64,7 @@ const mainNav = [
 
 const projectNav = [
   { title: 'Проекты', href: '/dashboard/projects', icon: FolderKanban },
+  { title: 'Пространства', href: '/projects', icon: FolderOpen },
 ]
 
 export function AppSidebar() {
