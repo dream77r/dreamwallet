@@ -419,6 +419,8 @@ export const transactionRouter = router({
             { description: { contains: q, mode: 'insensitive' } },
             { counterparty: { contains: q, mode: 'insensitive' } },
             { reference: { contains: q, mode: 'insensitive' } },
+            { category: { name: { contains: q, mode: 'insensitive' } } },
+            { tags: { some: { tag: { name: { contains: q, mode: 'insensitive' } } } } },
           ],
         },
         include: {
