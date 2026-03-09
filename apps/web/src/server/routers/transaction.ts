@@ -829,6 +829,28 @@ ${txList}
     }),
 
 
+  // ── Quick inline category update ──────────────────────────────────────────
+  updateCategory: protectedProcedure
+    .input(z.object({
+      id:         z.string().cuid(),
+      categoryId: z.string().cuid().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify transaction belongs to user via account → wallet
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id }, select: { id: true } })
+      const accounts = wallet ? await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } }) : []
+      const accountIds = accounts.map(a => a.id)
+
+      const tx = await ctx.prisma.transaction.findFirst({ where: { id: input.id, accountId: { in: accountIds } }, select: { id: true } })
+      if (!tx) throw new TRPCError({ code: 'NOT_FOUND' })
+
+      return ctx.prisma.transaction.update({
+        where: { id: input.id },
+        data: { categoryId: input.categoryId },
+        select: { id: true, categoryId: true },
+      })
+    }),
+
   // ── Clean bank descriptions (retroactive) ─────────────────────────────────
   cleanDescriptions: protectedProcedure
     .mutation(async ({ ctx }) => {

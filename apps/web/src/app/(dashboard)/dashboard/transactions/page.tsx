@@ -56,6 +56,8 @@ import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import { QuickAddModal } from '@/components/transactions/QuickAddModal'
+import { InlineCategoryPicker } from '@/components/transactions/InlineCategoryPicker'
+import { SuggestRuleDialog, type SuggestRulePayload } from '@/components/transactions/SuggestRuleDialog'
 
 const PAGE_SIZE = 20
 
@@ -113,7 +115,34 @@ function TransactionsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [isAutoCategorizing, setIsAutoCategorizing] = useState(false)
+  const [isKeywordCategorizing, setIsKeywordCategorizing] = useState(false)
   const [isCleaning, setIsCleaning] = useState(false)
+  const [suggestRule, setSuggestRule] = useState<SuggestRulePayload | null>(null)
+
+  const updateCategory = trpc.transaction.updateCategory.useMutation({
+    onSuccess: () => utils.transaction.list.invalidate(),
+    onError: (e) => toast.error('Ошибка: ' + e.message),
+  })
+
+  function handleCategoryChanged(
+    txId: string,
+    categoryId: string | null,
+    categoryName: string | null,
+    tx: { description?: string | null; counterparty?: string | null; category?: { icon?: string | null } | null }
+  ) {
+    updateCategory.mutate({ id: txId, categoryId })
+    // Предлагаем правило только если назначили категорию (не убрали)
+    if (categoryId && categoryName) {
+      setSuggestRule({
+        txId,
+        description: tx.description ?? null,
+        counterparty: tx.counterparty ?? null,
+        categoryId,
+        categoryName,
+        categoryIcon: tx.category?.icon ?? null,
+      })
+    }
+  }
   const cleanDescriptions = trpc.transaction.cleanDescriptions.useMutation({
     onSuccess: (data) => { toast.success(data.message); utils.transaction.list.invalidate() },
     onError: (e) => toast.error('Ошибка: ' + e.message),
@@ -125,7 +154,7 @@ function TransactionsPage() {
       utils.transaction.list.invalidate()
     },
     onError: (e) => toast.error('Ошибка: ' + e.message),
-    onSettled: () => setIsAutoCategorizing(false),
+    onSettled: () => { setIsAutoCategorizing(false); setIsKeywordCategorizing(false) },
   })
   const searchParams = useSearchParams()
   useEffect(() => {
@@ -285,6 +314,11 @@ function TransactionsPage() {
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
       <QuickAddModal open={quickAddOpen} onOpenChange={setQuickAddOpen} />
+      <SuggestRuleDialog
+        payload={suggestRule}
+        onClose={() => setSuggestRule(null)}
+        onApplied={() => { setSuggestRule(null); utils.transaction.list.invalidate() }}
+      />
       {editingTx && (
         <TransactionForm
           initialData={{ id: editingTx.id, type: editingTx.type as 'INCOME' | 'EXPENSE' | 'TRANSFER', accountId: editingTx.accountId, amount: editingTx.amount, date: editingTx.date, description: editingTx.description, categoryId: editingTx.categoryId }}
@@ -300,7 +334,29 @@ function TransactionsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Mobile: dropdown menu for secondary actions */}
+          {/* Categorization buttons */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setIsKeywordCategorizing(true); autoCategorize.mutate({ useAI: false }) }}
+            disabled={isKeywordCategorizing || isAutoCategorizing}
+            title="Категоризировать по ключевым словам"
+          >
+            <Tag className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">{isKeywordCategorizing ? 'Обрабатываю...' : 'Категории'}</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setIsAutoCategorizing(true); autoCategorize.mutate({ useAI: true }) }}
+            disabled={isAutoCategorizing || isKeywordCategorizing}
+            title="AI категоризация"
+            className="text-indigo-600 hover:text-indigo-700 border-indigo-200 hover:border-indigo-300"
+          >
+            <Sparkles className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">{isAutoCategorizing ? 'AI...' : 'AI'}</span>
+          </Button>
+          {/* Secondary actions dropdown */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -311,13 +367,6 @@ function TransactionsPage() {
               <DropdownMenuItem onClick={handleExport} disabled={exportQuery.isFetching}>
                 <Download className="h-4 w-4 mr-2" />
                 {exportQuery.isFetching ? 'Экспорт...' : 'Экспорт CSV'}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => { setIsAutoCategorizing(true); autoCategorize.mutate({ useAI: true }) }}
-                disabled={isAutoCategorizing}
-              >
-                <Sparkles className="h-4 w-4 mr-2 text-indigo-500" />
-                {isAutoCategorizing ? 'Обрабатываю...' : 'AI категории'}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => { setIsCleaning(true); cleanDescriptions.mutate() }}
@@ -526,9 +575,14 @@ function TransactionsPage() {
                       <p className="text-sm font-semibold leading-tight">
                         {getDisplayDescription(tx.description ?? null, tx.counterparty ?? null, typeLabels[type] ?? "")}
                       </p>
-                      <p className="text-xs text-muted-foreground font-medium mt-0.5">
-                        {tx.category?.name ?? 'Без категории'} · {dateLabel}
-                      </p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <InlineCategoryPicker
+                          tx={tx}
+                          categories={categories ?? []}
+                          onChanged={handleCategoryChanged}
+                        />
+                        <span className="text-xs text-muted-foreground">· {dateLabel}</span>
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
@@ -631,8 +685,12 @@ function TransactionsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        {tx.category?.name ?? '—'}
+                      <TableCell className="hidden md:table-cell">
+                        <InlineCategoryPicker
+                          tx={tx}
+                          categories={categories ?? []}
+                          onChanged={handleCategoryChanged}
+                        />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {tx.account.name}
