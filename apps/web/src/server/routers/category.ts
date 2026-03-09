@@ -92,4 +92,42 @@ export const categoryRouter = router({
     await ctx.prisma.category.createMany({ data: categories })
     return { created: categories.length }
   }),
+
+  // Add missing default categories to existing user (idempotent)
+  seedMissing: protectedProcedure.mutation(async ({ ctx }) => {
+    const existing = await ctx.prisma.category.findMany({
+      where: { userId: ctx.user.id },
+      select: { name: true, type: true },
+    })
+    const existingNames = new Set(existing.map(c => `${c.type}:${c.name.toLowerCase()}`))
+
+    const toCreate = [
+      ...DEFAULT_EXPENSE_CATEGORIES
+        .filter(c => !existingNames.has(`EXPENSE:${c.name.toLowerCase()}`))
+        .map((c, i) => ({
+          userId: ctx.user.id,
+          name: c.name,
+          type: 'EXPENSE' as const,
+          icon: c.icon,
+          color: c.color,
+          isDefault: true,
+          sortOrder: 100 + i,
+        })),
+      ...DEFAULT_INCOME_CATEGORIES
+        .filter(c => !existingNames.has(`INCOME:${c.name.toLowerCase()}`))
+        .map((c, i) => ({
+          userId: ctx.user.id,
+          name: c.name,
+          type: 'INCOME' as const,
+          icon: c.icon,
+          color: c.color,
+          isDefault: true,
+          sortOrder: 100 + i,
+        })),
+    ]
+
+    if (toCreate.length === 0) return { created: 0 }
+    await ctx.prisma.category.createMany({ data: toCreate })
+    return { created: toCreate.length }
+  }),
 })

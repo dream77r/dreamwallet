@@ -6,22 +6,23 @@ import {
   LayoutDashboard,
   ArrowLeftRight,
   PieChart,
-  Settings,
+  Menu,
   Plus,
 } from 'lucide-react'
 import { useState } from 'react'
 import { QuickAddModal } from '@/components/transactions/QuickAddModal'
+import { useSidebar } from '@/components/ui/sidebar'
 
 const tabs = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Обзор' },
   { href: '/dashboard/transactions', icon: ArrowLeftRight, label: 'Транзакции' },
   { href: '/dashboard/analytics', icon: PieChart, label: 'Аналитика' },
-  { href: '/dashboard/settings', icon: Settings, label: 'Настройки' },
 ]
 
 export function BottomNav() {
   const pathname = usePathname()
   const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const { toggleSidebar } = useSidebar()
 
   return (
     <>
@@ -62,7 +63,7 @@ export function BottomNav() {
             <Plus className="h-7 w-7" strokeWidth={2} />
           </button>
 
-          {/* Последние 2 вкладки */}
+          {/* Аналитика */}
           {tabs.slice(2).map((tab) => {
             const isActive = pathname === tab.href || pathname.startsWith(tab.href)
             return (
@@ -84,6 +85,16 @@ export function BottomNav() {
               </Link>
             )
           })}
+
+          {/* Кнопка "Ещё" — открывает боковое меню со всеми разделами */}
+          <button
+            onClick={toggleSidebar}
+            className="flex flex-col items-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-150 active:scale-95 min-w-[56px] text-gray-400"
+            aria-label="Все разделы"
+          >
+            <Menu className="h-6 w-6" strokeWidth={1.5} />
+            <span className="text-[10px] font-medium">Ещё</span>
+          </button>
         </div>
       </nav>
 

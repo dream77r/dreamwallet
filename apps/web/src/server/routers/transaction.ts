@@ -528,6 +528,39 @@ export const transactionRouter = router({
 
       if (categories.length === 0) return null
 
+      // ── Keyword-based fallback (works without API key) ─────────────────────
+      const KEYWORD_RULES_SUGGEST: Array<{ patterns: string[]; category: string; type?: 'INCOME' | 'EXPENSE' }> = [
+        { patterns: ['пятёрочка','пятерочка','магнит','перекрёсток','перекресток','вкусвилл','ашан','лента','дикси','metro','окей','spar','спар','fix price','фикс прайс','светофор','globus','глобус'], category: 'Продукты' },
+        { patterns: ['кафе','ресторан','restaurant','cafe','coffee','кофе','пицца','pizza','суши','sushi','burger','бургер','kfc','макдоналдс','mcdonald','subway','домино','додо','dodo','вкусно и точка','шоколадница','coffee bean'], category: 'Кафе и рестораны' },
+        { patterns: ['яндекс такси','yandex taxi','uber','ситимобил','таксовичкоф','rutaxi','indriver','bolt'], category: 'Транспорт' },
+        { patterns: ['метро','московский метрополитен','мосметро','troika','тройка','электричка','ржд','rzd','аэроэкспресс'], category: 'Транспорт' },
+        { patterns: ['аптека','pharmacy','36,6','36.6','горздрав','ригла','eapteka','сбераптека','здравсити'], category: 'Здоровье' },
+        { patterns: ['мвидео','м.видео','эльдорадо','dns','днс','citilink','ситилинк','технопарк','re:store','restore','apple store'], category: 'Электроника' },
+        { patterns: ['ozon','озон','wildberries','wb','aliexpress','lamoda','яндекс маркет','яндекс.маркет','goods','sbermegamarket','мегамаркет'], category: 'Покупки' },
+        { patterns: ['зарплата','зп ','salary','аванс','выплата','начислено'], category: 'Зарплата', type: 'INCOME' },
+        { patterns: ['ростелеком','мтс','мегафон','билайн','tele2','теле2','yota','йота','сим карта'], category: 'Связь' },
+        { patterns: ['netflix','нетфликс','spotify','яндекс плюс','яндекс.плюс','кинопоиск','ivi','иви','okko','окко','vk музыка','сберзвук','premier','start.ru','amediateka'], category: 'Подписки' },
+        { patterns: ['жкх','жилищно','коммунальн','электроэнергия','газ газпром','водоканал','тепло','управляющая компания','тсж'], category: 'Коммунальные' },
+        { patterns: ['газпром нефть','лукойл','роснефть','bp','shell','azs','азс','заправк','бензин','топливо'], category: 'Авто' },
+        { patterns: ['фитнес','fitness','спорт зал','sport','worldclass','world class','бассейн','тренажер','yoga','йога','crossfit','кроссфит'], category: 'Спорт' },
+        { patterns: ['кино','cinema','синема','театр','theatre','мюзикл','концерт','kassir','кассир','ticketland'], category: 'Развлечения' },
+        { patterns: ['авиабилет','авиа','аэрофлот','s7','pobeda','победа','ural airlines','уральские авиалинии','booking','букинг','airbnb','отель','hotel'], category: 'Путешествия' },
+      ]
+      const lower = input.description.toLowerCase()
+      for (const rule of KEYWORD_RULES_SUGGEST) {
+        if (rule.type && rule.type !== input.type) continue
+        if (rule.patterns.some(p => lower.includes(p))) {
+          // Try exact name match first, then partial
+          const exact = categories.find(c => c.name.toLowerCase() === rule.category.toLowerCase())
+          const partial = exact ?? categories.find(c => c.name.toLowerCase().includes(rule.category.toLowerCase().split(' ')[0]))
+          if (partial) {
+            const result = { categoryId: partial.id, categoryName: partial.name, confidence: 0.85 }
+            setInCache(cacheKey, result)
+            return result
+          }
+        }
+      }
+
       // Get user AI model
       const userRecord = await ctx.prisma.user.findUnique({
         where: { id: ctx.user.id },
@@ -608,20 +641,20 @@ export const transactionRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Keyword rules for Russian bank descriptions
       const KEYWORD_RULES: Array<{ patterns: string[]; category: string; type?: 'INCOME' | 'EXPENSE' }> = [
-        { patterns: ['пятёрочка', 'пятерочка', 'магнит', 'перекрёсток', 'перекресток', 'вкусвилл', 'вкус вилл', 'ашан', 'лента', 'дикси', 'metro', 'окей', 'окей', 'spar', 'спар', 'fix price', 'фикс прайс', 'светофор', 'globus', 'глобус'], category: 'Продукты' },
+        { patterns: ['пятёрочка', 'пятерочка', 'магнит', 'перекрёсток', 'перекресток', 'вкусвилл', 'вкус вилл', 'ашан', 'лента', 'дикси', 'metro cash', 'окей', 'spar', 'спар', 'fix price', 'фикс прайс', 'светофор', 'globus', 'глобус'], category: 'Продукты' },
+        { patterns: ['кафе', 'ресторан', 'restaurant', 'cafe', 'coffee', 'кофе', 'пицца', 'pizza', 'суши', 'sushi', 'burger', 'бургер', 'kfc', 'макдоналдс', 'mcdonald', 'subway', 'domino', 'додо', 'dodo', 'вкусно и точка', 'шоколадница', 'coffee bean'], category: 'Кафе и рестораны' },
         { patterns: ['яндекс такси', 'yandex taxi', 'uber', 'ситимобил', 'таксовичкоф', 'rutaxi', 'indriver', 'bolt'], category: 'Транспорт' },
         { patterns: ['метро', 'московский метрополитен', 'мосметро', 'troika', 'тройка', 'электричка', 'ржд', 'rzd', 'аэроэкспресс'], category: 'Транспорт' },
         { patterns: ['аптека', 'pharmacy', 'farmacy', '36,6', '36.6', 'горздрав', 'ригла', 'eapteka', 'сбераптека', 'здравсити'], category: 'Здоровье' },
-        { patterns: ['мвидео', 'м.видео', 'эльдорадо', 'dns', 'днс', 'citilink', 'ситилинк', 'технопарк', "re:store", 'restore', 'apple store'], category: 'Электроника' },
-        { patterns: ['ozon', 'озон', 'wildberries', 'wb', 'ali', 'aliexpress', 'lamoda', 'яндекс маркет', 'яндекс.маркет', 'goods', 'sbermegamarket', 'мегамаркет'], category: 'Покупки' },
+        { patterns: ['мвидео', 'м.видео', 'эльдорадо', 'dns', 'днс', 'citilink', 'ситилинк', 'технопарк', 're:store', 'restore', 'apple store'], category: 'Электроника' },
+        { patterns: ['ozon', 'озон', 'wildberries', 'wb', 'aliexpress', 'lamoda', 'яндекс маркет', 'яндекс.маркет', 'goods', 'sbermegamarket', 'мегамаркет'], category: 'Покупки' },
         { patterns: ['зарплата', 'зп ', 'salary', 'аванс', 'выплата', 'начислено'], category: 'Зарплата', type: 'INCOME' },
-        { patterns: ['кафе', 'ресторан', 'restaurant', 'cafe', 'coffee', 'кофе', 'пицца', 'pizza', 'суши', 'sushi', 'burger', 'бургер', 'kfc', 'макдоналдс', 'mcdonald', 'subway', 'domino', 'додо', 'dodo', 'вкусно и точка', 'шоколадница', 'coffee bean'], category: 'Кафе и рестораны' },
         { patterns: ['ростелеком', 'мтс', 'мегафон', 'билайн', 'tele2', 'теле2', 'yota', 'йота', 'сим карта'], category: 'Связь' },
         { patterns: ['netflix', 'нетфликс', 'spotify', 'яндекс плюс', 'яндекс.плюс', 'кинопоиск', 'ivi', 'иви', 'okko', 'окко', 'vk музыка', 'сберзвук', 'premier', 'start.ru', 'amediateka'], category: 'Подписки' },
-        { patterns: ['жкх', 'жилищно', 'коммунальн', 'электроэнергия', 'газ газпром', 'водоканал', 'тепло', 'управляющая компания', 'тсж', 'хcs'], category: 'ЖКХ' },
+        { patterns: ['жкх', 'жилищно', 'коммунальн', 'электроэнергия', 'газ газпром', 'водоканал', 'тепло', 'управляющая компания', 'тсж'], category: 'Коммунальные' },
         { patterns: ['газпром нефть', 'лукойл', 'роснефть', 'bp', 'shell', 'azs', 'азс', 'заправк', 'бензин', 'топливо'], category: 'Авто' },
-        { patterns: ['фитнес', 'fitness', 'спорт', 'sport', 'worldclass', 'world class', 'физра', 'бассейн', 'тренажер', 'yoga', 'йога', 'crossfit', 'кроссфит'], category: 'Спорт' },
-        { patterns: ['кино', 'cinema', 'синема', 'театр', 'theatre', 'мюзикл', 'концерт', 'билет', 'kassir', 'кассир', 'ticketland'], category: 'Развлечения' },
+        { patterns: ['фитнес', 'fitness', 'worldclass', 'world class', 'физра', 'бассейн', 'тренажер', 'yoga', 'йога', 'crossfit', 'кроссфит'], category: 'Спорт' },
+        { patterns: ['кино', 'cinema', 'синема', 'театр', 'theatre', 'мюзикл', 'концерт', 'kassir', 'кассир', 'ticketland'], category: 'Развлечения' },
         { patterns: ['авиабилет', 'авиа', 'аэрофлот', 's7', 'pobeda', 'победа', 'ural airlines', 'уральские авиалинии', 'booking', 'букинг', 'airbnb', 'отель', 'hotel'], category: 'Путешествия' },
       ]
 

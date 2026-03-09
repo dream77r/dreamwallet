@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/app-sidebar'
 import { NotificationsBell } from '@/components/layout/notifications-bell'
@@ -5,9 +7,11 @@ import { GlobalSearch } from '@/components/layout/global-search'
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
 import { Separator } from '@/components/ui/separator'
 import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
+import { SessionGuard } from '@/components/layout/SessionGuard'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { QuickAddFAB } from '@/components/transactions/QuickAddFAB'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { CategorySeeder } from '@/components/layout/CategorySeeder'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -41,6 +45,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {children}
         </main>
       </SidebarInset>
+      <SessionGuard />
+      <CategorySeeder />
       <OnboardingWizard />
       <InstallPrompt />
       {/* FAB только на десктопе, на мобиле — BottomNav с кнопкой + */}
