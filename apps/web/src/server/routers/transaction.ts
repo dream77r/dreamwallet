@@ -641,21 +641,38 @@ export const transactionRouter = router({
     .mutation(async ({ ctx, input }) => {
       // Keyword rules for Russian bank descriptions
       const KEYWORD_RULES: Array<{ patterns: string[]; category: string; type?: 'INCOME' | 'EXPENSE' }> = [
-        { patterns: ['пятёрочка', 'пятерочка', 'магнит', 'перекрёсток', 'перекресток', 'вкусвилл', 'вкус вилл', 'ашан', 'лента', 'дикси', 'metro cash', 'окей', 'spar', 'спар', 'fix price', 'фикс прайс', 'светофор', 'globus', 'глобус'], category: 'Продукты' },
-        { patterns: ['кафе', 'ресторан', 'restaurant', 'cafe', 'coffee', 'кофе', 'пицца', 'pizza', 'суши', 'sushi', 'burger', 'бургер', 'kfc', 'макдоналдс', 'mcdonald', 'subway', 'domino', 'додо', 'dodo', 'вкусно и точка', 'шоколадница', 'coffee bean'], category: 'Кафе и рестораны' },
-        { patterns: ['яндекс такси', 'yandex taxi', 'uber', 'ситимобил', 'таксовичкоф', 'rutaxi', 'indriver', 'bolt'], category: 'Транспорт' },
-        { patterns: ['метро', 'московский метрополитен', 'мосметро', 'troika', 'тройка', 'электричка', 'ржд', 'rzd', 'аэроэкспресс'], category: 'Транспорт' },
-        { patterns: ['аптека', 'pharmacy', 'farmacy', '36,6', '36.6', 'горздрав', 'ригла', 'eapteka', 'сбераптека', 'здравсити'], category: 'Здоровье' },
-        { patterns: ['мвидео', 'м.видео', 'эльдорадо', 'dns', 'днс', 'citilink', 'ситилинк', 'технопарк', 're:store', 'restore', 'apple store'], category: 'Электроника' },
-        { patterns: ['ozon', 'озон', 'wildberries', 'wb', 'aliexpress', 'lamoda', 'яндекс маркет', 'яндекс.маркет', 'goods', 'sbermegamarket', 'мегамаркет'], category: 'Покупки' },
-        { patterns: ['зарплата', 'зп ', 'salary', 'аванс', 'выплата', 'начислено'], category: 'Зарплата', type: 'INCOME' },
-        { patterns: ['ростелеком', 'мтс', 'мегафон', 'билайн', 'tele2', 'теле2', 'yota', 'йота', 'сим карта'], category: 'Связь' },
-        { patterns: ['netflix', 'нетфликс', 'spotify', 'яндекс плюс', 'яндекс.плюс', 'кинопоиск', 'ivi', 'иви', 'okko', 'окко', 'vk музыка', 'сберзвук', 'premier', 'start.ru', 'amediateka'], category: 'Подписки' },
-        { patterns: ['жкх', 'жилищно', 'коммунальн', 'электроэнергия', 'газ газпром', 'водоканал', 'тепло', 'управляющая компания', 'тсж'], category: 'Коммунальные' },
-        { patterns: ['газпром нефть', 'лукойл', 'роснефть', 'bp', 'shell', 'azs', 'азс', 'заправк', 'бензин', 'топливо'], category: 'Авто' },
-        { patterns: ['фитнес', 'fitness', 'worldclass', 'world class', 'физра', 'бассейн', 'тренажер', 'yoga', 'йога', 'crossfit', 'кроссфит'], category: 'Спорт' },
-        { patterns: ['кино', 'cinema', 'синема', 'театр', 'theatre', 'мюзикл', 'концерт', 'kassir', 'кассир', 'ticketland'], category: 'Развлечения' },
-        { patterns: ['авиабилет', 'авиа', 'аэрофлот', 's7', 'pobeda', 'победа', 'ural airlines', 'уральские авиалинии', 'booking', 'букинг', 'airbnb', 'отель', 'hotel'], category: 'Путешествия' },
+        // Продукты — кириллица + транслит (банки часто пишут латиницей)
+        { patterns: ['пятёрочка','пятерочка','pyaterochka','магнит','magnit','перекрёсток','перекресток','perekrestok','вкусвилл','vkusvill','ашан','auchan','лента','lenta','дикси','dixy','metro cash','окей','okey','spar','спар','fix price','фикс прайс','светофор','globus','глобус','красное белое','krasnoye','bristol','бристоль','верный','verny','семейный','дороже дешево'], category: 'Продукты' },
+        // Кафе и рестораны
+        { patterns: ['кафе','ресторан','restaurant','cafe','coffee','кофе','coffeeshop','пицца','pizza','суши','sushi','burger','бургер','kfc','макдоналдс','mcdonald','subway','domino','dodopizza','додо','dodo','вкусно и точка','шоколадница','shokoladnitsa','coffee bean','starbucks','старбакс','бургер кинг','burger king','papa johns','теремок','teremok','якитория','yakia','тануки','tanuki','сбарро','sbarro','крошка картошка','жар пицца'], category: 'Кафе и рестораны' },
+        // Такси и транспорт
+        { patterns: ['яндекс такси','yandex taxi','ya.taxi','yataxi','uber','ситимобил','citimobil','таксовичкоф','rutaxi','indriver','bolt','gett','gettaxi'], category: 'Транспорт' },
+        // Общественный транспорт
+        { patterns: ['метро','московский метрополитен','мосметро','mosmetro','troika','тройка','электричка','ржд','rzd','аэроэкспресс','aeroexpress','моспересадка','тат транспорт'], category: 'Транспорт' },
+        // Здоровье
+        { patterns: ['аптека','apteka','pharmacy','36,6','36.6','горздрав','gorzdrav','ригла','rigla','eapteka','сбераптека','здравсити','zdravsiti','будь здоров','bud zdorov','витамин','vitami','dr.reddy','озерки','ozерки'], category: 'Здоровье' },
+        // Электроника
+        { patterns: ['мвидео','mvideo','м.видео','m.video','эльдорадо','eldorado','dns','днс','citilink','ситилинк','технопарк','technopark','re:store','apple store','istore','связной','svyaznoy'], category: 'Электроника' },
+        // Онлайн покупки
+        { patterns: ['ozon','озон','wildberries','wb по','lamoda','яндекс маркет','yandex market','sbermegamarket','мегамаркет','goods.ru','ali express','aliexpress','joom','avito','авито доставк'], category: 'Покупки' },
+        // Зарплата
+        { patterns: ['зарплата','zarplata','зп ','зп.','salary','аванс','avans','выплата зп','выплата заработ','начислено зп','начислена зп','оплата труда'], category: 'Зарплата', type: 'INCOME' },
+        // Связь
+        { patterns: ['ростелеком','rostelecom','мтс','mts','мегафон','megafon','билайн','beeline','tele2','теле2','yota','йота','сим карта','sim karta','t2','tele 2'], category: 'Связь' },
+        // Подписки/стриминг
+        { patterns: ['netflix','нетфликс','spotify','яндекс плюс','яндекс.плюс','kinopoisk','кинопоиск','ivi','иви','okko','окко','vk музыка','vk music','сберзвук','sbersound','premier','start.ru','amediateka','more.tv','литрес','litres','apple music','youtube premium','google play'], category: 'Подписки' },
+        // ЖКХ/Коммунальные
+        { patterns: ['жкх','zhkh','жилищно','коммунальн','kommunal','электроэнергия','electroenergy','газ газпром','водоканал','vodokanal','тепло','теплосеть','управляющая компания','тсж','tsj','гвс','хвс','домофон','лифт рем','капремонт'], category: 'Коммунальные' },
+        // Авто/АЗС
+        { patterns: ['газпром нефть','gazprom neft','лукойл','lukoil','роснефть','rosneft','bp','shell','azs','азс','заправк','zapravk','бензин','benzin','топливо','toplivо','neste','птк ','circle k','трасса'], category: 'Авто' },
+        // Спорт
+        { patterns: ['фитнес','fitness','worldclass','world class','физра','бассейн','bassein','тренажер','trenajer','yoga','йога','crossfit','кроссфит','спортмастер','sportmaster','decathlon','декатлон','планета фитнес','planet fitness'], category: 'Спорт' },
+        // Развлечения
+        { patterns: ['кино','kino','cinema','синема','театр','teatr','theatre','мюзикл','концерт','concert','kassir','кассир','ticketland','афиша','afisha','cinemax','мираж','иmax','imax','okko кино','rambler кино'], category: 'Развлечения' },
+        // Путешествия
+        { patterns: ['авиабилет','aviabilet','авиа','аэрофлот','aeroflot','s7','pobeda','победа','ural airlines','уральские авиалинии','booking','букинг','airbnb','отель','hotel','hostel','хостел','туристическ','турагент','onetwotrip','ostrovok','островок','100hotels'], category: 'Путешествия' },
+        // Образование
+        { patterns: ['skillbox','скилбокс','geekbrains','гикбрейнс','coursera','udemy','stepik','стэпик','яндекс практикум','practicum','skyeng','скайэнг','школа','shkola','университет','институт','курсы','kursy'], category: 'Образование' },
       ]
 
       const categories = await ctx.prisma.category.findMany({
@@ -684,7 +701,7 @@ export const transactionRouter = router({
       const transactions = await ctx.prisma.transaction.findMany({
         where,
         select: { id: true, description: true, counterparty: true, type: true, amount: true },
-        take: 200,
+        take: 500,
       })
 
       if (transactions.length === 0) {
@@ -728,7 +745,7 @@ export const transactionRouter = router({
       if (input.useAI && aiQueue.length > 0) {
         const userRecord = await ctx.prisma.user.findUnique({ where: { id: ctx.user.id }, select: { aiModel: true } })
         const defaultModelRow = await ctx.prisma.appSetting.findUnique({ where: { key: 'ai.defaultModel' } })
-        const model = userRecord?.aiModel ?? defaultModelRow?.value ?? 'anthropic/claude-haiku-4-5'
+        const model = userRecord?.aiModel ?? defaultModelRow?.value ?? 'anthropic/claude-haiku-4-5-20251001'
 
         const expenseCats = categories.filter(c => c.type === 'EXPENSE').map(c => c.name).join(', ')
         const incomeCats = categories.filter(c => c.type === 'INCOME').map(c => c.name).join(', ')
@@ -738,38 +755,46 @@ export const transactionRouter = router({
         for (let i = 0; i < aiQueue.length; i += CHUNK) {
           const chunk = aiQueue.slice(i, i + CHUNK)
           const txList = chunk.map((tx, idx) => {
-            const text = [tx.description, tx.counterparty].filter(Boolean).join(' | ').slice(0, 100)
-            return `${idx}: type=${tx.type} amount=${tx.amount} desc="${text}"`
+            const text = [tx.description, tx.counterparty].filter(Boolean).join(' | ').slice(0, 120)
+            return `${idx}: тип=${tx.type === 'EXPENSE' ? 'расход' : 'доход'} сумма=${tx.amount} описание="${text}"`
           }).join('\n')
 
-          const prompt = `Ты финансовый аналитик. Твоя задача — точно категоризировать банковские транзакции россиянина.
+          const prompt = `Ты эксперт по категоризации банковских транзакций россиян. Категоризируй КАЖДУЮ транзакцию — обязательно присвой категорию, даже если описание нечёткое.
 
 КАТЕГОРИИ РАСХОДОВ: ${expenseCats}
 КАТЕГОРИИ ДОХОДОВ: ${incomeCats}
 
-ПРАВИЛА:
-1. Анализируй название магазина/сервиса, описание и сумму
-2. Банковские описания часто содержат шум — ищи ключевые слова
-3. Переводы между своими счетами → null
-4. Если не уверен на 70%+ → null (лучше не угадывать)
-5. Учитывай контекст: ночные траты в кафе могут быть ресторан, крупные суммы в супермаркете — продукты
+ПРАВИЛА (строго соблюдай):
+1. ВСЕГДА выбирай наиболее подходящую категорию из списка — не оставляй null без крайней необходимости
+2. null ТОЛЬКО для: переводы между своими счетами, возвраты, пополнение карты, банковские комиссии/проценты
+3. Описания могут быть транслитом: PYATEROCHKA=Продукты, MAGNIT=Продукты, APTEKA=Здоровье, TAXI=Транспорт
+4. Если сомневаешься — выбирай "Прочее" (для расходов) или "Прочий доход" (для доходов), но не null
+5. Учитывай сумму: 500-5000 руб в продуктовом = Продукты; 200-800 в кафе = Кафе и рестораны
 
-ПРИМЕРЫ РАСПОЗНАВАНИЯ:
-- "PEREKRESTOK", "PYATEROCHKA", "MAGNIT" → Продукты
-- "YANDEX.TAXI", "UBER" → Транспорт  
-- "NETFLIX", "SPOTIFY", "KINOPOISK" → Подписки
-- "APTEKA", "RIGLA", "GORZDRAV" → Здоровье
-- "OZON", "WILDBERRIES" → Покупки
-- "ZP", "SALARY", "ZARPLATA" → Зарплата
+ПРИМЕРЫ (описание → категория):
+- "PYATEROCHKA", "MAGNIT 5", "PEREKRESTOK", "VKUSVILL" → Продукты
+- "YANDEX.TAXI", "YA.TAXI", "UBER", "INDRIVER" → Транспорт
+- "DODOPIZZA", "KFC", "MCDONALDS", "BURGER KING", "COFFEESHOP" → Кафе и рестораны
+- "APTEKA", "RIGLA", "36.6", "GORZDRAV" → Здоровье
+- "NETFLIX", "SPOTIFY", "KINOPOISK", "IVI", "OKKO" → Подписки
+- "OZON", "WILDBERRIES", "WB", "ALIEXPRESS", "LAMODA" → Покупки
+- "MTS", "MEGAFON", "BEELINE", "TELE2", "YOTA" → Связь
+- "LUKOIL", "GAZPROM NEFT", "AZS", "BP" → Авто
+- "ZHKKh", "ZHKU", "VODOKANAL", "KOMMUNAL" → Коммунальные
+- "ZP", "ZARPLATA", "SALARY", "AVANS" → Зарплата (только доход)
+- "AEROFLOT", "S7", "POBEDA", "BOOKING" → Путешествия
+- "KINO", "KASSIR", "CONCERT", "TEATR" → Развлечения
+- "FITNESS", "WORLDCLASS", "SPORTMASTER" → Спорт
+- перевод другу/родственнику → Прочее
 
-ТРАНЗАКЦИИ ДЛЯ КАТЕГОРИЗАЦИИ:
+ТРАНЗАКЦИИ:
 ${txList}
 
-Ответь СТРОГО JSON массивом (без markdown, без пояснений):
-[{"idx":0,"category":"точное название из списка или null"},...]`
+Ответь СТРОГО JSON массивом без markdown:
+[{"idx":0,"category":"точное название категории из списка"},...]`
 
           try {
-            const raw = await callOpenRouter({ model, prompt, maxTokens: 500 })
+            const raw = await callOpenRouter({ model, prompt, maxTokens: 800 })
             if (!raw) { skipped += chunk.length; continue }
 
             const match = raw.match(/\[([\s\S]*)\]/)
