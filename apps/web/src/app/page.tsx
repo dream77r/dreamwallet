@@ -125,19 +125,19 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[
-            { icon: Bot,        color: 'indigo', title: 'AI-категоризация', desc: 'Автоматически распределяет транзакции по категориям. Импортировал выписку — готово за секунды.' },
-            { icon: TrendingUp, color: 'violet', title: 'Прогнозирование', desc: 'Анализирует паттерны трат и предсказывает расходы на следующий месяц.' },
-            { icon: BarChart3,  color: 'blue',   title: 'PDF Отчёты',       desc: 'Красивые отчёты по месяцам, категориям и денежным потокам. Скачать одним кликом.' },
-            { icon: Zap,        color: 'amber',  title: 'Telegram алёрты', desc: 'Уведомления о превышении бюджета, крупных транзакциях и автоплатежах.' },
-            { icon: RefreshCw,  color: 'green',  title: 'Автоплатежи',     desc: 'Настройте повторяющиеся транзакции — аренда, подписки, кредиты. Система создаст их сама.' },
-            { icon: PieChart,   color: 'rose',   title: 'Бюджеты',         desc: 'Установите лимиты по категориям и получайте алёрты при приближении к порогу.' },
-            { icon: FileText,   color: 'teal',   title: 'Импорт CSV',      desc: 'Поддержка выписок Сбербанка, Альфа-Банка, Тинькофф и других. Умная маппинг колонок.' },
-            { icon: Smartphone, color: 'purple', title: 'PWA приложение',  desc: 'Установи на телефон как обычное приложение. Работает оффлайн, нет App Store.' },
-            { icon: Shield,     color: 'slate',  title: 'Ваши данные',     desc: 'Данные хранятся на собственном сервере. Никакой передачи третьим лицам.' },
-          ].map(({ icon: Icon, color, title, desc }) => (
+            { icon: Bot,        iconBg: 'bg-indigo-500/15', iconColor: 'text-indigo-400', title: 'AI-категоризация', desc: 'Автоматически распределяет транзакции по категориям. Импортировал выписку — готово за секунды.' },
+            { icon: TrendingUp, iconBg: 'bg-violet-500/15', iconColor: 'text-violet-400', title: 'Прогнозирование', desc: 'Анализирует паттерны трат и предсказывает расходы на следующий месяц.' },
+            { icon: BarChart3,  iconBg: 'bg-blue-500/15',   iconColor: 'text-blue-400',   title: 'PDF Отчёты',       desc: 'Красивые отчёты по месяцам, категориям и денежным потокам. Скачать одним кликом.' },
+            { icon: Zap,        iconBg: 'bg-amber-500/15',  iconColor: 'text-amber-400',  title: 'Telegram алёрты', desc: 'Уведомления о превышении бюджета, крупных транзакциях и автоплатежах.' },
+            { icon: RefreshCw,  iconBg: 'bg-green-500/15',  iconColor: 'text-green-400',  title: 'Автоплатежи',     desc: 'Настройте повторяющиеся транзакции — аренда, подписки, кредиты. Система создаст их сама.' },
+            { icon: PieChart,   iconBg: 'bg-rose-500/15',   iconColor: 'text-rose-400',   title: 'Бюджеты',         desc: 'Установите лимиты по категориям и получайте алёрты при приближении к порогу.' },
+            { icon: FileText,   iconBg: 'bg-teal-500/15',   iconColor: 'text-teal-400',   title: 'Импорт CSV',      desc: 'Поддержка выписок Сбербанка, Альфа-Банка, Тинькофф и других. Умная маппинг колонок.' },
+            { icon: Smartphone, iconBg: 'bg-purple-500/15', iconColor: 'text-purple-400', title: 'PWA приложение',  desc: 'Установи на телефон как обычное приложение. Работает оффлайн, нет App Store.' },
+            { icon: Shield,     iconBg: 'bg-slate-500/15',  iconColor: 'text-slate-400',  title: 'Ваши данные',     desc: 'Данные хранятся на собственном сервере. Никакой передачи третьим лицам.' },
+          ].map(({ icon: Icon, iconBg, iconColor, title, desc }) => (
             <div key={title} className="group rounded-2xl border border-white/5 bg-white/[0.03] p-6 hover:border-white/10 hover:bg-white/[0.06] transition-all">
-              <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-${color}-500/15`}>
-                <Icon className={`h-5 w-5 text-${color}-400`} />
+              <div className={`mb-4 flex h-10 w-10 items-center justify-center rounded-xl ${iconBg}`}>
+                <Icon className={`h-5 w-5 ${iconColor}`} />
               </div>
               <h3 className="font-bold mb-2">{title}</h3>
               <p className="text-sm text-white/40 leading-relaxed">{desc}</p>
