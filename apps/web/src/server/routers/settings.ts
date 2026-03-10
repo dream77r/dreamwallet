@@ -59,4 +59,20 @@ export const settingsRouter = router({
     })
     return { success: true }
   }),
+
+  getProfile: protectedProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.user.findUnique({
+      where: { id: ctx.user.id },
+      select: { id: true, name: true, email: true },
+      // onboardingDone added to schema - will work after prisma generate on server
+    })
+  }),
+
+  completeOnboarding: protectedProcedure.mutation(async ({ ctx }) => {
+    await ctx.prisma.user.update({
+      where: { id: ctx.user.id },
+      data: { onboardingDone: true } as any,
+    })
+    return { success: true }
+  }),
 })

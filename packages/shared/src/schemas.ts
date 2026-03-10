@@ -77,7 +77,8 @@ export const createCategorySchema = z.object({
 // ─── Budget ────────────────────────────────────
 export const createBudgetSchema = z.object({
   walletId: z.string().cuid(),
-  categoryId: z.string().cuid(),
+  categoryId: z.string().cuid().optional(),
+  name: z.string().min(1).max(100).optional(),
   amount: z.number().positive(),
   period: z.enum(['WEEKLY', 'MONTHLY', 'YEARLY']),
   alertThreshold: z.number().int().min(1).max(100).default(80),

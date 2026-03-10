@@ -61,7 +61,8 @@ export const budgetRouter = router({
   create: protectedProcedure
     .input(createBudgetSchema)
     .mutation(async ({ ctx, input }) => {
-      return ctx.prisma.budget.create({ data: input })
+      const { categoryId, ...rest } = input
+      return ctx.prisma.budget.create({ data: { ...rest, ...(categoryId ? { categoryId } : {}) } as any })
     }),
 
   update: protectedProcedure

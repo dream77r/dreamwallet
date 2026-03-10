@@ -29,6 +29,7 @@ model User {
   timezone      String    @default("Europe/Moscow")
   locale        String    @default("ru")
   dashboardLayout Json?   @map("dashboard_layout")
+  onboardingDone  Boolean   @default(false) @map("onboarding_done")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
