@@ -44,20 +44,19 @@ jobs:
             echo "💾 Disk usage:"
             df -h .
 
-            echo "🧹 Cleaning old build..."
+            echo "🧹 Cleaning old build artifacts..."
             rm -rf apps/worker/dist
-            rm -rf apps/web/.next/cache
-            mkdir -p apps/web/.next/static/dreamwallet-stable
+            rm -rf apps/web/.next-build
             pnpm store prune 2>/dev/null || true
 
             echo "🔨 Building packages..."
             pnpm --filter @dreamwallet/db build
-            # Next.js deletes .next/static during build init — watch and recreate it
-            (while true; do mkdir -p apps/web/.next/static/dreamwallet-stable 2>/dev/null; sleep 0.1; done) &
-            MKDIR_PID=$!
             pnpm --filter @dreamwallet/web build
-            kill $MKDIR_PID 2>/dev/null || true
             pnpm --filter @dreamwallet/worker build
+
+            echo "🔄 Swapping build atomically..."
+            rm -rf apps/web/.next
+            mv apps/web/.next-build apps/web/.next
 
             echo "📁 Copying static assets..."
             cp -r apps/web/public apps/web/.next/standalone/apps/web/public 2>/dev/null || true
