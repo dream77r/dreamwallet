@@ -7,7 +7,7 @@ import {
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
   SidebarMenuItem, SidebarFooter,
 } from '@/components/ui/sidebar'
-import { Bitcoin } from "lucide-react"
+import { Bitcoin, FileText } from "lucide-react"
 import {
   LayoutDashboard, ArrowLeftRight, CreditCard, PieChart,
   FolderKanban, FolderOpen, Target, Upload, Settings, Wallet,
@@ -52,6 +52,7 @@ const navGroups: NavGroup[] = [
       { title: 'Прогноз',     href: '/dashboard/forecast',            icon: TrendingUp,      color: '#5AC8FA' },
       { title: 'Активы',      href: '/dashboard/net-worth',           icon: Landmark,        color: '#30D158' },
       { title: 'Крипто',      href: '/dashboard/crypto',              icon: Bitcoin,         color: '#FF9F0A' },
+      { title: 'Отчёты',     href: '/dashboard/reports',             icon: FileText,        color: '#30D158' },
     ],
   },
   {
