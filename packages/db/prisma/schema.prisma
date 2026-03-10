@@ -159,6 +159,7 @@ model Account {
   transactions    Transaction[]   @relation("TransactionAccount")
   transfersFrom   Transaction[]   @relation("TransferFrom")
   transfersTo     Transaction[]   @relation("TransferTo")
+  recurringRules  RecurringRule[] @relation("AccountRecurring")
 
   @@map("accounts")
 }
@@ -253,6 +254,7 @@ model Category {
   transactions Transaction[]
   budgets      Budget[]
   autoRules    AutoCategoryRule[]
+  recurringRules RecurringRule[] @relation("CategoryRecurring")
 
   @@unique([userId, name, parentId])
   @@map("categories")
@@ -456,9 +458,14 @@ model RecurringRule {
   nextRunAt     DateTime @map("next_run_at")
   isActive      Boolean  @default(true) @map("is_active")
   reminderDays  Int      @default(3) @map("reminder_days")
+  accountId     String?  @map("account_id")
+  categoryId    String?  @map("category_id")
+  description   String?
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
+  account      Account?  @relation("AccountRecurring", fields: [accountId], references: [id], onDelete: SetNull)
+  category     Category? @relation("CategoryRecurring", fields: [categoryId], references: [id], onDelete: SetNull)
   transactions Transaction[]
 
   @@map("recurring_rules")
