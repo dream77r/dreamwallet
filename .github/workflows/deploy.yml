@@ -54,19 +54,48 @@ jobs:
             pnpm --filter @dreamwallet/web build
             pnpm --filter @dreamwallet/worker build
 
-            echo "🔄 Swapping build atomically..."
-            rm -rf apps/web/.next
-            mv apps/web/.next-build apps/web/.next
+            echo "📁 Copying static assets into new build..."
+            cp -r apps/web/public apps/web/.next-build/standalone/apps/web/public 2>/dev/null || true
+            mkdir -p apps/web/.next-build/standalone/apps/web/.next
+            cp -r apps/web/.next-build/static apps/web/.next-build/standalone/apps/web/.next/static
+            touch apps/web/.next-build/server/pages-manifest.json 2>/dev/null || true
 
-            echo "📁 Copying static assets..."
-            cp -r apps/web/public apps/web/.next/standalone/apps/web/public 2>/dev/null || true
-            mkdir -p apps/web/.next/standalone/apps/web/.next
-            cp -r apps/web/.next/static apps/web/.next/standalone/apps/web/.next/static
-            touch apps/web/.next/server/pages-manifest.json 2>/dev/null || true
+            echo "✅ Validating standalone build..."
+            if [ ! -f "apps/web/.next-build/standalone/apps/web/server.js" ]; then
+              echo "❌ standalone/server.js not found in new build! Aborting."
+              exit 1
+            fi
+            echo "  → server.js OK"
+            if [ ! -d "apps/web/.next-build/standalone/apps/web/.next/static" ]; then
+              echo "❌ .next/static not found in standalone! Aborting."
+              exit 1
+            fi
+            echo "  → static assets OK"
+
+            echo "🔄 Swapping build atomically..."
+            rm -rf apps/web/.next.old 2>/dev/null || true
+            [ -d "apps/web/.next" ] && mv apps/web/.next apps/web/.next.old
+            mv apps/web/.next-build apps/web/.next
+            rm -rf apps/web/.next.old &
 
             echo "🚀 Restarting services..."
             pm2 restart ecosystem.config.cjs --update-env || pm2 start ecosystem.config.cjs
             pm2 save
+
+            echo "⏳ Waiting for app to be ready..."
+            for i in $(seq 1 10); do
+              sleep 3
+              STATUS=$(pm2 describe dreamwallet-web 2>/dev/null | grep "status" | grep -c "online" || echo 0)
+              if [ "$STATUS" -gt "0" ]; then
+                echo "  → PM2 online after ${i}x3s"
+                break
+              fi
+              if [ "$i" -eq "10" ]; then
+                echo "❌ App failed to come online!"
+                pm2 logs dreamwallet-web --lines 20 --nostream
+                exit 1
+              fi
+            done
 
             echo "✅ Deploy complete!"
 
