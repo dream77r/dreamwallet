@@ -43,6 +43,8 @@ const WIDGET_LABELS: Record<WidgetConfig['id'], string> = {
   networth: 'Чистый капитал',
   goals: 'Финансовые цели',
   currency: 'Курсы валют',
+  gamification: 'Достижения',
+  runway: 'Прогноз баланса',
 }
 
 interface SortableWidgetItemProps {

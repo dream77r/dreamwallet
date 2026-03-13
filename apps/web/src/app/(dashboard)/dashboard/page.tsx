@@ -31,6 +31,8 @@ import { useRouter } from 'next/navigation'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import Link from 'next/link'
 import { AiInsights } from '@/components/dashboard/ai-insights'
+import { RunwayWidget } from '@/components/dashboard/RunwayWidget'
+import { GamificationWidget } from '@/components/dashboard/GamificationWidget'
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist'
 import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidget'
 import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
@@ -38,7 +40,7 @@ import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWid
 import dynamic from 'next/dynamic'
 const DashboardCustomizer = dynamic(() => import('@/components/dashboard/DashboardCustomizer').then(m => m.DashboardCustomizer), { ssr: false })
 const DashboardCustomizerSkeleton = dynamic(() => import('@/components/dashboard/DashboardCustomizer').then(m => m.DashboardCustomizerSkeleton), { ssr: false })
-type WidgetId = 'balance' | 'recent-transactions' | 'budgets' | 'cashflow' | 'score' | 'forecast' | 'networth' | 'goals'
+type WidgetId = 'balance' | 'recent-transactions' | 'budgets' | 'cashflow' | 'score' | 'forecast' | 'networth' | 'goals' | 'gamification' | 'runway'
 type WidgetConfig = { id: WidgetId; enabled: boolean; order: number }
 
 const CHART_COLORS = [
@@ -573,6 +575,8 @@ export default function DashboardPage() {
       <RecentTransactionsWidget key="recent-transactions" transactions={recentTxData?.items} isLoading={txLoading} />
     ),
     goals: <GoalsWidget key="goals" goals={dash?.goals} />,
+    gamification: <GamificationWidget key="gamification" data={dash?.gamification} isLoading={dashLoading} />,
+    runway: <RunwayWidget key="runway" data={dash?.runway} isLoading={dashLoading} />,
   }
 
   const sortedWidgets = layout
@@ -622,6 +626,10 @@ export default function DashboardPage() {
             {widgetMap['recent-transactions']}
           </div>
           {widgetMap['goals']}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {widgetMap['gamification']}
+            {widgetMap['runway']}
+          </div>
         </>
       )}
 

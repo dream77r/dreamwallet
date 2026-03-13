@@ -62,6 +62,7 @@ const navGroups: NavGroup[] = [
       { title: 'Отчёты',     href: '/dashboard/reports',             icon: FileText,        color: '#30D158' },
       { title: 'Санкей',      href: '/dashboard/reports/sankey',      icon: BarChart3,       color: '#5856D6' },
       { title: 'Налоги',      href: '/dashboard/reports/tax',         icon: Receipt,         color: '#64748B' },
+      { title: 'Итоги',       href: '/dashboard/wrapped',             icon: Sparkles,        color: '#AF52DE' },
     ],
   },
   {

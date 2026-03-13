@@ -139,6 +139,10 @@ export async function checkAchievements(prisma: PrismaClient, userId: string): P
         create: { userId, totalPoints: 25, level: 1 },
         update: { totalPoints: { increment: 25 } },
       })
+      // Notify user about new achievement
+      await prisma.notification.create({
+        data: { userId, type: 'SYSTEM', title: `${def.icon} ${def.title}`, body: `Вы получили достижение "${def.title}"!` },
+      }).catch(() => {}) // non-critical
       earned.push(def.type)
     }
   }

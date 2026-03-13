@@ -367,6 +367,31 @@ export const walletRouter = router({
       if (income > 0 && expense > 0 && income > expense) greetMessage += ' Потрачено ' + fmt(expense) + ' из ' + fmt(income) + '.'
       const totalAssets = wallet.accounts.reduce((s, a) => s + Math.max(0, Number(a.balance)), 0)
       const totalDebtsAmount = debts.reduce((s, d) => s + Number(d.amount) - Number(d.paidAmount), 0)
+
+      // Runway: "when will money run out"
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000)
+      const [exp30d, inc30d] = await Promise.all([
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'EXPENSE', date: { gte: thirtyDaysAgo } }, _sum: { amount: true } }),
+        ctx.prisma.transaction.aggregate({ where: { accountId: { in: accountIds }, type: 'INCOME', date: { gte: thirtyDaysAgo } }, _sum: { amount: true } }),
+      ])
+      const { calculateRunway } = await import('@/lib/runway-calculator')
+      const currentBalance = wallet.accounts.reduce((s, a) => s + Number(a.balance), 0)
+      const runway = calculateRunway(currentBalance, Number(exp30d._sum.amount ?? 0), Number(inc30d._sum.amount ?? 0))
+
+      // Gamification data
+      const [streak, activeChallenges, recentAchievements] = await Promise.all([
+        ctx.prisma.userStreak.findUnique({ where: { userId } }),
+        ctx.prisma.challenge.findMany({ where: { userId, status: 'ACTIVE' }, select: { id: true, title: true, progress: true, target: true }, take: 3 }),
+        ctx.prisma.achievement.findMany({ where: { userId }, orderBy: { earnedAt: 'desc' }, select: { type: true, title: true, icon: true }, take: 3 }),
+      ])
+      const gamification = {
+        streak: streak?.currentStreak ?? 0,
+        level: streak?.level ?? 1,
+        totalPoints: streak?.totalPoints ?? 0,
+        activeChallenges: activeChallenges.map(c => ({ id: c.id, title: c.title, progress: c.progress, target: c.target })),
+        recentAchievements: recentAchievements.map(a => ({ type: a.type, title: a.title, icon: a.icon })),
+      }
+
       return {
         score: {
           score, label: scoreLabel, savingsScore, budgetScore, goalScore, consistencyScore,
@@ -384,6 +409,8 @@ export const walletRouter = router({
         netWorthSummary: { totalAssets: Math.round(totalAssets), totalDebts: Math.round(totalDebtsAmount), netWorth: Math.round(totalAssets - totalDebtsAmount), monthDelta: Math.round(income - expense) },
         budgets: budgetResults.map((r) => ({ ...r.budget, spentAmount: r.spent, percentage: Number(r.budget.amount) > 0 ? Math.round(r.spent / Number(r.budget.amount) * 100) : 0 })),
         goals,
+        runway,
+        gamification,
       }
     } catch (e) {
       console.error('[dashboardData] error:', e)
