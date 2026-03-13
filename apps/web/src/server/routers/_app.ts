@@ -24,6 +24,17 @@ import { forecastRouter } from './forecast'
 import { dashboardRouter } from './dashboard'
 import { cryptoRouter } from './crypto'
 import { reportsRouter } from './reports'
+import { incomeRouter } from './income'
+import { currencyRouter } from './currency'
+import { familyRouter } from './family'
+import { splitRouter } from './split'
+import { gamificationRouter } from './gamification'
+import { cashbackRouter } from './cashback'
+import { taxRouter } from './tax'
+import { whatifRouter } from './whatif'
+import { smartRulesRouter } from './smart-rules'
+import { investmentsRouter } from './investments'
+import { bankConnectionRouter } from './bank-connection'
 
 export const appRouter = router({
   wallet: walletRouter,
@@ -51,6 +62,17 @@ export const appRouter = router({
   dashboard: dashboardRouter,
   crypto: cryptoRouter,
   reports: reportsRouter,
+  income: incomeRouter,
+  currency: currencyRouter,
+  family: familyRouter,
+  split: splitRouter,
+  gamification: gamificationRouter,
+  cashback: cashbackRouter,
+  tax: taxRouter,
+  whatif: whatifRouter,
+  smartRules: smartRulesRouter,
+  investments: investmentsRouter,
+  bankConnection: bankConnectionRouter,
 })
 
 export type AppRouter = typeof appRouter

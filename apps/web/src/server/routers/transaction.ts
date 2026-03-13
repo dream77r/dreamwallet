@@ -5,6 +5,7 @@ import { createTransactionSchema, updateTransactionSchema, transactionFiltersSch
 import { sendTelegramMessage, formatAmount } from '@/lib/telegram-notify'
 import { checkBudgetAlerts } from './budget-alerts'
 import { callOpenRouter } from './ai'
+import { updateStreak, checkAchievements } from '@/lib/gamification-engine'
 import crypto from 'crypto'
 
 // ── In-memory cache for AI category suggestions ─────────────────────────────
@@ -107,6 +108,7 @@ export const transactionRouter = router({
             category: true,
             account: { select: { id: true, name: true, type: true, icon: true } },
             tags: { include: { tag: true } },
+            createdBy: { select: { id: true, name: true } },
           },
           orderBy: { [sortBy]: sortOrder },
           skip: (page - 1) * pageSize,
@@ -231,6 +233,31 @@ export const transactionRouter = router({
 
         return created
       })
+
+      // Gamification hooks (fire and forget)
+      void updateStreak(ctx.prisma, ctx.user.id).catch(() => {})
+      void checkAchievements(ctx.prisma, ctx.user.id).catch(() => {})
+
+      // Auto-calculate cashback for expenses
+      if (input.type === 'EXPENSE' && transaction.categoryId) {
+        void ctx.prisma.cashbackRule.findFirst({
+          where: { accountId: transaction.accountId, categoryId: transaction.categoryId },
+        }).then(rule => {
+          if (rule) {
+            const cashbackAmount = Number(transaction.amount) * Number(rule.rate) / 100
+            if (cashbackAmount > 0) {
+              void ctx.prisma.cashbackEntry.create({
+                data: {
+                  accountId: transaction.accountId,
+                  transactionId: transaction.id,
+                  amount: cashbackAmount,
+                  isReceived: false,
+                } as any,
+              }).catch(() => {})
+            }
+          }
+        }).catch(() => {})
+      }
 
       // Telegram уведомление о транзакции (fire-and-forget)
       void (async () => {

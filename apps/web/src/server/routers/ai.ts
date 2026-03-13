@@ -719,4 +719,74 @@ ${trendsStr}
 
     return suggestions as Array<{ categoryId: string; categoryName: string; monthlyAvg: number; suggestedLimit: number }>
   }),
+
+  // ── Natural Language Query (AI Assistant v2) ────────────────────────────
+  naturalQuery: protectedProcedure
+    .input(z.object({ message: z.string().min(1).max(500) }))
+    .mutation(async ({ ctx, input }): Promise<{ intent: string; response: string; data?: unknown; navigateTo?: string }> => {
+      const userId = ctx.user.id
+      const { parseIntent, resolveNavigation } = await import('@/lib/ai-intent-parser')
+
+      const parsed = parseIntent(input.message)
+
+      // Handle navigation intent
+      if (parsed.intent === 'navigate' && parsed.params.page) {
+        const route = resolveNavigation(parsed.params.page as string)
+        if (route) {
+          return { intent: 'navigate', response: `Открываю ${parsed.params.page}`, navigateTo: route }
+        }
+      }
+
+      // Handle balance query
+      if (parsed.intent === 'query_balance') {
+        const wallet = await ctx.prisma.wallet.findFirst({
+          where: { userId },
+          include: { accounts: { where: { isArchived: false } } },
+        })
+        if (!wallet) return { intent: 'query_balance', response: 'Кошелёк не найден' }
+        const total = wallet.accounts.reduce((s, a) => s + Number(a.balance), 0)
+        const accountList = wallet.accounts.map(a => `${a.name}: ${Number(a.balance).toLocaleString('ru-RU')} ₽`).join('\n')
+        return {
+          intent: 'query_balance',
+          response: `Общий баланс: ${total.toLocaleString('ru-RU')} ₽\n\n${accountList}`,
+          data: { total, accounts: wallet.accounts.map(a => ({ name: a.name, balance: Number(a.balance) })) },
+        }
+      }
+
+      // Handle spending query
+      if (parsed.intent === 'query_spending') {
+        const wallet = await ctx.prisma.wallet.findFirst({ where: { userId } })
+        if (!wallet) return { intent: 'query_spending', response: 'Данные не найдены' }
+        const accounts = await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } })
+        const now = new Date()
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+        const result = await ctx.prisma.transaction.aggregate({
+          where: { accountId: { in: accounts.map(a => a.id) }, type: 'EXPENSE', date: { gte: monthStart } },
+          _sum: { amount: true },
+        })
+        const total = Number(result._sum.amount ?? 0)
+        return {
+          intent: 'query_spending',
+          response: `Расходы за текущий месяц: ${total.toLocaleString('ru-RU')} ₽`,
+          data: { total },
+        }
+      }
+
+      // Fallback to AI
+      const userRecord = await ctx.prisma.user.findUnique({ where: { id: userId }, select: { aiModel: true } })
+      const defaultRaw = await getSetting(ctx.prisma, SETTINGS_KEY_DEFAULT)
+      const model = userRecord?.aiModel ?? defaultRaw ?? 'anthropic/claude-haiku-4-5-20251001'
+
+      const reply = await callOpenRouter({
+        model,
+        prompt: input.message,
+        systemPrompt: 'Ты финансовый ассистент DreamWallet. Отвечай кратко на русском.',
+        maxTokens: 300,
+      })
+
+      return {
+        intent: 'unknown',
+        response: reply || 'Не удалось обработать запрос',
+      }
+    }),
 })

@@ -6,7 +6,11 @@ import { csvImportProcessor } from './processors/csv-import'
 import { categorizeProcessor } from './processors/categorize'
 import { notificationProcessor } from './processors/notification'
 import { recurringProcessor } from './processors/recurring'
-import { processProactiveAdvice } from './processors/proactive-advice'
+import { exchangeRatesProcessor } from './processors/exchange-rates'
+import { gamificationProcessor } from './processors/gamification'
+import { smartRulesProcessor } from './processors/smart-rules'
+import { proactiveAdviceProcessor } from './processors/proactive-advice'
+import { stockPricesProcessor } from './processors/stock-prices'
 import { createBot } from './telegram/bot'
 
 const logger = pino({ name: 'dreamwallet-worker' })
@@ -44,7 +48,11 @@ createWorker('csv-import', csvImportProcessor)
 createWorker('categorize', categorizeProcessor)
 createWorker('notification', notificationProcessor)
 createWorker('recurring', recurringProcessor)
-createWorker('proactive-advice', processProactiveAdvice)
+createWorker('exchange-rates', exchangeRatesProcessor)
+createWorker('gamification', gamificationProcessor)
+createWorker('smart-rules', smartRulesProcessor)
+createWorker('proactive-advice', proactiveAdviceProcessor)
+createWorker('stock-prices', stockPricesProcessor)
 
 logger.info('All workers started')
 
@@ -78,6 +86,50 @@ proactiveAdviceQueue.add('proactive-advice-daily', {}, {
   logger.info('Proactive advice cron scheduled (daily 20:00 Europe/Moscow)')
 }).catch((err) => {
   logger.error(err, 'Failed to schedule proactive advice cron')
+})
+
+// Exchange rates — daily at 10:00 Moscow time (after CBR publishes)
+const exchangeRatesQueue = new Queue('exchange-rates', { connection })
+exchangeRatesQueue.add('sync-rates', {}, {
+  repeat: { pattern: '0 10 * * *', tz: 'Europe/Moscow' },
+  jobId: 'exchange-rates-daily-cron',
+}).then(() => {
+  logger.info('Exchange rates cron scheduled (daily 10:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule exchange rates cron')
+})
+
+// Gamification — daily at 22:00 Moscow time
+const gamificationQueue = new Queue('gamification', { connection })
+gamificationQueue.add('daily-check', {}, {
+  repeat: { pattern: '0 22 * * *', tz: 'Europe/Moscow' },
+  jobId: 'gamification-daily-cron',
+}).then(() => {
+  logger.info('Gamification cron scheduled (daily 22:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule gamification cron')
+})
+
+// Smart rules — weekly on Monday at 03:00 Moscow time
+const smartRulesQueue = new Queue('smart-rules', { connection })
+smartRulesQueue.add('weekly-analysis', {}, {
+  repeat: { pattern: '0 3 * * 1', tz: 'Europe/Moscow' },
+  jobId: 'smart-rules-weekly-cron',
+}).then(() => {
+  logger.info('Smart rules cron scheduled (Mon 03:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule smart rules cron')
+})
+
+// Stock prices — daily at 19:00 Moscow time (after MOEX close)
+const stockPricesQueue = new Queue('stock-prices', { connection })
+stockPricesQueue.add('sync-prices', {}, {
+  repeat: { pattern: '0 19 * * 1-5', tz: 'Europe/Moscow' },
+  jobId: 'stock-prices-daily-cron',
+}).then(() => {
+  logger.info('Stock prices cron scheduled (Mon-Fri 19:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule stock prices cron')
 })
 
 // Recurring transactions — every day at 09:00 Moscow time

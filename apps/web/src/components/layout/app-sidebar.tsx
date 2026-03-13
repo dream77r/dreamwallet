@@ -13,6 +13,8 @@ import {
   FolderKanban, FolderOpen, Target, Upload, Settings, Wallet,
   LogOut, Sparkles, Shield, Tag, Hash, Repeat2, Zap, Flag,
   TrendingUp, BrainCircuit, HandCoins, CalendarClock, Landmark, Activity,
+  Users, Scissors, Trophy, PercentCircle, Receipt, GitBranch,
+  BarChart3, Banknote, LineChart,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
@@ -35,6 +37,8 @@ const navGroups: NavGroup[] = [
       { title: 'Регулярные',  href: '/dashboard/recurring',           icon: Repeat2,         color: '#FF9500' },
       { title: 'Долги',       href: '/dashboard/debts',               icon: HandCoins,       color: '#FF3B30' },
       { title: 'Подписки',    href: '/dashboard/subscriptions-tracker', icon: CalendarClock, color: '#FF2D55' },
+      { title: 'Кэшбэк',     href: '/dashboard/cashback',            icon: PercentCircle,   color: '#30D158' },
+      { title: 'Деление',     href: '/dashboard/splits',              icon: Scissors,        color: '#FF6B35' },
     ],
   },
   {
@@ -51,9 +55,13 @@ const navGroups: NavGroup[] = [
       { title: 'Аналитика',   href: '/dashboard/analytics',           icon: PieChart,        color: '#007AFF' },
       { title: 'Прогноз',     href: '/dashboard/forecast',            icon: TrendingUp,      color: '#5AC8FA' },
       { title: 'Привычки',    href: '/dashboard/habits',              icon: Activity,        color: '#FF2D55' },
+      { title: 'Что если',    href: '/dashboard/whatif',              icon: GitBranch,       color: '#AF52DE' },
       { title: 'Активы',      href: '/dashboard/net-worth',           icon: Landmark,        color: '#30D158' },
+      { title: 'Инвестиции',  href: '/dashboard/investments',         icon: LineChart,       color: '#007AFF' },
       { title: 'Крипто',      href: '/dashboard/crypto',              icon: Bitcoin,         color: '#FF9F0A' },
       { title: 'Отчёты',     href: '/dashboard/reports',             icon: FileText,        color: '#30D158' },
+      { title: 'Санкей',      href: '/dashboard/reports/sankey',      icon: BarChart3,       color: '#5856D6' },
+      { title: 'Налоги',      href: '/dashboard/reports/tax',         icon: Receipt,         color: '#64748B' },
     ],
   },
   {
@@ -63,6 +71,14 @@ const navGroups: NavGroup[] = [
       { title: 'Импорт',      href: '/dashboard/import',              icon: Upload,          color: '#636366' },
       { title: 'Категории',   href: '/dashboard/categories',          icon: Tag,             color: '#FF6B35' },
       { title: 'Теги',        href: '/dashboard/tags',                icon: Hash,            color: '#32ADE6' },
+      { title: 'Достижения',  href: '/dashboard/achievements',        icon: Trophy,          color: '#FFD60A' },
+    ],
+  },
+  {
+    label: 'Совместно',
+    items: [
+      { title: 'Семья',       href: '/dashboard/family',              icon: Users,           color: '#FF2D55' },
+      { title: 'Банки',       href: '/dashboard/bank-connections',    icon: Banknote,        color: '#34C759' },
     ],
   },
   {

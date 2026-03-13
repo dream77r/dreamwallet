@@ -142,6 +142,30 @@ export function normalizeToMonthly(amount: number, schedule: string): number {
   return amount * (opt?.multiplierToMonthly ?? 1)
 }
 
+// ─── Gamification ─────────────────────────────────
+export const ACHIEVEMENT_DEFINITIONS = [
+  { type: 'first_tx', title: 'Первая транзакция', icon: '🎉' },
+  { type: 'tx_10', title: '10 транзакций', icon: '📊' },
+  { type: 'tx_100', title: '100 транзакций', icon: '💯' },
+  { type: 'tx_500', title: '500 транзакций', icon: '🏆' },
+  { type: 'budget_master', title: 'Мастер бюджета', icon: '🎯' },
+  { type: 'streak_7', title: '7 дней подряд', icon: '🔥' },
+  { type: 'streak_30', title: '30 дней подряд', icon: '⚡' },
+  { type: 'goal_reached', title: 'Цель достигнута', icon: '🏅' },
+  { type: 'saver', title: 'Экономист', icon: '💰' },
+  { type: 'categorizer', title: 'Всё по полочкам', icon: '📁' },
+] as const
+
+export const CHALLENGE_TEMPLATES = [
+  { type: 'no_spend', title: 'День без трат', target: 1, durationDays: 1, points: 10 },
+  { type: 'no_spend_category', title: 'Неделя без кафе', target: 7, durationDays: 7, points: 50 },
+  { type: 'budget_limit', title: 'В рамках бюджета', target: 30, durationDays: 30, points: 100 },
+  { type: 'savings_target', title: 'Копилка 10%', target: 10, durationDays: 30, points: 75 },
+  { type: 'streak_keep', title: 'Ежедневный учёт', target: 14, durationDays: 14, points: 70 },
+] as const
+
+export const LEVEL_THRESHOLDS = [0, 100, 300, 600, 1000, 1500, 2500, 4000, 6000, 10000] as const
+
 // ─── App ───────────────────────────────────────
 export const APP_NAME = 'DreamWallet'
 export const APP_DESCRIPTION = 'Управление личными и бизнес-финансами'

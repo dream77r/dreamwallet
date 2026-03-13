@@ -520,7 +520,7 @@ export default function DashboardPage() {
   const isLoading = walletLoading || statsLoading
   const monthLabel = getCurrentMonthLabel()
 
-  const widgetMap: Record<WidgetConfig['id'], React.ReactNode> = {
+  const widgetMap: Record<string, React.ReactNode> = {
     balance: (
       <BalanceWidget key="balance" stats={stats} wallet={wallet} isLoading={isLoading} />
     ),
@@ -572,7 +572,7 @@ export default function DashboardPage() {
           {layoutLoading ? (
             <DashboardCustomizerSkeleton />
           ) : layout ? (
-            <DashboardCustomizer layout={layout} onLayoutChange={setOptimisticLayout} />
+            <DashboardCustomizer layout={layout} onLayoutChange={(l) => setOptimisticLayout(l as WidgetConfig[])} />
           ) : null}
           <div className="hidden md:block">
             <TransactionForm />

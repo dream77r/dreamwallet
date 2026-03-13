@@ -109,4 +109,86 @@ export const reportsRouter = router({
         })),
       }
     }),
+
+  // Sankey diagram data: income sources → expense categories
+  getSankeyData: protectedProcedure
+    .input(z.object({
+      from: z.string(),
+      to: z.string(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const from = new Date(input.from)
+      const to = new Date(input.to)
+
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
+      if (!wallet) return { nodes: [], links: [] }
+
+      const accounts = await ctx.prisma.account.findMany({
+        where: { walletId: wallet.id },
+        select: { id: true },
+      })
+      const accountIds = accounts.map(a => a.id)
+
+      const transactions = await ctx.prisma.transaction.findMany({
+        where: {
+          accountId: { in: accountIds },
+          date: { gte: from, lte: to },
+          type: { in: ['INCOME', 'EXPENSE'] },
+          categoryId: { not: null },
+        },
+        include: { category: { select: { name: true, type: true } } },
+      })
+
+      // Aggregate by category
+      const incomeByCategory = new Map<string, number>()
+      const expenseByCategory = new Map<string, number>()
+
+      for (const t of transactions) {
+        const catName = t.category?.name ?? 'Прочее'
+        if (t.type === 'INCOME') {
+          incomeByCategory.set(catName, (incomeByCategory.get(catName) ?? 0) + Number(t.amount))
+        } else {
+          expenseByCategory.set(catName, (expenseByCategory.get(catName) ?? 0) + Number(t.amount))
+        }
+      }
+
+      const totalIncome = Array.from(incomeByCategory.values()).reduce((s, v) => s + v, 0)
+
+      // Build Sankey nodes and links
+      const nodes: Array<{ id: string }> = []
+      const links: Array<{ source: string; target: string; value: number }> = []
+
+      // Income nodes
+      for (const [name] of incomeByCategory) {
+        nodes.push({ id: `income_${name}` })
+      }
+
+      // Central "Бюджет" node
+      nodes.push({ id: 'budget' })
+
+      // Expense nodes
+      for (const [name] of expenseByCategory) {
+        nodes.push({ id: `expense_${name}` })
+      }
+
+      // Savings node
+      const totalExpense = Array.from(expenseByCategory.values()).reduce((s, v) => s + v, 0)
+      const savings = totalIncome - totalExpense
+      if (savings > 0) {
+        nodes.push({ id: 'savings' })
+        links.push({ source: 'budget', target: 'savings', value: Math.round(savings) })
+      }
+
+      // Links: income → budget
+      for (const [name, amount] of incomeByCategory) {
+        links.push({ source: `income_${name}`, target: 'budget', value: Math.round(amount) })
+      }
+
+      // Links: budget → expense
+      for (const [name, amount] of expenseByCategory) {
+        links.push({ source: 'budget', target: `expense_${name}`, value: Math.round(amount) })
+      }
+
+      return { nodes, links }
+    }),
 })

@@ -17,8 +17,22 @@ export function cleanBankDescription(raw: string, counterparty?: string | null):
     if (merchant.length > 2) return toTitleCase(merchant)
   }
 
+  // ВТБ format: "Списание XXXXXX****XXXX MERCHANT MCC:XXXX"
+  const vtbMatch = raw.match(/Списание\s+\d{6}\*{4}\d{4}\s+(.+?)(?:\s*MCC|$)/i)
+  if (vtbMatch) {
+    const merchant = vtbMatch[1].trim().replace(/\s+/g, ' ')
+    if (merchant.length > 2) return toTitleCase(merchant)
+  }
+
+  // Райффайзен format: "Pokupka MERCHANT Karta *XXXX"
+  const raifMatch = raw.match(/(?:Pokupka|Покупка)\s+(.+?)(?:\s*Karta|\s*Карта|\s*MCC|$)/i)
+  if (raifMatch) {
+    const merchant = raifMatch[1].trim().replace(/\s+/g, ' ')
+    if (merchant.length > 2) return toTitleCase(merchant)
+  }
+
   // Tinkoff format: "MERCHANT NAME" (usually already clean, just title case)
-  // Sber: "Перевод MERCHANT" 
+  // Sber: "Перевод MERCHANT"
   // Remove card numbers
   let cleaned = raw
     .replace(/\b\d{4}\*{4,}\d{4}\b/g, '')          // card numbers

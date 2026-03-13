@@ -2,6 +2,8 @@ import { Bot, Context, session, SessionFlavor, Keyboard } from 'grammy'
 import { prisma } from '@dreamwallet/db'
 import { detectIntentFast } from '@dreamwallet/shared'
 import { parseTransactionText, formatAmount } from './parser'
+import { parseBankSMS } from './sms-parser'
+import { parseScreenshot } from './screenshot-parser'
 import pino from 'pino'
 
 const logger = pino({ name: 'telegram-bot' })
@@ -371,17 +373,59 @@ export function createBot(token: string) {
       }
     }
 
+    // Try SMS parsing (forwarded bank SMS)
+    const sms = parseBankSMS(text)
+    if (sms) {
+      await addTransaction(ctx, user.id, sms.amount, sms.type, sms.description, 'TELEGRAM_SMS')
+      return
+    }
+
     const parsed = parseTransactionText(text)
     if (!parsed) {
       return ctx.reply(
         '🤔 Не понял сумму. Попробуй так:\n' +
         '• "кофе 300"\n' +
         '• "зарплата 80000"\n' +
-        '• "такси 450 рублей"'
+        '• "такси 450 рублей"\n' +
+        '• Или перешли SMS из банка'
       )
     }
 
     await addTransaction(ctx, user.id, parsed.amount, parsed.type, parsed.description)
+  })
+
+  // ── Фото-сообщения — скриншоты банковских приложений ────────────────────
+  bot.on('message:photo', async (ctx) => {
+    const user = await getUser(String(ctx.chat.id))
+    if (!user) return ctx.reply('👋 Привяжи аккаунт DreamWallet, нажав /start')
+
+    const thinking = await ctx.reply('📸 Распознаю скриншот...')
+
+    try {
+      // Get largest photo
+      const photos = ctx.message.photo
+      const photo = photos[photos.length - 1]
+      const file = await ctx.api.getFile(photo.file_id)
+      const fileUrl = `https://api.telegram.org/file/bot${token}/${file.file_path}`
+      const tgRes = await fetch(fileUrl)
+      const buffer = Buffer.from(await tgRes.arrayBuffer())
+      const base64 = buffer.toString('base64')
+
+      const result = await parseScreenshot(base64)
+
+      await ctx.api.deleteMessage(ctx.chat.id, thinking.message_id).catch(() => {})
+
+      if (!result) {
+        return ctx.reply('🤔 Не удалось распознать финансовую информацию на скриншоте')
+      }
+
+      await addTransaction(ctx, user.id, result.amount, result.type, result.description, 'TELEGRAM_SCREENSHOT')
+
+    } catch (err) {
+      logger.error(err, 'Screenshot processing failed')
+      await ctx.api.deleteMessage(ctx.chat.id, thinking.message_id).catch(() => {})
+      await ctx.reply('❌ Ошибка при распознавании скриншота')
+    }
   })
 
   // ── Голосовые сообщения ───────────────────────────────────────────────────
@@ -483,6 +527,7 @@ async function addTransaction(
   amount: number,
   type: 'INCOME' | 'EXPENSE',
   description: string,
+  source: 'MANUAL' | 'TELEGRAM_SMS' | 'TELEGRAM_SCREENSHOT' = 'MANUAL',
 ) {
   const wallet = await getUserWallet(userId)
   if (!wallet || !wallet.accounts.length) {
@@ -507,7 +552,7 @@ async function addTransaction(
         date:        new Date(),
         description,
         categoryId:  categoryId ?? undefined,
-        source:      'MANUAL',
+        source,
       },
     }),
     prisma.account.update({

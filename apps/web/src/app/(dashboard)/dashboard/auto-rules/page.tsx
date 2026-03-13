@@ -474,6 +474,84 @@ function AiSuggestDialog({ open, onOpenChange }: AiSuggestDialogProps) {
   )
 }
 
+// ─── Smart Suggestions ───────────────────────────────────────────────────────
+
+function SmartSuggestions() {
+  const utils = trpc.useUtils()
+  const { data: suggestions = [], isLoading } = trpc.smartRules.listSuggestions.useQuery()
+
+  const acceptMutation = trpc.smartRules.acceptSuggestion.useMutation({
+    onSuccess: () => {
+      toast.success('Правило принято и применено')
+      utils.smartRules.listSuggestions.invalidate()
+      utils.autoRules.list.invalidate()
+    },
+    onError: (e: any) => toast.error(e.message),
+  })
+
+  const rejectMutation = trpc.smartRules.rejectSuggestion.useMutation({
+    onSuccess: () => {
+      toast.success('Предложение отклонено')
+      utils.smartRules.listSuggestions.invalidate()
+    },
+    onError: (e: any) => toast.error(e.message),
+  })
+
+  const pending = suggestions.filter((s: any) => s.status === 'PENDING')
+  if (isLoading || pending.length === 0) return null
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-amber-500" />
+        <h2 className="text-sm font-medium">Умные предложения ({pending.length})</h2>
+      </div>
+      {pending.map((s: any) => (
+        <Card key={s.id} className="border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20">
+          <CardContent className="flex items-center gap-4 p-4">
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-white/60 px-3 py-2 text-sm dark:bg-black/20">
+                <span className="text-xs text-muted-foreground shrink-0">
+                  {FIELD_LABELS[(s.field as RuleField) || 'description']}:
+                </span>
+                <code className="truncate font-mono font-medium">{s.pattern}</code>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <div className="flex shrink-0 items-center gap-1.5">
+                {s.category?.icon && <span className="text-base">{s.category.icon}</span>}
+                <span className="text-sm font-medium">{s.category?.name}</span>
+              </div>
+              <Badge variant="outline" className="shrink-0 text-[10px]">
+                {Math.round(s.confidence * 100)}%
+              </Badge>
+            </div>
+            <div className="flex shrink-0 gap-1.5">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-green-600 hover:text-green-700"
+                onClick={() => acceptMutation.mutate({ id: s.id })}
+                disabled={acceptMutation.isPending}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-red-500 hover:text-red-600"
+                onClick={() => rejectMutation.mutate({ id: s.id })}
+                disabled={rejectMutation.isPending}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AutoRulesPage() {
@@ -507,6 +585,9 @@ export default function AutoRulesPage() {
           </Button>
         </div>
       </div>
+
+      {/* Умные предложения от AI */}
+      <SmartSuggestions />
 
       {/* Подсказка как это работает */}
       {rules.length === 0 && !isLoading && (

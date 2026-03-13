@@ -10,6 +10,7 @@ export const widgetIdSchema = z.enum([
   'forecast',
   'networth',
   'goals',
+  'currency',
 ])
 
 export type WidgetId = z.infer<typeof widgetIdSchema>
