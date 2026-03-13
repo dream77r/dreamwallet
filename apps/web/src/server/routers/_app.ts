@@ -35,6 +35,7 @@ import { whatifRouter } from './whatif'
 import { smartRulesRouter } from './smart-rules'
 import { investmentsRouter } from './investments'
 import { bankConnectionRouter } from './bank-connection'
+import { wrappedRouter } from './wrapped'
 
 export const appRouter = router({
   wallet: walletRouter,
@@ -73,6 +74,7 @@ export const appRouter = router({
   smartRules: smartRulesRouter,
   investments: investmentsRouter,
   bankConnection: bankConnectionRouter,
+  wrapped: wrappedRouter,
 })
 
 export type AppRouter = typeof appRouter
