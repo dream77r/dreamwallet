@@ -110,8 +110,36 @@ export async function checkAchievements(prisma: PrismaClient, userId: string): P
     where: { userId, isCompleted: true },
   })
 
-  // Simple budget check
-  const budgetsInLimit = 0 // TODO: calculate properly
+  // Budget check: count active budgets where spending is within limit for current month
+  let budgetsInLimit = 0
+  if (wallet) {
+    const activeBudgets = await prisma.budget.findMany({
+      where: { walletId: wallet.id, isActive: true },
+      select: { id: true, categoryId: true, amount: true },
+    })
+
+    if (activeBudgets.length > 0) {
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
+
+      for (const budget of activeBudgets) {
+        const spent = await prisma.transaction.aggregate({
+          where: {
+            accountId: { in: accountIds },
+            type: 'EXPENSE',
+            categoryId: budget.categoryId,
+            date: { gte: monthStart, lt: monthEnd },
+          },
+          _sum: { amount: true },
+        })
+        const totalSpent = Math.abs(Number(spent._sum.amount ?? 0))
+        if (totalSpent < Number(budget.amount)) {
+          budgetsInLimit++
+        }
+      }
+    }
+  }
 
   // Categorization rate
   const totalTxForCat = await prisma.transaction.count({ where: { accountId: { in: accountIds } } })
