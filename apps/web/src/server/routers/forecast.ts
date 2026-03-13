@@ -91,7 +91,6 @@ export const forecastRouter = router({
 
       // ── Compute start balance ───────────────────────────────────────────────
       // For simplicity: treat all balances as same currency (main currency)
-      // TODO: add currency conversion when exchange rate service is ready
       const startBalance = accounts.reduce((sum: number, a: { balance: unknown }) => sum + Number(a.balance), 0)
 
       // ── Expand recurring rules into events ─────────────────────────────────

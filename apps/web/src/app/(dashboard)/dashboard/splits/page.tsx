@@ -42,12 +42,12 @@ export default function SplitsPage() {
       )}
 
       {!groups?.length && !showCreate && (
-        <Card className="rounded-3xl">
-          <CardContent className="p-8 text-center space-y-3">
-            <Scissors className="h-12 w-12 mx-auto text-gray-300" />
-            <p className="text-gray-500">Создайте группу для деления расходов</p>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <span className="text-5xl mb-4">✂️</span>
+          <p className="text-lg font-semibold text-[#1C1C1E] mb-1">Нет групп</p>
+          <p className="text-sm text-[#8E8E93] mb-4">Создайте группу, чтобы делить расходы с друзьями</p>
+          <button onClick={() => setShowCreate(true)} className="text-sm font-semibold text-[#007AFF]">Создать группу →</button>
+        </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

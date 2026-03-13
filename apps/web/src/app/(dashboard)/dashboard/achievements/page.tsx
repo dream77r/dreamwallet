@@ -70,16 +70,25 @@ export default function AchievementsPage() {
       {/* Achievements grid */}
       <div>
         <h2 className="text-lg font-semibold mb-3">Бейджи</h2>
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {achievements?.map(a => (
-            <Card key={a.type} className={`rounded-3xl ${a.earned ? '' : 'opacity-40'}`}>
-              <CardContent className="p-4 text-center">
-                <span className="text-3xl">{a.icon}</span>
-                <p className="text-xs font-medium mt-1">{a.title}</p>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {achievements && achievements.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <span className="text-5xl mb-4">🏆</span>
+            <p className="text-lg font-semibold text-[#1C1C1E] mb-1">Пока нет достижений</p>
+            <p className="text-sm text-[#8E8E93] mb-4">Добавляйте транзакции и ведите учёт, чтобы получать бейджи</p>
+            <button onClick={() => checkNow.mutate()} className="text-sm font-semibold text-[#007AFF]">Проверить достижения →</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            {achievements?.map(a => (
+              <Card key={a.type} className={`rounded-3xl ${a.earned ? '' : 'opacity-40'}`}>
+                <CardContent className="p-4 text-center">
+                  <span className="text-3xl">{a.icon}</span>
+                  <p className="text-xs font-medium mt-1">{a.title}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Challenges */}
