@@ -124,6 +124,36 @@ export const loginSchema = z.object({
   password: z.string().min(1),
 })
 
+// ─── Income Distribution ─────────────────────────
+export const upsertIncomeRuleSchema = z.object({
+  projectId: z.string().cuid(),
+  memberId: z.string().cuid(),
+  type: z.enum(['PERCENTAGE', 'FIXED']),
+  value: z.number().nonnegative('Значение не может быть отрицательным'),
+})
+
+export const createPayoutSchema = z.object({
+  projectId: z.string().cuid(),
+  memberId: z.string().cuid(),
+  amount: z.number().positive('Сумма должна быть положительной'),
+  period: z.string().regex(/^\d{4}-\d{2}$/, 'Формат: YYYY-MM'),
+  note: z.string().max(500).optional(),
+})
+
+export const getIncomeDistributionSchema = z.object({
+  projectId: z.string().cuid(),
+  period: z.string().regex(/^\d{4}-\d{2}$/, 'Формат: YYYY-MM'),
+})
+
+// ─── Project Expense ─────────────────────────────
+export const addProjectExpenseSchema = z.object({
+  projectId: z.string().cuid(),
+  amount: z.number().positive('Сумма должна быть положительной'),
+  description: z.string().max(500).optional(),
+  categoryId: z.string().cuid().optional(),
+  date: z.coerce.date(),
+})
+
 // ─── Type exports ──────────────────────────────
 export type CreateTransaction = z.infer<typeof createTransactionSchema>
 export type UpdateTransaction = z.infer<typeof updateTransactionSchema>
@@ -136,3 +166,7 @@ export type CreateCategory = z.infer<typeof createCategorySchema>
 export type CreateBudget = z.infer<typeof createBudgetSchema>
 export type ImportConfig = z.infer<typeof importConfigSchema>
 export type UpdateSettings = z.infer<typeof updateSettingsSchema>
+export type UpsertIncomeRule = z.infer<typeof upsertIncomeRuleSchema>
+export type CreatePayout = z.infer<typeof createPayoutSchema>
+export type GetIncomeDistribution = z.infer<typeof getIncomeDistributionSchema>
+export type AddProjectExpense = z.infer<typeof addProjectExpenseSchema>

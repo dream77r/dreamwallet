@@ -34,7 +34,7 @@ export default defineConfig({
     // Все остальные тесты — с сохранённой сессией (быстро, без логина)
     {
       name: 'app',
-      testMatch: ['**/dashboard.spec.ts', '**/transactions.spec.ts', '**/navigation.spec.ts'],
+      testMatch: ['**/dashboard.spec.ts', '**/transactions.spec.ts', '**/navigation.spec.ts', '**/ai-chat.spec.ts', '**/budgets.spec.ts', '**/goals.spec.ts', '**/import.spec.ts'],
       use: {
         ...devices['Desktop Chrome'],
         storageState: AUTH_FILE,
