@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Trash2, Plus, HandCoins } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
@@ -108,7 +109,20 @@ export default function DebtsPage() {
 
         <TabsContent value={tab} className="mt-4 space-y-3">
           {isLoading ? (
-            <Card><CardContent className="p-8 text-center text-muted-foreground">Загрузка...</CardContent></Card>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Card key={i}><CardContent className="p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-40" />
+                      <Skeleton className="h-3 w-64" />
+                    </div>
+                    <Skeleton className="h-6 w-24" />
+                  </div>
+                  <Skeleton className="mt-3 h-2 w-full rounded-full" />
+                </CardContent></Card>
+              ))}
+            </div>
           ) : activeList.length === 0 ? (
             <Card className="flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
               <HandCoins className="mb-3 h-10 w-10" />

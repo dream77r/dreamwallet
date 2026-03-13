@@ -1,6 +1,8 @@
 'use client'
+import { Suspense } from 'react'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +43,8 @@ import {
   X,
   Download,
   Camera,
+  Sparkles,
+  Wand2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -51,6 +55,9 @@ import {
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { TransactionForm } from '@/components/transactions/transaction-form'
+import { QuickAddModal } from '@/components/transactions/QuickAddModal'
+import { InlineCategoryPicker } from '@/components/transactions/InlineCategoryPicker'
+import { SuggestRuleDialog, type SuggestRulePayload } from '@/components/transactions/SuggestRuleDialog'
 
 const PAGE_SIZE = 20
 
@@ -74,6 +81,23 @@ const typeIcons: Record<TxType, React.ReactNode> = {
   TRANSFER: <ArrowLeftRight className="h-3.5 w-3.5 text-blue-600" />,
 }
 
+function getDisplayDescription(description: string | null, counterparty: string | null, fallback: string): string {
+  const isBankGarbage = (s: string) => 
+    s.includes('Операция по карте') || s.includes('место совершения операции') || s.includes('дата создания транзакции')
+  
+  if (description && !isBankGarbage(description)) {
+    return description.slice(0, 50) + (description.length > 50 ? '...' : '')
+  }
+  if (counterparty && counterparty.length > 0) return counterparty.slice(0, 50)
+  if (description && isBankGarbage(description)) {
+    // Try to extract merchant from garbage
+    const match = description.match(/место совершения операции:\s*(?:[A-Z]{2}\/[^/]+\/)?([^,]+)/i)
+    if (match) return match[1].trim().slice(0, 50)
+  }
+  return fallback
+}
+
+
 function formatAmount(amount: number, currency = 'RUB') {
   return new Intl.NumberFormat('ru-RU', {
     style: 'currency',
@@ -82,13 +106,62 @@ function formatAmount(amount: number, currency = 'RUB') {
   }).format(Math.abs(amount))
 }
 
-export default function TransactionsPage() {
+function TransactionsPage() {
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [tagFilter, setTagFilter] = useState<string>('')
   const [page, setPage] = useState(1)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [isAutoCategorizing, setIsAutoCategorizing] = useState(false)
+  const [isKeywordCategorizing, setIsKeywordCategorizing] = useState(false)
+  const [isCleaning, setIsCleaning] = useState(false)
+  const [suggestRule, setSuggestRule] = useState<SuggestRulePayload | null>(null)
+
+  const updateCategory = trpc.transaction.updateCategory.useMutation({
+    onSuccess: () => utils.transaction.list.invalidate(),
+    onError: (e) => toast.error('Ошибка: ' + e.message),
+  })
+
+  function handleCategoryChanged(
+    txId: string,
+    categoryId: string | null,
+    categoryName: string | null,
+    tx: { description?: string | null; counterparty?: string | null; category?: { icon?: string | null } | null }
+  ) {
+    updateCategory.mutate({ id: txId, categoryId })
+    // Предлагаем правило только если назначили категорию (не убрали)
+    if (categoryId && categoryName) {
+      setSuggestRule({
+        txId,
+        description: tx.description ?? null,
+        counterparty: tx.counterparty ?? null,
+        categoryId,
+        categoryName,
+        categoryIcon: tx.category?.icon ?? null,
+      })
+    }
+  }
+  const cleanDescriptions = trpc.transaction.cleanDescriptions.useMutation({
+    onSuccess: (data) => { toast.success(data.message); utils.transaction.list.invalidate() },
+    onError: (e) => toast.error('Ошибка: ' + e.message),
+    onSettled: () => setIsCleaning(false),
+  })
+  const autoCategorize = trpc.transaction.autoCategorize.useMutation({
+    onSuccess: (data) => {
+      toast.success(data.message)
+      utils.transaction.list.invalidate()
+    },
+    onError: (e) => toast.error('Ошибка: ' + e.message),
+    onSettled: () => { setIsAutoCategorizing(false); setIsKeywordCategorizing(false) },
+  })
+  const searchParams = useSearchParams()
+  useEffect(() => {
+    if (searchParams.get('action') === 'new') {
+      setQuickAddOpen(true)
+    }
+  }, [searchParams])
 
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -239,7 +312,13 @@ export default function TransactionsPage() {
   const editingTx = transactions.find(t => t.id === editingId)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+      <QuickAddModal open={quickAddOpen} onOpenChange={setQuickAddOpen} />
+      <SuggestRuleDialog
+        payload={suggestRule}
+        onClose={() => setSuggestRule(null)}
+        onApplied={() => { setSuggestRule(null); utils.transaction.list.invalidate() }}
+      />
       {editingTx && (
         <TransactionForm
           initialData={{ id: editingTx.id, type: editingTx.type as 'INCOME' | 'EXPENSE' | 'TRANSFER', accountId: editingTx.accountId, amount: editingTx.amount, date: editingTx.date, description: editingTx.description, categoryId: editingTx.categoryId }}
@@ -249,67 +328,92 @@ export default function TransactionsPage() {
       )}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Транзакции</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Транзакции</h1>
           <p className="text-muted-foreground text-sm">
             {isLoading ? 'Загрузка...' : `${total} записей`}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <label className="cursor-pointer">
-            <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} />
-            <Button variant="outline" size="sm" asChild disabled={parseReceiptMutation.isPending}>
-              <span>
-                <Camera className="h-4 w-4 mr-2" />
-                {parseReceiptMutation.isPending ? 'Сканирую...' : 'Чек'}
-              </span>
-            </Button>
-          </label>
-          <Button variant="outline" size="sm" onClick={handleExport} disabled={exportQuery.isFetching}>
-            <Download className="h-4 w-4 mr-2" />
-            {exportQuery.isFetching ? 'Экспорт...' : 'CSV'}
+          {/* Categorization buttons */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setIsKeywordCategorizing(true); autoCategorize.mutate({ useAI: false }) }}
+            disabled={isKeywordCategorizing || isAutoCategorizing}
+            title="Категоризировать по ключевым словам"
+          >
+            <Tag className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">{isKeywordCategorizing ? 'Обрабатываю...' : 'Категории'}</span>
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => { setIsAutoCategorizing(true); autoCategorize.mutate({ useAI: true }) }}
+            disabled={isAutoCategorizing || isKeywordCategorizing}
+            title="AI категоризация"
+            className="text-indigo-600 hover:text-indigo-700 border-indigo-200 hover:border-indigo-300"
+          >
+            <Sparkles className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">{isAutoCategorizing ? 'AI...' : 'AI'}</span>
+          </Button>
+          {/* Secondary actions dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem onClick={handleExport} disabled={exportQuery.isFetching}>
+                <Download className="h-4 w-4 mr-2" />
+                {exportQuery.isFetching ? 'Экспорт...' : 'Экспорт CSV'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { setIsCleaning(true); cleanDescriptions.mutate() }}
+                disabled={isCleaning}
+              >
+                <Wand2 className="h-4 w-4 mr-2" />
+                {isCleaning ? 'Чищу...' : 'Очистить описания'}
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <label className="cursor-pointer w-full flex items-center">
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} />
+                  <Camera className="h-4 w-4 mr-2" />
+                  {parseReceiptMutation.isPending ? 'Сканирую...' : 'Сканировать чек'}
+                </label>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <TransactionForm />
         </div>
       </div>
 
-      {/* Summary row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <p className="text-muted-foreground text-xs mb-1">Доходы</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <p className="text-lg font-semibold text-green-600">+{formatAmount(totalIncome)}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <p className="text-muted-foreground text-xs mb-1">Расходы</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <p className="text-lg font-semibold text-red-600">-{formatAmount(totalExpense)}</p>
-            )}
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-5 pb-4">
-            <p className="text-muted-foreground text-xs mb-1">Итого</p>
-            {isLoading ? (
-              <Skeleton className="h-6 w-24" />
-            ) : (
-              <p className={`text-lg font-semibold ${net >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {net >= 0 ? '+' : '-'}{formatAmount(net)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
+      {/* Summary row — compact single card */}
+      <div className="flex gap-2">
+        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground">Доходы</p>
+          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
+            <p className="text-sm font-bold tabular-nums text-green-500">+{formatAmount(totalIncome)}</p>
+          )}
+        </div>
+        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground">Расходы</p>
+          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
+            <p className="text-sm font-bold tabular-nums text-red-500">-{formatAmount(totalExpense)}</p>
+          )}
+        </div>
+        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground">Итого</p>
+          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
+            <p className={`text-sm font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+              {net >= 0 ? '+' : ''}{formatAmount(net)}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
-      <Card>
+      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
         <CardContent className="pt-5 pb-4">
           <div className="flex flex-wrap gap-3 items-center">
             <div className="relative flex-1 min-w-[200px]">
@@ -435,8 +539,71 @@ export default function TransactionsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Table */}
-      <Card>
+
+      {/* Mobile list — iOS Apple Wallet style */}
+      <div className="md:hidden space-y-1 bg-card rounded-2xl shadow-sm overflow-hidden dark:shadow-none">
+        {isLoading ? (
+          <div className="p-4 space-y-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-12 text-muted-foreground">
+            <span className="text-3xl">💸</span>
+            <p className="font-semibold text-foreground">Нет транзакций</p>
+            <p className="text-sm text-center px-4">Добавьте первую транзакцию чтобы начать отслеживать финансы</p>
+          </div>
+        ) : (
+          transactions.map((tx, i) => {
+            const type = tx.type as TxType
+            const amount = Number(tx.amount)
+            const dateLabel = new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+            return (
+              <div key={tx.id}>
+                <div
+                  className="flex items-center justify-between px-4 py-3 active:bg-muted transition-colors"
+                  onClick={() => setEditingId(tx.id)}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
+                      type === 'INCOME' ? 'bg-green-500/15' : type === 'EXPENSE' ? 'bg-red-500/15' : 'bg-blue-500/15'
+                    }`}>
+                      {typeIcons[type]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">
+                        {getDisplayDescription(tx.description ?? null, tx.counterparty ?? null, typeLabels[type] ?? "")}
+                      </p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <InlineCategoryPicker
+                          tx={tx}
+                          categories={categories ?? []}
+                          onChanged={handleCategoryChanged}
+                        />
+                        <span className="text-xs text-muted-foreground">· {dateLabel}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-bold tabular-nums ${
+                      type === 'INCOME' ? 'text-green-600' : type === 'TRANSFER' ? 'text-blue-600' : 'text-red-500'
+                    }`}>
+                      {type === 'INCOME' ? '+' : '-'}{formatAmount(amount, tx.currency)}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium">{tx.account.name}</p>
+                  </div>
+                </div>
+                {i < transactions.length - 1 && <div className="mx-4 h-px bg-gray-50" />}
+              </div>
+            )
+          })
+        )}
+      </div>
+
+      {/* Desktop table */}
+      {/* Desktop table — hidden on mobile */}
+      <div className="hidden md:block"><Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none overflow-hidden">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
@@ -514,12 +681,16 @@ export default function TransactionsPage() {
                             {typeIcons[type]}
                           </div>
                           <span className="font-medium text-sm">
-                            {tx.description || tx.counterparty || typeLabels[type]}
+                            {getDisplayDescription(tx.description ?? null, tx.counterparty ?? null, typeLabels[type] ?? "")}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                        {tx.category?.name ?? '—'}
+                      <TableCell className="hidden md:table-cell">
+                        <InlineCategoryPicker
+                          tx={tx}
+                          categories={categories ?? []}
+                          onChanged={handleCategoryChanged}
+                        />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {tx.account.name}
@@ -579,6 +750,8 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
 
+      </div>{/* end desktop table */}
+
       {/* Pagination */}
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
@@ -619,5 +792,13 @@ export default function TransactionsPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function TransactionsPageWrapper() {
+  return (
+    <Suspense>
+      <TransactionsPage />
+    </Suspense>
   )
 }

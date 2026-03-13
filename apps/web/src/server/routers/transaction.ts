@@ -2,6 +2,38 @@ import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import { createTransactionSchema, updateTransactionSchema, transactionFiltersSchema } from '@dreamwallet/shared'
+import { sendTelegramMessage, formatAmount } from '@/lib/telegram-notify'
+import { checkBudgetAlerts } from './budget-alerts'
+import { callOpenRouter } from './ai'
+import crypto from 'crypto'
+
+// ── In-memory cache for AI category suggestions ─────────────────────────────
+interface CacheEntry {
+  categoryId: string
+  categoryName: string
+  confidence: number
+  expiresAt: number
+}
+const suggestionCache = new Map<string, CacheEntry>()
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+function getCacheKey(description: string, type: string): string {
+  return crypto.createHash('md5').update(description.toLowerCase() + type).digest('hex')
+}
+
+function getFromCache(key: string): CacheEntry | null {
+  const entry = suggestionCache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expiresAt) {
+    suggestionCache.delete(key)
+    return null
+  }
+  return entry
+}
+
+function setInCache(key: string, value: Omit<CacheEntry, 'expiresAt'>): void {
+  suggestionCache.set(key, { ...value, expiresAt: Date.now() + CACHE_TTL_MS })
+}
 
 export const transactionRouter = router({
   // List transactions with filters and pagination
@@ -199,6 +231,41 @@ export const transactionRouter = router({
 
         return created
       })
+
+      // Telegram уведомление о транзакции (fire-and-forget)
+      void (async () => {
+        try {
+          const tgConn = await ctx.prisma.telegramConnection.findUnique({
+            where: { userId: ctx.user.id, isActive: true },
+          })
+          if (tgConn?.notifyTransactions) {
+            const category = transaction.categoryId
+              ? await ctx.prisma.category.findUnique({ where: { id: transaction.categoryId } })
+              : null
+            const amount = formatAmount(Number(transaction.amount), transaction.currency)
+            let msg: string
+            if (transaction.type === 'EXPENSE') {
+              msg = `💸 <b>Расход:</b> -${amount}`
+              if (category) msg += `\n📁 ${category.name}`
+              if (transaction.description) msg += `\n📝 ${transaction.description}`
+            } else if (transaction.type === 'INCOME') {
+              msg = `💰 <b>Доход:</b> +${amount}`
+              if (category) msg += `\n📁 ${category.name}`
+              if (transaction.description) msg += `\n📝 ${transaction.description}`
+            } else {
+              return
+            }
+            await sendTelegramMessage(tgConn.chatId, msg)
+          }
+
+          // Проверка бюджетов
+          if (transaction.type === 'EXPENSE') {
+            await checkBudgetAlerts(ctx.prisma, ctx.user.id, transaction.accountId)
+          }
+        } catch (err) {
+          console.error('[transaction.create] Ошибка Telegram-уведомления:', err)
+        }
+      })()
 
       return transaction
     }),
@@ -419,6 +486,8 @@ export const transactionRouter = router({
             { description: { contains: q, mode: 'insensitive' } },
             { counterparty: { contains: q, mode: 'insensitive' } },
             { reference: { contains: q, mode: 'insensitive' } },
+            { category: { name: { contains: q, mode: 'insensitive' } } },
+            { tags: { some: { tag: { name: { contains: q, mode: 'insensitive' } } } } },
           ],
         },
         include: {
@@ -430,4 +499,389 @@ export const transactionRouter = router({
         take: limit,
       })
     }),
+
+  // ── AI Category Suggestion ─────────────────────────────────────────────────
+  suggestCategory: protectedProcedure
+    .input(z.object({
+      description: z.string(),
+      amount: z.number().optional(),
+      type: z.enum(['INCOME', 'EXPENSE']),
+    }))
+    .query(async ({ ctx, input }) => {
+      // Skip if description too short
+      if (input.description.trim().length < 3) {
+        return null
+      }
+
+      // Check cache
+      const cacheKey = getCacheKey(input.description, input.type)
+      const cached = getFromCache(cacheKey)
+      if (cached) {
+        return { categoryId: cached.categoryId, categoryName: cached.categoryName, confidence: cached.confidence }
+      }
+
+      // Get user categories filtered by type
+      const categories = await ctx.prisma.category.findMany({
+        where: { userId: ctx.user.id, type: input.type },
+        select: { id: true, name: true, icon: true },
+      })
+
+      if (categories.length === 0) return null
+
+      // ── Keyword-based fallback (works without API key) ─────────────────────
+      const KEYWORD_RULES_SUGGEST: Array<{ patterns: string[]; category: string; type?: 'INCOME' | 'EXPENSE' }> = [
+        { patterns: ['пятёрочка','пятерочка','магнит','перекрёсток','перекресток','вкусвилл','ашан','лента','дикси','metro','окей','spar','спар','fix price','фикс прайс','светофор','globus','глобус'], category: 'Продукты' },
+        { patterns: ['кафе','ресторан','restaurant','cafe','coffee','кофе','пицца','pizza','суши','sushi','burger','бургер','kfc','макдоналдс','mcdonald','subway','домино','додо','dodo','вкусно и точка','шоколадница','coffee bean'], category: 'Кафе и рестораны' },
+        { patterns: ['яндекс такси','yandex taxi','uber','ситимобил','таксовичкоф','rutaxi','indriver','bolt'], category: 'Транспорт' },
+        { patterns: ['метро','московский метрополитен','мосметро','troika','тройка','электричка','ржд','rzd','аэроэкспресс'], category: 'Транспорт' },
+        { patterns: ['аптека','pharmacy','36,6','36.6','горздрав','ригла','eapteka','сбераптека','здравсити'], category: 'Здоровье' },
+        { patterns: ['мвидео','м.видео','эльдорадо','dns','днс','citilink','ситилинк','технопарк','re:store','restore','apple store'], category: 'Электроника' },
+        { patterns: ['ozon','озон','wildberries','wb','aliexpress','lamoda','яндекс маркет','яндекс.маркет','goods','sbermegamarket','мегамаркет'], category: 'Покупки' },
+        { patterns: ['зарплата','зп ','salary','аванс','выплата','начислено'], category: 'Зарплата', type: 'INCOME' },
+        { patterns: ['ростелеком','мтс','мегафон','билайн','tele2','теле2','yota','йота','сим карта'], category: 'Связь' },
+        { patterns: ['netflix','нетфликс','spotify','яндекс плюс','яндекс.плюс','кинопоиск','ivi','иви','okko','окко','vk музыка','сберзвук','premier','start.ru','amediateka'], category: 'Подписки' },
+        { patterns: ['жкх','жилищно','коммунальн','электроэнергия','газ газпром','водоканал','тепло','управляющая компания','тсж'], category: 'Коммунальные' },
+        { patterns: ['газпром нефть','лукойл','роснефть','bp','shell','azs','азс','заправк','бензин','топливо'], category: 'Авто' },
+        { patterns: ['фитнес','fitness','спорт зал','sport','worldclass','world class','бассейн','тренажер','yoga','йога','crossfit','кроссфит'], category: 'Спорт' },
+        { patterns: ['кино','cinema','синема','театр','theatre','мюзикл','концерт','kassir','кассир','ticketland'], category: 'Развлечения' },
+        { patterns: ['авиабилет','авиа','аэрофлот','s7','pobeda','победа','ural airlines','уральские авиалинии','booking','букинг','airbnb','отель','hotel'], category: 'Путешествия' },
+      ]
+      const lower = input.description.toLowerCase()
+      for (const rule of KEYWORD_RULES_SUGGEST) {
+        if (rule.type && rule.type !== input.type) continue
+        if (rule.patterns.some(p => lower.includes(p))) {
+          // Try exact name match first, then partial
+          const exact = categories.find(c => c.name.toLowerCase() === rule.category.toLowerCase())
+          const partial = exact ?? categories.find(c => c.name.toLowerCase().includes(rule.category.toLowerCase().split(' ')[0]))
+          if (partial) {
+            const result = { categoryId: partial.id, categoryName: partial.name, confidence: 0.85 }
+            setInCache(cacheKey, result)
+            return result
+          }
+        }
+      }
+
+      // Get user AI model
+      const userRecord = await ctx.prisma.user.findUnique({
+        where: { id: ctx.user.id },
+        select: { aiModel: true },
+      })
+      const defaultModelRow = await ctx.prisma.appSetting.findUnique({ where: { key: 'ai.defaultModel' } })
+      const model = userRecord?.aiModel ?? defaultModelRow?.value ?? 'anthropic/claude-haiku-4-5'
+
+      const categoryList = categories.map(c => `${c.icon ? c.icon + ' ' : ''}${c.name}`).join(', ')
+
+      const systemPrompt = `Ты финансовый аналитик. Определяй категорию транзакции по описанию платежа из российских банков. Всегда отвечай JSON без markdown.`
+
+      const prompt = `Тип операции: ${input.type === 'EXPENSE' ? 'РАСХОД' : 'ДОХОД'}
+Описание: "${input.description}"${input.amount !== undefined ? `\nСумма: ${input.amount} руб` : ''}
+
+Доступные категории: ${categoryList}
+
+Примеры (описание → категория):
+- "ПЯТЕРОЧКА", "МАГНИТ", "ПЕРЕКРЕСТОК", "ВКУСВИЛЛ", "АШАН", "ЛЕНТА" → Продукты
+- "ЯНДЕКС.ТАКСИ", "UBER", "СИТИМОБИЛ", "INDRIVER", "BOLT" → Транспорт
+- "NETFLIX", "SPOTIFY", "КИНОПОИСК", "IVI", "ЯНДЕКС ПЛЮС" → Подписки
+- "АПТЕКА", "36.6", "ГОРЗДРАВ", "РИГЛА", "ЕАПТЕКА" → Здоровье
+- "KFC", "МАКДОНАЛДС", "БУРГЕР КИНГ", "ВКУСНО И ТОЧКА", "ДОДО ПИЦЦА", "ШОКОЛАДНИЦА" → Кафе и рестораны
+- "OZON", "WILDBERRIES", "ЯНДЕКС МАРКЕТ", "ALIEXPRESS", "LAMODA" → Покупки
+- "ЗАРПЛАТА", "ЗП", "АВАНС", "ВЫПЛАТА ЗА" → Зарплата
+- "М.ВИДЕО", "ДНС", "СИТИЛИНК", "ЭЛЬДОРАДО" → Электроника
+- "ЛУКОЙЛ АЗС", "ГАЗПРОМ НЕФТЬ", "РОСНЕФТЬ АЗС", "BP АЗС" → Авто
+- "МТС", "МЕГАФОН", "БИЛАЙН", "ТЕЛЕ2", "РОСТЕЛЕКОМ" → Связь
+- "ЖКХ", "ЭЛЕКТРОЭНЕРГИЯ", "ГАЗ", "ВОДОКАНАЛ", "УК " → ЖКХ
+- "ФИТНЕС", "WORLDCLASS", "ПЛАНЕТА ФИТНЕС", "YOGA" → Спорт
+- "АЭРОФЛОТ", "S7", "ПОБЕДА", "BOOKING.COM", "ОТЕЛЬ" → Путешествия
+- "КИНО", "ТЕАТР", "КОНЦЕРТ", "KASSIR.RU" → Развлечения
+
+Правила:
+- Выбирай категорию строго из списка выше
+- confidence = уверенность (0.0–1.0)
+- Банковский шум или перевод → confidence < 0.3
+
+Ответь ТОЛЬКО JSON (без markdown): { "categoryName": "название из списка", "confidence": 0.85 }`
+
+      const categorySuggestionSchema = z.object({
+        categoryName: z.string(),
+        confidence: z.number().min(0).max(1),
+      })
+
+      try {
+        const raw = await callOpenRouter({ model, prompt, systemPrompt, maxTokens: 150 })
+        if (!raw) return null
+
+        const match = raw.match(/\{[\s\S]*\}/)
+        if (!match) return null
+
+        const parsedJson = categorySuggestionSchema.safeParse(JSON.parse(match[0]))
+        if (!parsedJson.success) return null
+
+        const categoryName = String(parsedJson.data.categoryName).trim()
+        const confidence = Math.min(1, Math.max(0, Number(parsedJson.data.confidence) || 0))
+
+        // Find matching category (case-insensitive, strip icon prefix)
+        const found = categories.find(c => c.name.toLowerCase() === categoryName.toLowerCase())
+        if (!found) return null
+
+        const result = { categoryId: found.id, categoryName: found.name, confidence }
+        setInCache(cacheKey, result)
+        return result
+      } catch {
+        // Graceful degradation
+        return null
+      }
+    }),
+
+  // ── Batch Auto-Categorize ─────────────────────────────────────────────────
+  autoCategorize: protectedProcedure
+    .input(z.object({
+      transactionIds: z.array(z.string()).optional(), // if empty — all uncategorized
+      useAI: z.boolean().default(true),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Keyword rules for Russian bank descriptions
+      const KEYWORD_RULES: Array<{ patterns: string[]; category: string; type?: 'INCOME' | 'EXPENSE' }> = [
+        // Продукты — кириллица + транслит (банки часто пишут латиницей)
+        { patterns: ['пятёрочка','пятерочка','pyaterochka','магнит','magnit','перекрёсток','перекресток','perekrestok','вкусвилл','vkusvill','ашан','auchan','лента','lenta','дикси','dixy','metro cash','окей','okey','spar','спар','fix price','фикс прайс','светофор','globus','глобус','красное белое','krasnoye','bristol','бристоль','верный','verny','семейный','дороже дешево'], category: 'Продукты' },
+        // Кафе и рестораны
+        { patterns: ['кафе','ресторан','restaurant','cafe','coffee','кофе','coffeeshop','пицца','pizza','суши','sushi','burger','бургер','kfc','макдоналдс','mcdonald','subway','domino','dodopizza','додо','dodo','вкусно и точка','шоколадница','shokoladnitsa','coffee bean','starbucks','старбакс','бургер кинг','burger king','papa johns','теремок','teremok','якитория','yakia','тануки','tanuki','сбарро','sbarro','крошка картошка','жар пицца'], category: 'Кафе и рестораны' },
+        // Такси и транспорт
+        { patterns: ['яндекс такси','yandex taxi','ya.taxi','yataxi','uber','ситимобил','citimobil','таксовичкоф','rutaxi','indriver','bolt','gett','gettaxi'], category: 'Транспорт' },
+        // Общественный транспорт
+        { patterns: ['метро','московский метрополитен','мосметро','mosmetro','troika','тройка','электричка','ржд','rzd','аэроэкспресс','aeroexpress','моспересадка','тат транспорт'], category: 'Транспорт' },
+        // Здоровье
+        { patterns: ['аптека','apteka','pharmacy','36,6','36.6','горздрав','gorzdrav','ригла','rigla','eapteka','сбераптека','здравсити','zdravsiti','будь здоров','bud zdorov','витамин','vitami','dr.reddy','озерки','ozерки'], category: 'Здоровье' },
+        // Электроника
+        { patterns: ['мвидео','mvideo','м.видео','m.video','эльдорадо','eldorado','dns','днс','citilink','ситилинк','технопарк','technopark','re:store','apple store','istore','связной','svyaznoy'], category: 'Электроника' },
+        // Онлайн покупки
+        { patterns: ['ozon','озон','wildberries','wb по','lamoda','яндекс маркет','yandex market','sbermegamarket','мегамаркет','goods.ru','ali express','aliexpress','joom','avito','авито доставк'], category: 'Покупки' },
+        // Зарплата
+        { patterns: ['зарплата','zarplata','зп ','зп.','salary','аванс','avans','выплата зп','выплата заработ','начислено зп','начислена зп','оплата труда'], category: 'Зарплата', type: 'INCOME' },
+        // Связь
+        { patterns: ['ростелеком','rostelecom','мтс','mts','мегафон','megafon','билайн','beeline','tele2','теле2','yota','йота','сим карта','sim karta','t2','tele 2'], category: 'Связь' },
+        // Подписки/стриминг
+        { patterns: ['netflix','нетфликс','spotify','яндекс плюс','яндекс.плюс','kinopoisk','кинопоиск','ivi','иви','okko','окко','vk музыка','vk music','сберзвук','sbersound','premier','start.ru','amediateka','more.tv','литрес','litres','apple music','youtube premium','google play'], category: 'Подписки' },
+        // ЖКХ/Коммунальные
+        { patterns: ['жкх','zhkh','жилищно','коммунальн','kommunal','электроэнергия','electroenergy','газ газпром','водоканал','vodokanal','тепло','теплосеть','управляющая компания','тсж','tsj','гвс','хвс','домофон','лифт рем','капремонт'], category: 'Коммунальные' },
+        // Авто/АЗС
+        { patterns: ['газпром нефть','gazprom neft','лукойл','lukoil','роснефть','rosneft','bp','shell','azs','азс','заправк','zapravk','бензин','benzin','топливо','toplivо','neste','птк ','circle k','трасса'], category: 'Авто' },
+        // Спорт
+        { patterns: ['фитнес','fitness','worldclass','world class','физра','бассейн','bassein','тренажер','trenajer','yoga','йога','crossfit','кроссфит','спортмастер','sportmaster','decathlon','декатлон','планета фитнес','planet fitness'], category: 'Спорт' },
+        // Развлечения
+        { patterns: ['кино','kino','cinema','синема','театр','teatr','theatre','мюзикл','концерт','concert','kassir','кассир','ticketland','афиша','afisha','cinemax','мираж','иmax','imax','okko кино','rambler кино'], category: 'Развлечения' },
+        // Путешествия
+        { patterns: ['авиабилет','aviabilet','авиа','аэрофлот','aeroflot','s7','pobeda','победа','ural airlines','уральские авиалинии','booking','букинг','airbnb','отель','hotel','hostel','хостел','туристическ','турагент','onetwotrip','ostrovok','островок','100hotels'], category: 'Путешествия' },
+        // Образование
+        { patterns: ['skillbox','скилбокс','geekbrains','гикбрейнс','coursera','udemy','stepik','стэпик','яндекс практикум','practicum','skyeng','скайэнг','школа','shkola','университет','институт','курсы','kursy'], category: 'Образование' },
+      ]
+
+      const categories = await ctx.prisma.category.findMany({
+        where: { userId: ctx.user.id },
+        select: { id: true, name: true, type: true },
+      })
+
+      if (categories.length === 0) {
+        return { categorized: 0, skipped: 0, message: 'Нет категорий. Создайте категории сначала.' }
+      }
+
+      const catByName = new Map(categories.map(c => [c.name.toLowerCase(), c]))
+
+      // Get user's account ids (Transaction has no direct userId)
+      const userWallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id }, select: { id: true } })
+      const userAccounts = userWallet ? await ctx.prisma.account.findMany({ where: { walletId: userWallet.id }, select: { id: true } }) : []
+      const userAccountIds = userAccounts.map(a => a.id)
+
+      // Find uncategorized transactions
+      const where = {
+        accountId: { in: userAccountIds },
+        categoryId: null as null | string,
+        ...(input.transactionIds?.length ? { id: { in: input.transactionIds } } : {}),
+      }
+
+      const transactions = await ctx.prisma.transaction.findMany({
+        where,
+        select: { id: true, description: true, counterparty: true, type: true, amount: true },
+        take: 500,
+      })
+
+      if (transactions.length === 0) {
+        return { categorized: 0, skipped: 0, message: 'Все транзакции уже категоризированы!' }
+      }
+
+      // Helper: keyword match
+      function matchByKeywords(text: string, txType: string): string | null {
+        const lower = text.toLowerCase()
+        for (const rule of KEYWORD_RULES) {
+          if (rule.type && rule.type !== txType) continue
+          if (rule.patterns.some(p => lower.includes(p))) {
+            const cat = catByName.get(rule.category.toLowerCase())
+            if (cat && cat.type === txType) return cat.id
+            // Try to find any category with similar name
+            for (const [, c] of catByName) {
+              if (c.name.toLowerCase().includes(rule.category.toLowerCase().split(' ')[0]) && c.type === txType) return c.id
+            }
+          }
+        }
+        return null
+      }
+
+      let categorized = 0
+      let skipped = 0
+      const aiQueue: typeof transactions = []
+
+      // Pass 1: keyword rules
+      for (const tx of transactions) {
+        const text = [tx.description, tx.counterparty].filter(Boolean).join(' ')
+        const categoryId = matchByKeywords(text, tx.type)
+        if (categoryId) {
+          await ctx.prisma.transaction.update({ where: { id: tx.id }, data: { categoryId } })
+          categorized++
+        } else {
+          aiQueue.push(tx)
+        }
+      }
+
+      // Pass 2: AI batch (if enabled and API key exists)
+      if (input.useAI && aiQueue.length > 0) {
+        const userRecord = await ctx.prisma.user.findUnique({ where: { id: ctx.user.id }, select: { aiModel: true } })
+        const defaultModelRow = await ctx.prisma.appSetting.findUnique({ where: { key: 'ai.defaultModel' } })
+        const model = userRecord?.aiModel ?? defaultModelRow?.value ?? 'anthropic/claude-haiku-4-5-20251001'
+
+        const expenseCats = categories.filter(c => c.type === 'EXPENSE').map(c => c.name).join(', ')
+        const incomeCats = categories.filter(c => c.type === 'INCOME').map(c => c.name).join(', ')
+
+        // Process in chunks of 20
+        const CHUNK = 20
+        for (let i = 0; i < aiQueue.length; i += CHUNK) {
+          const chunk = aiQueue.slice(i, i + CHUNK)
+          const txList = chunk.map((tx, idx) => {
+            const text = [tx.description, tx.counterparty].filter(Boolean).join(' | ').slice(0, 120)
+            return `${idx}: тип=${tx.type === 'EXPENSE' ? 'расход' : 'доход'} сумма=${tx.amount} описание="${text}"`
+          }).join('\n')
+
+          const prompt = `Ты эксперт по категоризации банковских транзакций россиян. Категоризируй КАЖДУЮ транзакцию — обязательно присвой категорию, даже если описание нечёткое.
+
+КАТЕГОРИИ РАСХОДОВ: ${expenseCats}
+КАТЕГОРИИ ДОХОДОВ: ${incomeCats}
+
+ПРАВИЛА (строго соблюдай):
+1. ВСЕГДА выбирай наиболее подходящую категорию из списка — не оставляй null без крайней необходимости
+2. null ТОЛЬКО для: переводы между своими счетами, возвраты, пополнение карты, банковские комиссии/проценты
+3. Описания могут быть транслитом: PYATEROCHKA=Продукты, MAGNIT=Продукты, APTEKA=Здоровье, TAXI=Транспорт
+4. Если сомневаешься — выбирай "Прочее" (для расходов) или "Прочий доход" (для доходов), но не null
+5. Учитывай сумму: 500-5000 руб в продуктовом = Продукты; 200-800 в кафе = Кафе и рестораны
+
+ПРИМЕРЫ (описание → категория):
+- "PYATEROCHKA", "MAGNIT 5", "PEREKRESTOK", "VKUSVILL" → Продукты
+- "YANDEX.TAXI", "YA.TAXI", "UBER", "INDRIVER" → Транспорт
+- "DODOPIZZA", "KFC", "MCDONALDS", "BURGER KING", "COFFEESHOP" → Кафе и рестораны
+- "APTEKA", "RIGLA", "36.6", "GORZDRAV" → Здоровье
+- "NETFLIX", "SPOTIFY", "KINOPOISK", "IVI", "OKKO" → Подписки
+- "OZON", "WILDBERRIES", "WB", "ALIEXPRESS", "LAMODA" → Покупки
+- "MTS", "MEGAFON", "BEELINE", "TELE2", "YOTA" → Связь
+- "LUKOIL", "GAZPROM NEFT", "AZS", "BP" → Авто
+- "ZHKKh", "ZHKU", "VODOKANAL", "KOMMUNAL" → Коммунальные
+- "ZP", "ZARPLATA", "SALARY", "AVANS" → Зарплата (только доход)
+- "AEROFLOT", "S7", "POBEDA", "BOOKING" → Путешествия
+- "KINO", "KASSIR", "CONCERT", "TEATR" → Развлечения
+- "FITNESS", "WORLDCLASS", "SPORTMASTER" → Спорт
+- перевод другу/родственнику → Прочее
+
+ТРАНЗАКЦИИ:
+${txList}
+
+Ответь СТРОГО JSON массивом без markdown:
+[{"idx":0,"category":"точное название категории из списка"},...]`
+
+          try {
+            const raw = await callOpenRouter({ model, prompt, maxTokens: 800 })
+            if (!raw) { skipped += chunk.length; continue }
+
+            const match = raw.match(/\[([\s\S]*)\]/)
+            if (!match) { skipped += chunk.length; continue }
+
+            const results = JSON.parse('[' + match[1] + ']') as Array<{ idx: number; category: string | null }>
+            for (const r of results) {
+              if (r.category === null || !r.category) continue
+              const tx = chunk[r.idx]
+              if (!tx) continue
+              const cat = catByName.get(r.category.toLowerCase())
+              if (cat) {
+                await ctx.prisma.transaction.update({ where: { id: tx.id }, data: { categoryId: cat.id } })
+                categorized++
+              } else {
+                skipped++
+              }
+            }
+          } catch {
+            skipped += chunk.length
+          }
+        }
+      } else {
+        skipped += aiQueue.length
+      }
+
+      return {
+        categorized,
+        skipped,
+        message: `Категоризировано: ${categorized} из ${transactions.length} транзакций`,
+      }
+    }),
+
+
+  // ── Quick inline category update ──────────────────────────────────────────
+  updateCategory: protectedProcedure
+    .input(z.object({
+      id:         z.string().cuid(),
+      categoryId: z.string().cuid().nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify transaction belongs to user via account → wallet
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id }, select: { id: true } })
+      const accounts = wallet ? await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } }) : []
+      const accountIds = accounts.map(a => a.id)
+
+      const tx = await ctx.prisma.transaction.findFirst({ where: { id: input.id, accountId: { in: accountIds } }, select: { id: true } })
+      if (!tx) throw new TRPCError({ code: 'NOT_FOUND' })
+
+      return ctx.prisma.transaction.update({
+        where: { id: input.id },
+        data: { categoryId: input.categoryId },
+        select: { id: true, categoryId: true },
+      })
+    }),
+
+  // ── Clean bank descriptions (retroactive) ─────────────────────────────────
+  cleanDescriptions: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      const { cleanBankDescription } = await import('@/lib/bank-description')
+      // Get user's account ids
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id }, select: { id: true } })
+      const accounts = wallet ? await ctx.prisma.account.findMany({ where: { walletId: wallet.id }, select: { id: true } }) : []
+      const accountIds = accounts.map(a => a.id)
+
+      const txs = await ctx.prisma.transaction.findMany({
+        where: {
+          accountId: { in: accountIds },
+          OR: [
+            { description: { contains: 'Операция по карте' } },
+            { description: { contains: 'место совершения операции' } },
+            { description: { contains: 'дата создания транзакции' } },
+          ],
+        },
+        select: { id: true, description: true, counterparty: true },
+        take: 500,
+      })
+
+      let cleaned = 0
+      for (const tx of txs) {
+        const newDesc = cleanBankDescription(tx.description ?? '', tx.counterparty)
+        if (newDesc !== tx.description && newDesc.length > 0) {
+          await ctx.prisma.transaction.update({ where: { id: tx.id }, data: { description: newDesc } })
+          cleaned++
+        }
+      }
+      return { cleaned, total: txs.length, message: `Очищено ${cleaned} из ${txs.length} описаний` }
+    }),
+
 })

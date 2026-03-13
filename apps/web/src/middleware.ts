@@ -20,6 +20,14 @@ export function middleware(request: NextRequest) {
     request.cookies.get('better-auth.session_token') ||
     request.cookies.get('__Secure-better-auth.session_token')
 
+  // Landing page — show to guests, redirect logged-in users to dashboard
+  if (pathname === '/') {
+    if (sessionCookie) {
+      return NextResponse.redirect(new URL('/dashboard', request.url))
+    }
+    return NextResponse.next()
+  }
+
   if (!sessionCookie) {
     const loginUrl = new URL('/login', request.url)
     loginUrl.searchParams.set('callbackUrl', pathname)

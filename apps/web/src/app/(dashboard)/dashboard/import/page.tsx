@@ -48,6 +48,7 @@ import {
   BookmarkPlus,
   BookmarkCheck,
   Layers,
+  Sparkles,
 } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { trpc } from '@/lib/trpc/client'
@@ -58,7 +59,7 @@ type Step = 1 | 2 | 3 | 4
 const steps = [
   { id: 1, label: 'Загрузка' },
   { id: 2, label: 'Предпросмотр' },
-  { id: 3, label: 'Маппинг колонок' },
+  { id: 3, label: 'Колонки' },
   { id: 4, label: 'Подтверждение' },
 ]
 
@@ -229,7 +230,7 @@ export default function ImportPage() {
   const [isUploading, setIsUploading] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [importResult, setImportResult] = useState<{
-    imported: number; skipped: number; errors: number; totalRows: number
+    imported: number; skipped: number; duplicates: number; errors: number; totalRows: number
   } | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -239,8 +240,12 @@ export default function ImportPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  const [aiCatResult, setAiCatResult] = useState<{ categorized: number; skipped: number } | null>(null)
+  const [isAiCategorizing, setIsAiCategorizing] = useState(false)
+
   const { data: accounts } = trpc.account.listAll.useQuery()
   const importMutation = trpc.import.start.useMutation()
+  const autoCategorize = trpc.transaction.autoCategorize.useMutation()
   const { data: importHistory, isLoading: historyLoading } = trpc.import.history.useQuery()
   const { data: csvTemplates } = trpc.csvTemplates.list.useQuery()
 
@@ -326,6 +331,15 @@ export default function ImportPage() {
       })
 
       setImportResult(result)
+      // Auto-run keyword categorization on newly imported transactions
+      if (result.imported > 0) {
+        try {
+          const catResult = await autoCategorize.mutateAsync({ useAI: false })
+          setAiCatResult({ categorized: catResult.categorized, skipped: catResult.skipped })
+        } catch {
+          // ignore categorization errors
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Import failed')
     } finally {
@@ -339,6 +353,7 @@ export default function ImportPage() {
     setParseResult(null)
     setMapping({})
     setImportResult(null)
+    setAiCatResult(null)
     setError(null)
     setSelectedCsvTemplateId('none')
   }
@@ -592,7 +607,7 @@ export default function ImportPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-base">Маппинг колонок</CardTitle>
+                <CardTitle className="text-base">Колонки</CardTitle>
                 <CardDescription>Укажите, какие колонки файла соответствуют полям системы</CardDescription>
               </div>
               <Button
@@ -681,9 +696,51 @@ export default function ImportPage() {
                 <div>
                   <p className="text-lg font-semibold">Импорт завершён</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Загружено: {importResult.imported} · Пропущено: {importResult.skipped} · Ошибок: {importResult.errors}
+                    Загружено: {importResult.imported}{importResult.duplicates > 0 && ` · Дубликатов пропущено: ${importResult.duplicates}`}{importResult.skipped > 0 && ` · Пропущено: ${importResult.skipped}`}{importResult.errors > 0 && ` · Ошибок: ${importResult.errors}`}
                   </p>
+                  {aiCatResult !== null && (
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                      Категоризировано: {aiCatResult.categorized}
+                      {aiCatResult.skipped > 0 && ` · Без категории: ${aiCatResult.skipped}`}
+                    </p>
+                  )}
                 </div>
+
+                {/* AI categorization for remaining uncategorized */}
+                {aiCatResult !== null && aiCatResult.skipped > 0 && (
+                  <div className="w-full max-w-xs space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      {aiCatResult.skipped} транзакций без категории — попробуй AI
+                    </p>
+                    <Button
+                      className="w-full gap-2"
+                      variant="outline"
+                      disabled={isAiCategorizing}
+                      onClick={async () => {
+                        setIsAiCategorizing(true)
+                        try {
+                          const r = await autoCategorize.mutateAsync({ useAI: true })
+                          setAiCatResult(prev => prev ? {
+                            categorized: (prev.categorized) + r.categorized,
+                            skipped: r.skipped,
+                          } : r)
+                          toast.success(`AI категоризировал ещё ${r.categorized} транзакций`)
+                        } catch {
+                          toast.error('Ошибка категоризации')
+                        } finally {
+                          setIsAiCategorizing(false)
+                        }
+                      }}
+                    >
+                      {isAiCategorizing ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Категоризирую...</>
+                      ) : (
+                        <><Sparkles className="h-4 w-4 text-indigo-500" /> AI категоризация</>
+                      )}
+                    </Button>
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Button variant="outline" onClick={resetImport}>
                     Новый импорт

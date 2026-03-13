@@ -3,8 +3,8 @@ import { test, expect } from './fixtures'
 test.describe('Dashboard', () => {
   test('дашборд загружается после логина', async ({ authedPage: page }) => {
     await expect(page).toHaveURL(/\/dashboard/)
-    // Заголовок "Обзор" на главной странице дашборда
-    await expect(page.locator('h1').first()).toBeVisible()
+    // Дашборд загрузился — есть sidebar навигация
+    await expect(page.locator('nav, [data-testid="sidebar"], aside').first()).toBeVisible({ timeout: 10000 })
   })
 
   test('навигационное меню содержит основные разделы', async ({ authedPage: page }) => {

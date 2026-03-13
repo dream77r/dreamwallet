@@ -2,7 +2,6 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   TrendingUp,
@@ -27,7 +26,7 @@ import {
   Legend,
 } from 'recharts'
 import { trpc } from '@/lib/trpc/client'
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import Link from 'next/link'
@@ -35,14 +34,23 @@ import { AiInsights } from '@/components/dashboard/ai-insights'
 import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidget'
 import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
 import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWidget'
+import dynamic from 'next/dynamic'
+const DashboardCustomizer = dynamic(() => import('@/components/dashboard/DashboardCustomizer').then(m => m.DashboardCustomizer), { ssr: false })
+const DashboardCustomizerSkeleton = dynamic(() => import('@/components/dashboard/DashboardCustomizer').then(m => m.DashboardCustomizerSkeleton), { ssr: false })
+type WidgetId = 'balance' | 'recent-transactions' | 'budgets' | 'cashflow' | 'score' | 'forecast' | 'networth' | 'goals'
+type WidgetConfig = { id: WidgetId; enabled: boolean; order: number }
 
 const CHART_COLORS = [
-  'hsl(var(--chart-1))',
-  'hsl(var(--chart-2))',
-  'hsl(var(--chart-3))',
-  'hsl(var(--chart-4))',
-  'hsl(var(--chart-5))',
-  '#6366f1',
+  '#6366f1', // indigo
+  '#22c55e', // green
+  '#f59e0b', // amber
+  '#ec4899', // pink
+  '#14b8a6', // teal
+  '#f97316', // orange
+  '#8b5cf6', // violet
+  '#06b6d4', // cyan
+  '#ef4444', // red
+  '#a3e635', // lime
   '#8b5cf6',
 ]
 
@@ -68,34 +76,398 @@ function getCurrentMonthLabel() {
   return `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`
 }
 
-
-function SmartGreeting({ data, isLoading }: { data: any, isLoading: boolean }) {
+function SmartGreeting({ data, isLoading }: { data: { message: string; status: string } | undefined; isLoading: boolean }) {
   if (isLoading) return (
     <div className="space-y-1">
-      <div className="h-7 w-72 animate-pulse bg-muted rounded" />
-      <div className="h-4 w-44 animate-pulse bg-muted rounded" />
+      <div className="h-7 w-72 animate-pulse bg-muted rounded-xl" />
+      <div className="h-4 w-44 animate-pulse bg-muted rounded-xl" />
     </div>
   )
-  if (!data) return <div><h1 className="text-2xl font-semibold">Обзор</h1></div>
-  const borderColor = data.status === 'good' ? 'border-l-green-500' : data.status === 'warning' ? 'border-l-yellow-500' : 'border-l-red-500'
+  if (!data) return <div><h1 className="text-[28px] font-bold tracking-tight">Обзор</h1></div>
+  const borderColor = data.status === 'good' ? 'border-l-[#34C759]' : data.status === 'warning' ? 'border-l-yellow-500' : 'border-l-[#FF3B30]'
   return (
     <div className={`border-l-4 pl-3 ${borderColor}`}>
-      <p className="text-lg font-semibold leading-snug max-w-xl">{data.message}</p>
-      <p className="text-xs text-muted-foreground mt-0.5">
+      <p className="text-[28px] font-bold tracking-tight leading-snug max-w-xl">{data.message}</p>
+      <p className="text-xs text-muted-foreground mt-0.5 font-medium">
         {new Date().toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long' })}
       </p>
     </div>
   )
 }
 
+// ────────────── Widget components ──────────────
+
+function BalanceWidget({
+  stats,
+  wallet,
+  isLoading,
+}: {
+  stats: { totalBalance: number; monthIncome: number; monthExpense: number; monthNet: number } | undefined
+  wallet: { currency: string; accounts: { id: string }[] } | undefined
+  isLoading: boolean
+}) {
+  return (
+    <div className="space-y-3">
+      {/* Main balance card — clean white, iOS style */}
+      <div className="bg-white rounded-3xl shadow-card p-6 animate-fade-up">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8E8E93] mb-1">Общий баланс</p>
+        {isLoading ? (
+          <div className="h-12 w-48 animate-pulse bg-black/[0.06] rounded-xl mb-4" />
+        ) : (
+          <p className="text-[42px] font-bold tracking-tight text-[#1C1C1E] leading-none mb-4">
+            {formatAmount(stats?.totalBalance ?? 0, wallet?.currency)}
+          </p>
+        )}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <div className="w-7 h-7 rounded-lg bg-[#34C759]/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-[#34C759]" />
+            </div>
+            {isLoading ? <div className="h-4 w-20 animate-pulse bg-black/[0.06] rounded" /> : (
+              <div>
+                <p className="text-[11px] text-[#8E8E93] font-medium">Доходы</p>
+                <p className="text-sm font-bold text-[#34C759]">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-7 h-7 rounded-lg bg-[#FF3B30]/10 flex items-center justify-center">
+              <TrendingDown className="h-4 w-4 text-[#FF3B30]" />
+            </div>
+            {isLoading ? <div className="h-4 w-20 animate-pulse bg-black/[0.06] rounded" /> : (
+              <div>
+                <p className="text-[11px] text-[#8E8E93] font-medium">Расходы</p>
+                <p className="text-sm font-bold text-[#FF3B30]">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
+              </div>
+            )}
+          </div>
+          {stats && stats.monthIncome > 0 && (
+            <div className="ml-auto">
+              <p className="text-[11px] text-[#8E8E93] font-medium text-right">Сохранено</p>
+              <p className="text-sm font-bold text-[#007AFF] text-right">
+                {Math.round((stats.monthNet / stats.monthIncome) * 100)}%
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {[
+          { label: 'Чистый доход', value: formatAmount(Math.abs(stats?.monthNet ?? 0), wallet?.currency), prefix: (stats?.monthNet ?? 0) >= 0 ? '+' : '-', color: (stats?.monthNet ?? 0) >= 0 ? '#34C759' : '#FF3B30', icon: ArrowLeftRight, bg: (stats?.monthNet ?? 0) >= 0 ? '#34C759' : '#FF3B30' },
+          { label: 'Счётов', value: String(wallet?.accounts.length ?? 0), prefix: '', color: '#007AFF', icon: Wallet, bg: '#007AFF' },
+        ].map((stat, i) => (
+          <div key={i} className="bg-white rounded-2xl p-4 animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: stat.bg + '1A' }}>
+              <stat.icon className="h-5 w-5" style={{ color: stat.bg }} />
+            </div>
+            {isLoading ? (
+              <div className="h-6 w-16 animate-pulse bg-black/[0.06] rounded mb-1" />
+            ) : (
+              <p className="text-xl font-bold" style={{ color: stat.color }}>{stat.prefix}{stat.value}</p>
+            )}
+            <p className="text-xs text-[#8E8E93] font-medium">{stat.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function CashflowWidget({
+  cashFlowData,
+  categoryData,
+  isLoading,
+  monthLabel,
+}: {
+  cashFlowData: { month: string; income: number; expense: number }[]
+  categoryData: { name: string; value: number }[]
+  isLoading: boolean
+  monthLabel: string
+}) {
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div className="lg:col-span-2 bg-white rounded-3xl p-5 shadow-card border-0">
+        <div className="pb-2">
+          <p className="text-base font-bold tracking-tight">Денежный поток</p>
+          <p className="text-xs font-medium text-[#8E8E93]">Доходы и расходы за 12 месяцев</p>
+        </div>
+        <div>
+          {isLoading ? (
+            <Skeleton className="h-[260px] w-full rounded-xl" />
+          ) : cashFlowData.length === 0 ? (
+            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm font-medium">
+              Нет данных за последние 12 месяцев
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={cashFlowData} barCategoryGap="30%">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis
+                  tick={{ fontSize: 12 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`}
+                />
+                <Tooltip
+                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
+                  labelStyle={{ fontWeight: 600 }}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', backgroundColor: '#ffffff', color: '#1C1C1E' }}
+                />
+                <Bar dataKey="income" name="Доходы" fill="#34C759" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="expense" name="Расходы" fill="#FF3B30" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+
+      <div className="bg-white rounded-3xl p-5 shadow-card border-0">
+        <div className="pb-2">
+          <p className="text-base font-bold tracking-tight">Расходы по категориям</p>
+          <p className="text-xs font-medium text-[#8E8E93]">{monthLabel}</p>
+        </div>
+        <div>
+          {isLoading ? (
+            <Skeleton className="h-[260px] w-full rounded-xl" />
+          ) : categoryData.length === 0 ? (
+            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm font-medium">
+              Нет расходов в этом месяце
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={categoryData}
+                  cx="50%"
+                  cy="45%"
+                  innerRadius={55}
+                  outerRadius={85}
+                  paddingAngle={2}
+                  dataKey="value"
+                >
+                  {categoryData.map((_, index) => (
+                    <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
+                  ))}
+                </Pie>
+                <Legend
+                  iconType="circle"
+                  iconSize={8}
+                  formatter={(value) => <span style={{ fontSize: 11, fontWeight: 500 }}>{value}</span>}
+                />
+                <Tooltip
+                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
+                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', backgroundColor: '#ffffff', color: '#1C1C1E' }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function BudgetsWidget({
+  budgets,
+  isLoading,
+  monthLabel,
+}: {
+  budgets: Array<{ id: string; amount: unknown; spentAmount: number; percentage: number; category: { name: string } }> | undefined
+  isLoading: boolean
+  monthLabel: string
+}) {
+  return (
+    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-bold tracking-tight">Бюджеты</CardTitle>
+        <CardDescription className="text-xs font-medium text-gray-400">Прогресс на {monthLabel}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="space-y-1.5">
+              <Skeleton className="h-4 w-full rounded-lg" />
+              <Skeleton className="h-2 w-full rounded-full" />
+            </div>
+          ))
+        ) : !budgets || budgets.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
+            <PiggyBank className="h-8 w-8" />
+            <p className="text-sm font-medium">Бюджеты не настроены</p>
+          </div>
+        ) : (
+          budgets.map((budget) => {
+            const budgetAmount = Number(budget.amount)
+            const over = budget.spentAmount > budgetAmount
+            const pct = Math.min(budget.percentage, 100)
+            return (
+              <div key={budget.id} className="space-y-1.5">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="font-semibold">{budget.category.name}</span>
+                  <span className={`text-xs font-medium ${over ? 'text-red-500' : 'text-muted-foreground'}`}>
+                    {formatAmount(budget.spentAmount)} / {formatAmount(budgetAmount)}
+                  </span>
+                </div>
+                <Progress value={pct} className={`h-2 ${over ? '[&>div]:bg-red-500' : '[&>div]:bg-indigo-500'}`} />
+                <div className="flex justify-between text-xs text-muted-foreground font-medium">
+                  <span>{pct}% использовано</span>
+                  {over ? (
+                    <span className="text-red-500">Превышен на {formatAmount(budget.spentAmount - budgetAmount)}</span>
+                  ) : (
+                    <span>Остаток {formatAmount(budgetAmount - budget.spentAmount)}</span>
+                  )}
+                </div>
+              </div>
+            )
+          })
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function RecentTransactionsWidget({
+  transactions,
+  isLoading,
+}: {
+  transactions: Array<{
+    id: string
+    type: string
+    amount: unknown
+    description: string | null
+    counterparty: string | null
+    date: Date | string
+    currency: string
+    category: { name: string } | null
+    account: { name: string }
+  }> | undefined
+  isLoading: boolean
+}) {
+  return (
+    <div className="bg-white rounded-3xl shadow-card border-0 overflow-hidden">
+      <div className="px-5 pt-5 pb-3">
+        <p className="text-base font-bold tracking-tight">Последние транзакции</p>
+        <p className="text-xs font-medium text-[#8E8E93]">5 последних операций</p>
+      </div>
+      <div>
+        {isLoading ? (
+          <div className="space-y-3 px-5 pb-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-14 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : !transactions?.length ? (
+          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground px-5 pb-5">
+            <ArrowLeftRight className="h-8 w-8" />
+            <p className="text-sm font-medium">Нет транзакций</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-black/[0.06]">
+            {transactions.map((tx) => {
+              const isIncome = tx.type === 'INCOME'
+              const amount = Number(tx.amount)
+              const dateLabel = new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
+              return (
+                <div key={tx.id} className="flex items-center justify-between px-5 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-[#34C759]/10' : 'bg-[#FF3B30]/10'}`}>
+                      {isIncome ? (
+                        <ArrowUpRight className="h-5 w-5 text-[#34C759]" />
+                      ) : (
+                        <ArrowDownRight className="h-5 w-5 text-[#FF3B30]" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">
+                        {tx.description ?? tx.counterparty ?? (isIncome ? 'Доход' : 'Расход')}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {tx.category?.name ?? 'Без категории'} · {dateLabel}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+                      {isIncome ? '+' : '-'}{formatAmount(amount, tx.currency)}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-medium">{tx.account.name}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function GoalsWidget({
+  goals,
+}: {
+  goals: Array<{
+    id: string
+    name: string
+    isCompleted: boolean
+    currentAmount: unknown
+    targetAmount: unknown
+    color: string | null
+    icon: string | null
+  }> | undefined
+}) {
+  const active = goals?.filter((g) => !g.isCompleted) ?? []
+  if (!active.length) return null
+
+  return (
+    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-bold tracking-tight">Финансовые цели</CardTitle>
+          <Link href="/dashboard/goals" className="text-xs font-semibold text-[#007AFF] hover:text-[#007AFF]/80 transition-colors">
+            Все цели →
+          </Link>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {active.slice(0, 3).map((goal) => {
+            const current = Number(goal.currentAmount)
+            const target = Number(goal.targetAmount)
+            const pct = Math.min(100, Math.round((current / target) * 100))
+            const color = goal.color ?? '#007AFF'
+            return (
+              <div key={goal.id} className="space-y-2 rounded-2xl bg-muted/50 p-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl leading-none">{goal.icon ?? '🎯'}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold">{goal.name}</p>
+                    <p className="text-xs text-muted-foreground font-medium">
+                      {pct}% из {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(target)}
+                    </p>
+                  </div>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+                  <div className="h-full rounded-full transition-all duration-300" style={{ width: `${pct}%`, backgroundColor: color }} />
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// ────────────── Main page ──────────────
+
 export default function DashboardPage() {
   const router = useRouter()
   const { start: monthStart, end: monthEnd } = useMemo(() => getCurrentMonthRange(), [])
 
-  // 1. Get personal wallet
   const { data: wallet, isLoading: walletLoading } = trpc.wallet.get.useQuery()
 
-  // Redirect new users (no accounts) to onboarding
   useEffect(() => {
     if (!walletLoading && wallet && wallet.accounts?.length === 0) {
       router.replace('/onboarding')
@@ -104,32 +476,22 @@ export default function DashboardPage() {
 
   const walletId = wallet?.id
 
-  // 2. Get stats (requires walletId)
   const { data: stats, isLoading: statsLoading } = trpc.wallet.getStats.useQuery(
     { walletId: walletId!, dateFrom: monthStart, dateTo: monthEnd },
-    { enabled: !!walletId }
+    { enabled: !!walletId },
   )
 
-  // 3. Get cash flow for 12 months
   const { data: cashFlowRaw, isLoading: cashFlowLoading } = trpc.wallet.getCashFlow.useQuery(
     { walletId: walletId!, months: 12 },
-    { enabled: !!walletId }
+    { enabled: !!walletId },
   )
 
-  // 4. Get expense category breakdown
   const { data: categoryBreakdown, isLoading: categoryLoading } = trpc.wallet.getCategoryBreakdown.useQuery(
     { walletId: walletId!, type: 'EXPENSE', dateFrom: monthStart, dateTo: monthEnd },
-    { enabled: !!walletId }
+    { enabled: !!walletId },
   )
 
-  // 5. dashboardData — все агрегаты одним запросом
   const { data: dash, isLoading: dashLoading } = trpc.wallet.dashboardData.useQuery(undefined, { staleTime: 30_000 })
-  const budgets = dash?.budgets
-  const budgetsLoading = dashLoading
-  const goals = dash?.goals
-  const greeting = dash?.greeting
-  const greetingLoading = dashLoading
-
 
   const { data: recentTxData, isLoading: txLoading } = trpc.transaction.list.useQuery({
     page: 1,
@@ -138,371 +500,111 @@ export default function DashboardPage() {
     sortOrder: 'desc',
   })
 
-  // Format cash flow data for chart
+  const { data: layoutData, isLoading: layoutLoading } = trpc.dashboard.getLayout.useQuery()
+  const [optimisticLayout, setOptimisticLayout] = useState<WidgetConfig[] | null>(null)
+  const layout = optimisticLayout ?? layoutData
+
   const cashFlowData = useMemo(() => {
     if (!cashFlowRaw) return []
     return cashFlowRaw.map(({ month, income, expense }) => {
       const [, m] = month.split('-')
-      return {
-        month: MONTH_NAMES[(parseInt(m) - 1) % 12],
-        income,
-        expense,
-      }
+      return { month: MONTH_NAMES[(parseInt(m) - 1) % 12], income, expense }
     })
   }, [cashFlowRaw])
 
-  // Format category data for pie chart
   const expenseCategoriesData = useMemo(() => {
     if (!categoryBreakdown) return []
-    return categoryBreakdown.slice(0, 7).map(c => ({
-      name: c.categoryName,
-      value: c.amount,
-    }))
+    return categoryBreakdown.slice(0, 7).map((c) => ({ name: c.categoryName, value: c.amount }))
   }, [categoryBreakdown])
 
   const isLoading = walletLoading || statsLoading
   const monthLabel = getCurrentMonthLabel()
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <SmartGreeting data={greeting} isLoading={greetingLoading} />
-        <TransactionForm />
-      </div>
-
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Общий баланс</CardDescription>
-            {isLoading ? (
-              <Skeleton className="h-8 w-36" />
-            ) : (
-              <CardTitle className="text-2xl">
-                {formatAmount(stats?.totalBalance ?? 0, wallet?.currency)}
-              </CardTitle>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-muted-foreground text-sm">
-              <Wallet className="h-3.5 w-3.5" />
-              {walletLoading ? (
-                <Skeleton className="h-4 w-16" />
-              ) : (
-                <span>{wallet?.accounts.length ?? 0} {wallet?.accounts.length === 1 ? 'счёт' : 'счёта'}</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Доходы за месяц</CardDescription>
-            {isLoading ? (
-              <Skeleton className="h-8 w-36" />
-            ) : (
-              <CardTitle className="text-2xl text-green-600">
-                +{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}
-              </CardTitle>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-green-600 text-sm">
-              <TrendingUp className="h-3.5 w-3.5" />
-              <span>Доходы текущего месяца</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Расходы за месяц</CardDescription>
-            {isLoading ? (
-              <Skeleton className="h-8 w-36" />
-            ) : (
-              <CardTitle className="text-2xl text-red-600">
-                -{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}
-              </CardTitle>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-red-600 text-sm">
-              <TrendingDown className="h-3.5 w-3.5" />
-              <span>Расходы текущего месяца</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Чистый доход</CardDescription>
-            {isLoading ? (
-              <Skeleton className="h-8 w-36" />
-            ) : (
-              <CardTitle className={`text-2xl ${(stats?.monthNet ?? 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {(stats?.monthNet ?? 0) >= 0 ? '+' : '-'}{formatAmount(stats?.monthNet ?? 0, wallet?.currency)}
-              </CardTitle>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center gap-1 text-muted-foreground text-sm">
-              <ArrowLeftRight className="h-3.5 w-3.5" />
-              {stats && stats.monthIncome > 0 ? (
-                <span>Сохранено {Math.round((stats.monthNet / stats.monthIncome) * 100)}%</span>
-              ) : (
-                <span>Нет данных</span>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Cash flow chart */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Денежный поток</CardTitle>
-            <CardDescription>Доходы и расходы за 12 месяцев</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {cashFlowLoading ? (
-              <Skeleton className="h-[260px] w-full" />
-            ) : cashFlowData.length === 0 ? (
-              <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">
-                Нет данных за последние 12 месяцев
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={cashFlowData} barCategoryGap="30%">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 12 }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Tooltip
-                    formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
-                    labelStyle={{ fontWeight: 600 }}
-                  />
-                  <Bar dataKey="income" name="Доходы" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" name="Расходы" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Pie chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Расходы по категориям</CardTitle>
-            <CardDescription>{monthLabel}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {categoryLoading ? (
-              <Skeleton className="h-[260px] w-full" />
-            ) : expenseCategoriesData.length === 0 ? (
-              <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm">
-                Нет расходов в этом месяце
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie
-                    data={expenseCategoriesData}
-                    cx="50%"
-                    cy="45%"
-                    innerRadius={55}
-                    outerRadius={85}
-                    paddingAngle={2}
-                    dataKey="value"
-                  >
-                    {expenseCategoriesData.map((_, index) => (
-                      <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    formatter={(value) => (
-                      <span style={{ fontSize: 11 }}>{value}</span>
-                    )}
-                  />
-                  <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Financial Score + Forecast + Month Comparison */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+  const widgetMap: Record<WidgetConfig['id'], React.ReactNode> = {
+    balance: (
+      <BalanceWidget key="balance" stats={stats} wallet={wallet} isLoading={isLoading} />
+    ),
+    cashflow: (
+      <CashflowWidget
+        key="cashflow"
+        cashFlowData={cashFlowData}
+        categoryData={expenseCategoriesData}
+        isLoading={cashFlowLoading || categoryLoading}
+        monthLabel={monthLabel}
+      />
+    ),
+    score: (
+      <div key="score" className="grid grid-cols-1 gap-4 sm:grid-cols-1">
         <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
+      </div>
+    ),
+    forecast: (
+      <div key="forecast" className="grid grid-cols-1 gap-4 sm:grid-cols-1">
         <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
+      </div>
+    ),
+    networth: (
+      <div key="networth" className="grid grid-cols-1 gap-4 sm:grid-cols-1">
         <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
       </div>
+    ),
+    budgets: (
+      <BudgetsWidget key="budgets" budgets={dash?.budgets} isLoading={dashLoading} monthLabel={monthLabel} />
+    ),
+    'recent-transactions': (
+      <RecentTransactionsWidget key="recent-transactions" transactions={recentTxData?.items} isLoading={txLoading} />
+    ),
+    goals: <GoalsWidget key="goals" goals={dash?.goals} />,
+  }
 
-      {/* Budget + Recent transactions */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Budgets */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Бюджеты</CardTitle>
-            <CardDescription>Прогресс на {monthLabel}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            {budgetsLoading ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="space-y-1.5">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-2 w-full" />
-                </div>
-              ))
-            ) : !budgets || budgets.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
-                <PiggyBank className="h-8 w-8" />
-                <p className="text-sm">Бюджеты не настроены</p>
-              </div>
-            ) : (
-              budgets.map((budget) => {
-                const budgetAmount = Number(budget.amount)
-                const over = budget.spentAmount > budgetAmount
-                const pct = Math.min(budget.percentage, 100)
-                return (
-                  <div key={budget.id} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium">{budget.category.name}</span>
-                      <span className={`text-xs ${over ? 'text-red-600 font-semibold' : 'text-muted-foreground'}`}>
-                        {formatAmount(budget.spentAmount)} / {formatAmount(budgetAmount)}
-                      </span>
-                    </div>
-                    <Progress
-                      value={pct}
-                      className={`h-2 ${over ? '[&>div]:bg-red-500' : ''}`}
-                    />
-                    <div className="flex justify-between text-xs text-muted-foreground">
-                      <span>{pct}% использовано</span>
-                      {over ? (
-                        <span className="text-red-600">Превышен на {formatAmount(budget.spentAmount - budgetAmount)}</span>
-                      ) : (
-                        <span>Остаток {formatAmount(budgetAmount - budget.spentAmount)}</span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })
-            )}
-          </CardContent>
-        </Card>
+  const sortedWidgets = layout
+    ? layout
+        .filter((w) => w.enabled)
+        .sort((a, b) => a.order - b.order)
+        .map((w) => widgetMap[w.id])
+    : null
 
-        {/* Recent transactions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Последние транзакции</CardTitle>
-            <CardDescription>5 последних операций</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {txLoading ? (
-              <div className="space-y-3">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Skeleton key={i} className="h-12 w-full" />
-                ))}
-              </div>
-            ) : !recentTxData?.items.length ? (
-              <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
-                <ArrowLeftRight className="h-8 w-8" />
-                <p className="text-sm">Нет транзакций</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {recentTxData.items.map((tx, i) => {
-                  const isIncome = tx.type === 'INCOME'
-                  const amount = Number(tx.amount)
-                  const dateLabel = new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
-                  return (
-                    <div key={tx.id}>
-                      <div className="flex items-center justify-between py-2.5">
-                        <div className="flex items-center gap-3">
-                          <div className={`flex h-8 w-8 items-center justify-center rounded-full ${isIncome ? 'bg-green-100' : 'bg-red-100'}`}>
-                            {isIncome ? (
-                              <ArrowUpRight className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <ArrowDownRight className="h-4 w-4 text-red-600" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium leading-tight">
-                              {tx.description || tx.counterparty || (isIncome ? 'Доход' : 'Расход')}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {tx.category?.name ?? 'Без категории'} · {dateLabel}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className={`text-sm font-semibold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                            {isIncome ? '+' : '-'}{formatAmount(amount, tx.currency)}
-                          </p>
-                          <p className="text-xs text-muted-foreground">{tx.account.name}</p>
-                        </div>
-                      </div>
-                      {i < recentTxData.items.length - 1 && <Separator />}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+  return (
+    <div className="space-y-4 animate-fade-up">
+      <div className="flex items-center justify-between gap-4">
+        <SmartGreeting data={dash?.greeting} isLoading={dashLoading} />
+        <div className="flex items-center gap-2">
+          {layoutLoading ? (
+            <DashboardCustomizerSkeleton />
+          ) : layout ? (
+            <DashboardCustomizer layout={layout} onLayoutChange={setOptimisticLayout} />
+          ) : null}
+          <div className="hidden md:block">
+            <TransactionForm />
+          </div>
+        </div>
       </div>
 
-      {/* Goals widget */}
-      {goals && goals.filter(g => !g.isCompleted).length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle>Финансовые цели</CardTitle>
-              <Link href="/dashboard/goals" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                Все цели →
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {goals.filter(g => !g.isCompleted).slice(0, 3).map(goal => {
-                const current = Number(goal.currentAmount)
-                const target = Number(goal.targetAmount)
-                const pct = Math.min(100, Math.round((current / target) * 100))
-                const color = goal.color ?? '#3B82F6'
-                return (
-                  <div key={goal.id} className="space-y-2 rounded-lg border p-3">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg leading-none">{goal.icon ?? '🎯'}</span>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{goal.name}</p>
-                        <p className="text-xs text-muted-foreground">{pct}% из {new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(target)}</p>
-                      </div>
-                    </div>
-                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                      <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: color }} />
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+      {layoutLoading ? (
+        <>
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-80 w-full rounded-2xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </>
+      ) : sortedWidgets ? (
+        sortedWidgets
+      ) : (
+        <>
+          {widgetMap['balance']}
+          {widgetMap['cashflow']}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
+            <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
+            <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
+          </div>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {widgetMap['budgets']}
+            {widgetMap['recent-transactions']}
+          </div>
+          {widgetMap['goals']}
+        </>
       )}
-      {/* AI Insights */}
+
       <AiInsights />
     </div>
   )

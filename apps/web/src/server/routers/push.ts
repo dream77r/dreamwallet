@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
 import webpush from 'web-push'
+import type { prisma as PrismaType } from '@dreamwallet/db'
+type PrismaClient = typeof PrismaType
 
 // Configure VAPID
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? ''
@@ -16,7 +18,7 @@ if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
 
 // Helper: send push to all subscriptions for a user
 export async function sendPushToUser(
-  prisma: Parameters<typeof webpush.sendNotification>[0] extends never ? never : any,
+  prisma: PrismaClient,
   userId: string,
   payload: { title: string; body: string; icon?: string; url?: string },
 ) {

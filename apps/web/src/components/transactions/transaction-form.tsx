@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, KeyboardEvent } from 'react'
+import { useEffect, useState, useRef, KeyboardEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Pencil, Plus, X } from 'lucide-react'
+import { Pencil, Plus, X, Sparkles } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
@@ -67,6 +67,8 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
     initialData?.tags?.map(t => t.tag.name) ?? []
   )
   const [tagInput, setTagInput] = useState('')
+  const [debouncedDesc, setDebouncedDesc] = useState(description)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (open && initialData) {
@@ -87,6 +89,32 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
     { type: type as 'INCOME' | 'EXPENSE' },
     { enabled: type !== 'TRANSFER' }
   )
+
+  // Debounce description for AI suggestion
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      setDebouncedDesc(description)
+    }, 800)
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [description])
+
+  const { data: aiSuggestion } = trpc.transaction.suggestCategory.useQuery(
+    { description: debouncedDesc, type: type as 'INCOME' | 'EXPENSE' },
+    {
+      enabled: type !== 'TRANSFER' && debouncedDesc.trim().length >= 3,
+      staleTime: 60 * 60 * 1000,
+    }
+  )
+
+  // Auto-apply when confidence > 0.7 and no category selected
+  useEffect(() => {
+    if (aiSuggestion && aiSuggestion.confidence > 0.7 && !categoryId) {
+      setCategoryId(aiSuggestion.categoryId)
+    }
+  }, [aiSuggestion, categoryId])
 
   const createMutation = trpc.transaction.create.useMutation({
     onSuccess: () => {
@@ -278,6 +306,24 @@ export function TransactionForm({ initialData, open: controlledOpen, onOpenChang
                   ))}
                 </SelectContent>
               </Select>
+              {/* AI suggestion */}
+              {aiSuggestion && aiSuggestion.confidence >= 0.4 && (
+                aiSuggestion.confidence > 0.7 ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                    <Sparkles className="h-3 w-3" />
+                    AI ✨ {aiSuggestion.categoryName}
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setCategoryId(aiSuggestion.categoryId)}
+                    className="inline-flex items-center gap-1 rounded-full border border-purple-300 px-2.5 py-0.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20 transition-colors"
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    AI предлагает: {aiSuggestion.categoryName}
+                  </button>
+                )
+              )}
             </div>
           )}
 

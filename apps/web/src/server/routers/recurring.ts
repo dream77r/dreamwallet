@@ -79,6 +79,8 @@ export const recurringRouter = router({
         accountId:    z.string().cuid(),
         schedule:     z.enum(['0 9 * * *', '0 9 * * 1', '0 9 1 * *', '0 9 1 */3 *', '0 9 1 1 *']),
         reminderDays: z.number().int().min(0).max(30).default(3),
+        categoryId:   z.string().cuid().optional(),
+        description:  z.string().max(200).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
@@ -100,20 +102,9 @@ export const recurringRouter = router({
             nextRunAt,
             isActive:     true,
             reminderDays: input.reminderDays,
-          },
-        })
-
-        // Создаём первую "якорную" транзакцию, которая связывает правило с аккаунтом
-        await tx.transaction.create({
-          data: {
-            accountId:       input.accountId,
-            type:            input.type,
-            amount:          input.amount,
-            currency:        account.currency,
-            date:            new Date(),
-            description:     input.name,
-            source:          'RECURRING',
-            recurringRuleId: rule.id,
+            accountId:    input.accountId,
+            categoryId:   input.categoryId ?? null,
+            description:  input.description ?? null,
           },
         })
 

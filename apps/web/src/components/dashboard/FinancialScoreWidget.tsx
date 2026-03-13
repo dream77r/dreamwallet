@@ -1,3 +1,5 @@
+'use client'
+
 "use client"
 import { trpc } from "@/lib/trpc/client"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

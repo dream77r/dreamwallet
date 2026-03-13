@@ -5,6 +5,7 @@ import { bankSyncProcessor } from './processors/bank-sync'
 import { csvImportProcessor } from './processors/csv-import'
 import { categorizeProcessor } from './processors/categorize'
 import { notificationProcessor } from './processors/notification'
+import { recurringProcessor } from './processors/recurring'
 import { createBot } from './telegram/bot'
 
 const logger = pino({ name: 'dreamwallet-worker' })
@@ -41,6 +42,7 @@ createWorker('bank-sync', bankSyncProcessor)
 createWorker('csv-import', csvImportProcessor)
 createWorker('categorize', categorizeProcessor)
 createWorker('notification', notificationProcessor)
+createWorker('recurring', recurringProcessor)
 
 logger.info('All workers started')
 
@@ -62,6 +64,18 @@ notifQueue.add('recurring-reminder', { type: 'recurring_reminder' }, {
   logger.info('Recurring reminder cron scheduled (daily 08:00 Europe/Moscow)')
 }).catch((err) => {
   logger.error(err, 'Failed to schedule recurring reminder cron')
+})
+
+
+// Recurring transactions — every day at 09:00 Moscow time
+const recurringQueue = new Queue('recurring', { connection })
+recurringQueue.add('process-recurring', {}, {
+  repeat: { pattern: '0 9 * * *', tz: 'Europe/Moscow' },
+  jobId: 'recurring-daily-cron',
+}).then(() => {
+  logger.info('Recurring transactions cron scheduled (daily 09:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule recurring cron')
 })
 
 // Start Telegram bot (if token configured)

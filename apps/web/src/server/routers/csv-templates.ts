@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
+import { Prisma } from '@dreamwallet/db'
 import { router, protectedProcedure } from '../trpc'
 
 export const csvTemplatesRouter = router({
@@ -28,8 +29,7 @@ export const csvTemplatesRouter = router({
         data: {
           userId: ctx.user.id,
           name: input.name,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          columnMap: input.columnMap as any,
+          columnMap: input.columnMap as Prisma.InputJsonValue,
           dateFormat: input.dateFormat,
           delimiter: input.delimiter ?? ',',
           skipRows: input.skipRows ?? 0,
@@ -61,8 +61,7 @@ export const csvTemplatesRouter = router({
         where: { id },
         data: {
           name: data.name,
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          columnMap: data.columnMap as any,
+          columnMap: data.columnMap as Prisma.InputJsonValue,
           dateFormat: data.dateFormat,
           delimiter: data.delimiter,
           skipRows: data.skipRows,

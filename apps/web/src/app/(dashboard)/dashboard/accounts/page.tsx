@@ -25,6 +25,15 @@ import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { AccountForm } from '@/components/accounts/account-form'
 
+function pluralize(n: number, one: string, two: string, five: string): string {
+  const mod10 = n % 10, mod100 = n % 100
+  if (mod100 >= 11 && mod100 <= 14) return five
+  if (mod10 === 1) return one
+  if (mod10 >= 2 && mod10 <= 4) return two
+  return five
+}
+
+
 type AccountType = 'BANK_ACCOUNT' | 'CASH' | 'CRYPTO' | 'INVESTMENT' | 'CREDIT_CARD' | 'SAVINGS' | 'CUSTOM'
 
 const typeLabels: Record<AccountType, string> = {
@@ -91,7 +100,7 @@ export default function AccountsPage() {
         <div>
           <h1 className="text-2xl font-semibold">Счета</h1>
           <p className="text-muted-foreground text-sm">
-            {isLoading ? 'Загрузка...' : `${accounts?.length ?? 0} счетов и кошельков`}
+            {isLoading ? 'Загрузка...' : `${accounts?.length ?? 0} ${pluralize(accounts?.length ?? 0, "счёт", "счёта", "счетов")} и кошельков`}
           </p>
         </div>
         {wallet && <AccountForm walletId={wallet.id} />}
