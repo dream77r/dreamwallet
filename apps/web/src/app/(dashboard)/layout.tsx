@@ -6,7 +6,7 @@ import { NotificationsBell } from '@/components/layout/notifications-bell'
 import { GlobalSearch } from '@/components/layout/global-search'
 import { WorkspaceSwitcher } from '@/components/layout/WorkspaceSwitcher'
 import { Separator } from '@/components/ui/separator'
-import { OnboardingWizard } from '@/components/onboarding/OnboardingWizard'
+// OnboardingWizard removed — replaced by OnboardingChecklist on dashboard
 import { SessionGuard } from '@/components/layout/SessionGuard'
 import { InstallPrompt } from '@/components/pwa/InstallPrompt'
 import { QuickAddFAB } from '@/components/transactions/QuickAddFAB'
@@ -47,7 +47,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       </SidebarInset>
       <SessionGuard />
       <CategorySeeder />
-      <OnboardingWizard />
+      {/* OnboardingChecklist is rendered inside dashboard/page.tsx */}
       <InstallPrompt />
       {/* FAB только на десктопе, на мобиле — BottomNav с кнопкой + */}
       <div className="hidden md:block">

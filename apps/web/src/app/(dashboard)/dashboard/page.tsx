@@ -31,6 +31,7 @@ import { useRouter } from 'next/navigation'
 import { TransactionForm } from '@/components/transactions/transaction-form'
 import Link from 'next/link'
 import { AiInsights } from '@/components/dashboard/ai-insights'
+import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist'
 import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidget'
 import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
 import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWidget'
@@ -106,6 +107,17 @@ function BalanceWidget({
   wallet: { currency: string; accounts: { id: string }[] } | undefined
   isLoading: boolean
 }) {
+  if (!isLoading && (!wallet?.accounts?.length)) {
+    return (
+      <div className="bg-white rounded-3xl shadow-card p-8 animate-fade-up flex flex-col items-center justify-center gap-3 text-center">
+        <span className="text-4xl">💳</span>
+        <p className="text-sm font-medium text-[#1C1C1E]">Добавьте счёт, чтобы видеть баланс</p>
+        <p className="text-xs text-[#8E8E93]">Банковская карта, наличные или накопительный</p>
+        <Link href="/dashboard/accounts" className="text-sm font-semibold text-[#007AFF] hover:underline">Создать счёт →</Link>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-3">
       {/* Main balance card — clean white, iOS style */}
@@ -196,8 +208,9 @@ function CashflowWidget({
           {isLoading ? (
             <Skeleton className="h-[260px] w-full rounded-xl" />
           ) : cashFlowData.length === 0 ? (
-            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm font-medium">
-              Нет данных за последние 12 месяцев
+            <div className="flex h-[260px] flex-col items-center justify-center gap-2 text-muted-foreground">
+              <span className="text-3xl">📈</span>
+              <p className="text-sm font-medium">График появится после первых транзакций</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
@@ -232,8 +245,9 @@ function CashflowWidget({
           {isLoading ? (
             <Skeleton className="h-[260px] w-full rounded-xl" />
           ) : categoryData.length === 0 ? (
-            <div className="flex h-[260px] items-center justify-center text-muted-foreground text-sm font-medium">
-              Нет расходов в этом месяце
+            <div className="flex h-[260px] flex-col items-center justify-center gap-2 text-muted-foreground">
+              <span className="text-3xl">🥧</span>
+              <p className="text-sm font-medium">Здесь будет разбивка по категориям</p>
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
@@ -293,9 +307,10 @@ function BudgetsWidget({
             </div>
           ))
         ) : !budgets || budgets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground">
-            <PiggyBank className="h-8 w-8" />
-            <p className="text-sm font-medium">Бюджеты не настроены</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground">
+            <span className="text-3xl">📊</span>
+            <p className="text-sm font-medium">Бюджет поможет контролировать траты</p>
+            <Link href="/dashboard/budgets" className="text-xs font-medium text-primary hover:underline">Задать бюджет →</Link>
           </div>
         ) : (
           budgets.map((budget) => {
@@ -359,9 +374,10 @@ function RecentTransactionsWidget({
             ))}
           </div>
         ) : !transactions?.length ? (
-          <div className="flex flex-col items-center justify-center gap-2 py-8 text-muted-foreground px-5 pb-5">
-            <ArrowLeftRight className="h-8 w-8" />
-            <p className="text-sm font-medium">Нет транзакций</p>
+          <div className="flex flex-col items-center justify-center gap-3 py-8 text-muted-foreground px-5 pb-5">
+            <span className="text-3xl">📝</span>
+            <p className="text-sm font-medium">Здесь появятся ваши транзакции</p>
+            <Link href="/dashboard/transactions" className="text-xs font-medium text-primary hover:underline">Добавить первую →</Link>
           </div>
         ) : (
           <div className="divide-y divide-black/[0.06]">
@@ -468,11 +484,13 @@ export default function DashboardPage() {
 
   const { data: wallet, isLoading: walletLoading } = trpc.wallet.get.useQuery()
 
+  // Redirect to welcome screen if user hasn't chosen profile yet
+  const { data: settingsData } = trpc.settings.get.useQuery()
   useEffect(() => {
-    if (!walletLoading && wallet && wallet.accounts?.length === 0) {
+    if (settingsData && !settingsData.onboardingDone && !settingsData.userProfile) {
       router.replace('/onboarding')
     }
-  }, [walletLoading, wallet, router])
+  }, [settingsData, router])
 
   const walletId = wallet?.id
 
@@ -579,6 +597,8 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <OnboardingChecklist />
 
       {layoutLoading ? (
         <>
