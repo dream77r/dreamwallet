@@ -28,6 +28,7 @@ export interface ForecastResult {
   totalIncome: number
   totalExpense: number
   daily: ForecastDay[]
+  minBalanceDay: { date: string; balance: number } | null
 }
 
 // ─── In-memory cache (15 min TTL) ────────────────────────────────────────────
@@ -147,6 +148,9 @@ export const forecastRouter = router({
         day.balance = Math.round(runningBalance)
       }
 
+      // ── Find first day balance goes negative ─────────────────────────────────
+      const firstDeficitDay = daily.find((d) => d.balance < 0) ?? null
+
       const result: ForecastResult = {
         periodDays: input.days,
         startBalance: Math.round(startBalance),
@@ -154,6 +158,9 @@ export const forecastRouter = router({
         totalIncome: Math.round(totalIncome),
         totalExpense: Math.round(totalExpense),
         daily,
+        minBalanceDay: firstDeficitDay
+          ? { date: firstDeficitDay.date, balance: firstDeficitDay.balance }
+          : null,
       }
 
       setCached(cacheKey, result)

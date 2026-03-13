@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, TrendingDown, Wallet, Calendar, Plus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, Calendar, Plus, AlertTriangle } from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -100,6 +100,7 @@ export default function ForecastPage() {
   const hasEvents = (data?.daily.some((d) => d.events.length > 0)) ?? false
   const allEvents = data?.daily.flatMap((d) => d.events.map((e) => ({ ...e, dateLabel: d.date }))) ?? []
   const isNegativeEnd = (data?.endBalance ?? 0) < 0
+  const deficitDay = data?.minBalanceDay ?? null
 
   return (
     <div className="space-y-6">
@@ -171,6 +172,19 @@ export default function ForecastPage() {
               </CardHeader>
             </Card>
           </div>
+
+          {/* Deficit banner */}
+          {deficitDay && (
+            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">
+              <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-red-500" />
+              <div className="text-sm">
+                <span className="font-semibold">⚠️ Возможный дефицит:&nbsp;</span>
+                {format(new Date(deficitDay.date), 'd MMMM yyyy', { locale: ru })}
+                &nbsp;— ожидаемый баланс&nbsp;
+                <span className="font-semibold">{formatAmount(deficitDay.balance)}</span>
+              </div>
+            </div>
+          )}
 
           {/* Chart */}
           <Card>
