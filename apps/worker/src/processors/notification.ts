@@ -59,6 +59,24 @@ async function checkRecurringReminders() {
     const body = `${rule.type === 'EXPENSE' ? 'Списание' : 'Поступление'} ${fmt(Number(rule.amount))} через ${daysUntil} ${dayWord}`
     await prisma.notification.create({ data: { userId, type: 'SYSTEM', title, body, data: { recurringRuleId: rule.id, daysUntil } } })
     await pushToUser(userId, { title: `⏰ ${title}`, body, url: '/dashboard/recurring' })
+
+    // Отправка в Telegram
+    const botToken = process.env.TELEGRAM_BOT_TOKEN
+    if (botToken) {
+      const tgConn = await prisma.telegramConnection.findUnique({
+        where: { userId },
+        select: { chatId: true, isActive: true, notifyTransactions: true },
+      })
+      if (tgConn?.isActive && tgConn.notifyTransactions) {
+        const tgText = `⏰ Напоминание: ${rule.name}\n${rule.type === 'EXPENSE' ? 'Списание' : 'Поступление'} ${fmt(Number(rule.amount))} через ${daysUntil} ${dayWord}`
+        await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: tgConn.chatId, text: tgText }),
+        }).catch(() => null)
+      }
+    }
+
     sent++
   }
   return { checked: rules.length, sent }

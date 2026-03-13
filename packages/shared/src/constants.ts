@@ -85,6 +85,63 @@ export const DEFAULT_INCOME_CATEGORIES = [
 export const SUPPORTED_CURRENCIES = ['RUB', 'USD', 'EUR', 'GBP', 'CNY', 'TRY', 'AED'] as const
 export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number]
 
+// ─── Subscription Categories & Catalog ────────────
+export const SUBSCRIPTION_CATEGORIES = {
+  streaming: { key: 'streaming', label: 'Стриминг',  icon: '🎬' },
+  music:     { key: 'music',     label: 'Музыка',    icon: '🎵' },
+  cloud:     { key: 'cloud',     label: 'Облако',    icon: '☁️' },
+  fitness:   { key: 'fitness',   label: 'Фитнес',    icon: '💪' },
+  telecom:   { key: 'telecom',   label: 'Связь',     icon: '📱' },
+  software:  { key: 'software',  label: 'Софт',      icon: '💻' },
+  other:     { key: 'other',     label: 'Другое',    icon: '📦' },
+} as const
+
+export type SubscriptionCategoryKey = keyof typeof SUBSCRIPTION_CATEGORIES
+
+export const SUBSCRIPTION_CATALOG = [
+  { id: 'yandex-plus',      name: 'Яндекс.Плюс',       defaultAmount: 399,   categoryKey: 'streaming' as const, icon: '🟡', schedule: '0 9 1 * *' as const },
+  { id: 'netflix',           name: 'Netflix',            defaultAmount: 999,   categoryKey: 'streaming' as const, icon: '🎬', schedule: '0 9 1 * *' as const },
+  { id: 'kinopoisk',         name: 'Кинопоиск',         defaultAmount: 299,   categoryKey: 'streaming' as const, icon: '🎥', schedule: '0 9 1 * *' as const },
+  { id: 'youtube-premium',   name: 'YouTube Premium',    defaultAmount: 299,   categoryKey: 'streaming' as const, icon: '▶️', schedule: '0 9 1 * *' as const },
+  { id: 'ivi',               name: 'IVI',                defaultAmount: 399,   categoryKey: 'streaming' as const, icon: '📺', schedule: '0 9 1 * *' as const },
+  { id: 'spotify',           name: 'Spotify',            defaultAmount: 299,   categoryKey: 'music' as const,     icon: '🎵', schedule: '0 9 1 * *' as const },
+  { id: 'yandex-music',      name: 'Яндекс.Музыка',     defaultAmount: 299,   categoryKey: 'music' as const,     icon: '🎶', schedule: '0 9 1 * *' as const },
+  { id: 'apple-music',       name: 'Apple Music',        defaultAmount: 269,   categoryKey: 'music' as const,     icon: '🍎', schedule: '0 9 1 * *' as const },
+  { id: 'icloud',            name: 'iCloud',             defaultAmount: 99,    categoryKey: 'cloud' as const,     icon: '☁️', schedule: '0 9 1 * *' as const },
+  { id: 'google-one',        name: 'Google One',         defaultAmount: 139,   categoryKey: 'cloud' as const,     icon: '🔵', schedule: '0 9 1 * *' as const },
+  { id: 'dropbox',           name: 'Dropbox',            defaultAmount: 990,   categoryKey: 'cloud' as const,     icon: '📦', schedule: '0 9 1 * *' as const },
+  { id: 'chatgpt-plus',      name: 'ChatGPT Plus',       defaultAmount: 1500,  categoryKey: 'software' as const,  icon: '🤖', schedule: '0 9 1 * *' as const },
+  { id: 'notion',            name: 'Notion',             defaultAmount: 800,   categoryKey: 'software' as const,  icon: '📝', schedule: '0 9 1 * *' as const },
+  { id: 'figma',             name: 'Figma',              defaultAmount: 1200,  categoryKey: 'software' as const,  icon: '🎨', schedule: '0 9 1 * *' as const },
+  { id: 'github-copilot',    name: 'GitHub Copilot',     defaultAmount: 750,   categoryKey: 'software' as const,  icon: '🐙', schedule: '0 9 1 * *' as const },
+  { id: 'gym',               name: 'Фитнес-клуб',       defaultAmount: 3000,  categoryKey: 'fitness' as const,   icon: '🏋️', schedule: '0 9 1 * *' as const },
+  { id: 'mts',               name: 'МТС',               defaultAmount: 500,   categoryKey: 'telecom' as const,   icon: '📡', schedule: '0 9 1 * *' as const },
+  { id: 'megafon',           name: 'МегаФон',            defaultAmount: 500,   categoryKey: 'telecom' as const,   icon: '📶', schedule: '0 9 1 * *' as const },
+  { id: 'beeline',           name: 'Билайн',             defaultAmount: 500,   categoryKey: 'telecom' as const,   icon: '🐝', schedule: '0 9 1 * *' as const },
+  { id: 'tele2',             name: 'Tele2',              defaultAmount: 400,   categoryKey: 'telecom' as const,   icon: '📞', schedule: '0 9 1 * *' as const },
+  { id: 'internet-home',     name: 'Домашний интернет',  defaultAmount: 700,   categoryKey: 'telecom' as const,   icon: '🌐', schedule: '0 9 1 * *' as const },
+  { id: 'vpn',               name: 'VPN',                defaultAmount: 300,   categoryKey: 'software' as const,  icon: '🔒', schedule: '0 9 1 * *' as const },
+  { id: 'telegram-premium',  name: 'Telegram Premium',   defaultAmount: 299,   categoryKey: 'software' as const,  icon: '✈️', schedule: '0 9 1 * *' as const },
+] as const
+
+export type SubscriptionCatalogItem = (typeof SUBSCRIPTION_CATALOG)[number]
+
+export const SCHEDULE_OPTIONS = [
+  { value: '0 9 * * *'   as const, label: 'Ежедневно',     short: 'Каждый день',   multiplierToMonthly: 30 },
+  { value: '0 9 * * 1'   as const, label: 'Еженедельно',   short: 'Каждую неделю', multiplierToMonthly: 4.33 },
+  { value: '0 9 1 * *'   as const, label: 'Ежемесячно',    short: 'Каждый месяц',  multiplierToMonthly: 1 },
+  { value: '0 9 1 */3 *' as const, label: 'Ежеквартально', short: 'Раз в квартал', multiplierToMonthly: 1 / 3 },
+  { value: '0 9 1 1 *'   as const, label: 'Ежегодно',      short: 'Раз в год',     multiplierToMonthly: 1 / 12 },
+] as const
+
+export type ScheduleValue = (typeof SCHEDULE_OPTIONS)[number]['value']
+
+/** Нормализация суммы к месячной */
+export function normalizeToMonthly(amount: number, schedule: string): number {
+  const opt = SCHEDULE_OPTIONS.find(o => o.value === schedule)
+  return amount * (opt?.multiplierToMonthly ?? 1)
+}
+
 // ─── App ───────────────────────────────────────
 export const APP_NAME = 'DreamWallet'
 export const APP_DESCRIPTION = 'Управление личными и бизнес-финансами'

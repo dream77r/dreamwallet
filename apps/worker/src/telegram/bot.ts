@@ -1,4 +1,4 @@
-import { Bot, Context, session, SessionFlavor } from 'grammy'
+import { Bot, Context, session, SessionFlavor, Keyboard } from 'grammy'
 import { prisma } from '@dreamwallet/db'
 import { parseTransactionText, formatAmount } from './parser'
 import pino from 'pino'
@@ -52,6 +52,16 @@ export function createBot(token: string) {
 
   bot.use(session({ initial: (): SessionData => ({}) }))
 
+  // Set Menu Button for Web App
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://dreamwallet.brewos.ru'
+  bot.api.setChatMenuButton({
+    menu_button: {
+      type: 'web_app',
+      text: 'DreamWallet',
+      web_app: { url: `${appUrl}/tg` },
+    },
+  }).catch(err => logger.warn(err, 'Failed to set menu button'))
+
   // ── /start <token> — привязка аккаунта ───────────────────────────────────
   bot.command('start', async (ctx) => {
     const linkToken = ctx.match?.trim()
@@ -101,13 +111,19 @@ export function createBot(token: string) {
         return
       }
 
+      const keyboard = new Keyboard()
+        .webApp('Открыть DreamWallet', `${appUrl}/tg`)
+        .resized()
+
       await ctx.reply(
         `✅ Отлично, ${ctx.from?.first_name ?? 'друг'}! Аккаунт DreamWallet привязан.\n\n` +
         'Теперь ты можешь:\n' +
         '• Писать транзакции текстом: "кофе 300", "зарплата 80к"\n' +
         '• 🎙️ Отправлять голосовые сообщения\n' +
-        '• Проверять /balance, /last, /goals\n\n' +
-        'Попробуй прямо сейчас — напиши что-нибудь!'
+        '• Проверять /balance, /last, /goals\n' +
+        '• 📱 Открыть мини-приложение через кнопку ниже\n\n' +
+        'Попробуй прямо сейчас — напиши что-нибудь!',
+        { reply_markup: keyboard },
       )
     } catch (err) {
       logger.error(err, 'Link failed')
