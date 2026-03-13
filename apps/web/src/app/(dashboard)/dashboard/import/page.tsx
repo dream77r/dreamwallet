@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useRef, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,6 +13,8 @@ import {
   Select,
   SelectContent,
   SelectItem,
+  SelectGroup,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
@@ -64,16 +66,25 @@ const steps = [
 ]
 
 const bankTemplates = [
-  { value: 'tinkoff', label: 'Тинькофф Банк' },
-  { value: 'sber', label: 'Сбербанк' },
-  { value: 'alfa', label: 'Альфа-Банк' },
-  { value: 'vtb', label: 'ВТБ' },
-  { value: 'raiffeisen', label: 'Райффайзен' },
-  { value: 'gazprom', label: 'Газпромбанк' },
-  { value: 'ozon', label: 'Ozon Банк' },
-  { value: 'pochtabank', label: 'Почта Банк' },
-  { value: 'mts', label: 'МТС Банк' },
-  { value: 'custom', label: 'Произвольный CSV' },
+  // Banks
+  { value: 'tinkoff', label: 'Тинькофф Банк', group: 'bank' },
+  { value: 'sber', label: 'Сбербанк', group: 'bank' },
+  { value: 'alfa', label: 'Альфа-Банк', group: 'bank' },
+  { value: 'vtb', label: 'ВТБ', group: 'bank' },
+  { value: 'raiffeisen', label: 'Райффайзен', group: 'bank' },
+  { value: 'gazprom', label: 'Газпромбанк', group: 'bank' },
+  { value: 'ozon', label: 'Ozon Банк', group: 'bank' },
+  { value: 'pochtabank', label: 'Почта Банк', group: 'bank' },
+  { value: 'mts', label: 'МТС Банк', group: 'bank' },
+  // Payment systems
+  { value: 'yoomoney', label: 'ЮMoney (Яндекс.Деньги)', group: 'payment' },
+  { value: 'paypal', label: 'PayPal', group: 'payment' },
+  { value: 'stripe', label: 'Stripe', group: 'payment' },
+  // Crypto exchanges
+  { value: 'binance', label: 'Binance', group: 'crypto' },
+  { value: 'bybit', label: 'Bybit', group: 'crypto' },
+  // Custom
+  { value: 'custom', label: 'Произвольный CSV', group: 'custom' },
 ]
 
 const targetFields = [
@@ -219,9 +230,18 @@ function SaveTemplateModal({
 // ─── Main Page ───────────────────────────────────────────────────────────────
 
 export default function ImportPage() {
+  return (
+    <Suspense>
+      <ImportPageInner />
+    </Suspense>
+  )
+}
+
+function ImportPageInner() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState<Step>(1)
-  const [template, setTemplate] = useState('tinkoff')
+  const [template, setTemplate] = useState(searchParams.get('template') || 'tinkoff')
   const [isDragging, setIsDragging] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
@@ -457,18 +477,39 @@ export default function ImportPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Шаблон банка</CardTitle>
-              <CardDescription>Выберите ваш банк для автоматического определения формата</CardDescription>
+              <CardTitle className="text-base">Источник данных</CardTitle>
+              <CardDescription>Выберите банк, платёжную систему или биржу для автоопределения формата</CardDescription>
             </CardHeader>
             <CardContent>
               <Select value={template} onValueChange={setTemplate}>
-                <SelectTrigger className="w-full sm:w-[280px]">
+                <SelectTrigger className="w-full sm:w-[320px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {bankTemplates.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                  ))}
+                  <SelectGroup>
+                    <SelectLabel>Банки</SelectLabel>
+                    {bankTemplates.filter(t => t.group === 'bank').map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Платёжные системы</SelectLabel>
+                    {bankTemplates.filter(t => t.group === 'payment').map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Криптобиржи</SelectLabel>
+                    {bankTemplates.filter(t => t.group === 'crypto').map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
+                  <SelectGroup>
+                    <SelectLabel>Прочее</SelectLabel>
+                    {bankTemplates.filter(t => t.group === 'custom').map((t) => (
+                      <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 </SelectContent>
               </Select>
             </CardContent>

@@ -1,7 +1,6 @@
 import type { PrismaClient } from '@dreamwallet/db'
 
 const COINGECKO_URL = 'https://api.coingecko.com/api/v3/simple/price'
-const ETHERSCAN_URL = 'https://api.etherscan.io/api'
 const BLOCKSTREAM_URL = 'https://blockstream.info/api'
 const SOLANA_RPC_URL = 'https://api.mainnet-beta.solana.com'
 
@@ -17,6 +16,9 @@ const COINGECKO_IDS: Record<string, string> = {
   BTC: 'bitcoin',
   SOL: 'solana',
   BNB: 'binancecoin',
+  POL: 'matic-network',
+  TON: 'the-open-network',
+  TRX: 'tron',
 }
 
 export async function getCryptoPrice(symbol: string): Promise<CryptoPrice | null> {
@@ -38,7 +40,7 @@ export async function getCryptoPrice(symbol: string): Promise<CryptoPrice | null
   }
 }
 
-// ─── Ethereum (Etherscan) ─────────────────────────────────────────────────────
+// ─── Etherscan-compatible API (Ethereum, Polygon, Arbitrum, BSC) ─────────────
 
 interface EtherscanTx {
   hash: string
@@ -55,18 +57,44 @@ interface EtherscanResponse {
   result: EtherscanTx[] | string
 }
 
-async function fetchEthereumTxs(address: string): Promise<EtherscanTx[]> {
-  const apiKey = process.env.ETHERSCAN_API_KEY ?? ''
+const EVM_EXPLORERS: Record<string, { url: string; envKey: string }> = {
+  ethereum: { url: 'https://api.etherscan.io/api', envKey: 'ETHERSCAN_API_KEY' },
+  polygon: { url: 'https://api.polygonscan.com/api', envKey: 'POLYGONSCAN_API_KEY' },
+  arbitrum: { url: 'https://api.arbiscan.io/api', envKey: 'ARBISCAN_API_KEY' },
+  bsc: { url: 'https://api.bscscan.com/api', envKey: 'BSCSCAN_API_KEY' },
+}
+
+async function fetchEvmTxs(network: string, address: string): Promise<EtherscanTx[]> {
+  const explorer = EVM_EXPLORERS[network]
+  if (!explorer) throw new Error(`Unsupported EVM network: ${network}`)
+
+  const apiKey = process.env[explorer.envKey] ?? ''
   const url =
-    `${ETHERSCAN_URL}?module=account&action=txlist` +
+    `${explorer.url}?module=account&action=txlist` +
     `&address=${address}&startblock=0&endblock=99999999&sort=desc&offset=50&page=1` +
     (apiKey ? `&apikey=${apiKey}` : '')
 
   const res = await fetch(url, { signal: AbortSignal.timeout(15_000) })
-  if (!res.ok) throw new Error(`Etherscan HTTP ${res.status}`)
+  if (!res.ok) throw new Error(`${network} explorer HTTP ${res.status}`)
   const data = (await res.json()) as EtherscanResponse
   if (data.status !== '1' || !Array.isArray(data.result)) return []
   return data.result.filter((tx) => tx.isError === '0')
+}
+
+async function fetchEvmBalance(network: string, address: string): Promise<number> {
+  const explorer = EVM_EXPLORERS[network]
+  if (!explorer) return 0
+
+  const apiKey = process.env[explorer.envKey] ?? ''
+  const url =
+    `${explorer.url}?module=account&action=balance&address=${address}&tag=latest` +
+    (apiKey ? `&apikey=${apiKey}` : '')
+
+  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) })
+  if (!res.ok) return 0
+  const data = (await res.json()) as { status: string; result: string }
+  if (data.status !== '1') return 0
+  return weiToEth(data.result)
 }
 
 function weiToEth(wei: string): number {
@@ -178,6 +206,124 @@ async function fetchSolanaTxs(
   return results
 }
 
+// ─── TON (TON Center API v3) ─────────────────────────────────────────────────
+
+interface TonTransaction {
+  hash: string
+  now: number  // unix timestamp
+  in_msg?: { value: string; source: string }
+  out_msgs?: Array<{ value: string; destination: string }>
+}
+
+async function fetchTonTxs(address: string): Promise<Array<{ hash: string; date: Date; amount: number; isIncoming: boolean; counterparty: string }>> {
+  const apiKey = process.env.TONCENTER_API_KEY ?? ''
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (apiKey) headers['X-API-Key'] = apiKey
+
+  const res = await fetch(
+    `https://toncenter.com/api/v3/transactions?account=${address}&limit=50&sort=desc`,
+    { headers, signal: AbortSignal.timeout(15_000) },
+  )
+  if (!res.ok) throw new Error(`TON Center HTTP ${res.status}`)
+  const data = (await res.json()) as { transactions: TonTransaction[] }
+
+  return (data.transactions || []).map((tx) => {
+    const inValue = tx.in_msg?.value ? Number(tx.in_msg.value) / 1e9 : 0
+    const outValue = (tx.out_msgs || []).reduce((s, m) => s + Number(m.value || '0') / 1e9, 0)
+
+    const isIncoming = inValue > outValue
+    const amount = isIncoming ? inValue : outValue
+    const counterparty = isIncoming
+      ? (tx.in_msg?.source || '').slice(0, 8)
+      : (tx.out_msgs?.[0]?.destination || '').slice(0, 8)
+
+    return { hash: tx.hash, date: new Date(tx.now * 1000), amount, isIncoming, counterparty }
+  }).filter((tx) => tx.amount > 0)
+}
+
+async function fetchTonBalance(address: string): Promise<number> {
+  const apiKey = process.env.TONCENTER_API_KEY ?? ''
+  const headers: Record<string, string> = {}
+  if (apiKey) headers['X-API-Key'] = apiKey
+
+  const res = await fetch(
+    `https://toncenter.com/api/v3/account?address=${address}`,
+    { headers, signal: AbortSignal.timeout(10_000) },
+  )
+  if (!res.ok) return 0
+  const data = (await res.json()) as { balance: string }
+  return Number(data.balance || '0') / 1e9
+}
+
+// ─── TRON (TronGrid API) ─────────────────────────────────────────────────────
+
+interface TronTx {
+  txID: string
+  block_timestamp: number
+  raw_data: {
+    contract: Array<{
+      parameter: {
+        value: {
+          amount?: number
+          owner_address: string
+          to_address?: string
+        }
+      }
+      type: string
+    }>
+  }
+  ret: Array<{ contractRet: string }>
+}
+
+async function fetchTronTxs(address: string): Promise<Array<{ hash: string; date: Date; amount: number; isIncoming: boolean; counterparty: string }>> {
+  const apiKey = process.env.TRONGRID_API_KEY ?? ''
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (apiKey) headers['TRON-PRO-API-KEY'] = apiKey
+
+  const res = await fetch(
+    `https://api.trongrid.io/v1/accounts/${address}/transactions?limit=50&order_by=block_timestamp,desc`,
+    { headers, signal: AbortSignal.timeout(15_000) },
+  )
+  if (!res.ok) throw new Error(`TronGrid HTTP ${res.status}`)
+  const data = (await res.json()) as { data: TronTx[] }
+
+  return (data.data || [])
+    .filter((tx) => tx.ret?.[0]?.contractRet === 'SUCCESS')
+    .map((tx) => {
+      const contract = tx.raw_data.contract[0]
+      if (!contract || contract.type !== 'TransferContract') return null
+
+      const amount = (contract.parameter.value.amount || 0) / 1e6  // sun → TRX
+      const toAddr = contract.parameter.value.to_address || ''
+      const fromAddr = contract.parameter.value.owner_address || ''
+      const isIncoming = toAddr.toLowerCase() === address.toLowerCase() ||
+        toAddr === address  // TRON addresses can be hex or base58
+
+      return {
+        hash: tx.txID,
+        date: new Date(tx.block_timestamp),
+        amount,
+        isIncoming,
+        counterparty: isIncoming ? fromAddr.slice(0, 8) : toAddr.slice(0, 8),
+      }
+    })
+    .filter((tx): tx is NonNullable<typeof tx> => tx !== null && tx.amount > 0)
+}
+
+async function fetchTronBalance(address: string): Promise<number> {
+  const apiKey = process.env.TRONGRID_API_KEY ?? ''
+  const headers: Record<string, string> = {}
+  if (apiKey) headers['TRON-PRO-API-KEY'] = apiKey
+
+  const res = await fetch(
+    `https://api.trongrid.io/v1/accounts/${address}`,
+    { headers, signal: AbortSignal.timeout(10_000) },
+  )
+  if (!res.ok) return 0
+  const data = (await res.json()) as { data: Array<{ balance: number }> }
+  return (data.data?.[0]?.balance || 0) / 1e6
+}
+
 // ─── Main sync function ───────────────────────────────────────────────────────
 
 export interface SyncResult {
@@ -185,6 +331,15 @@ export interface SyncResult {
   skipped: number
   newBalance: number
   error?: string
+}
+
+const EVM_NETWORKS = new Set(['ethereum', 'polygon', 'arbitrum', 'bsc'])
+
+const NETWORK_SYMBOLS: Record<string, string> = {
+  ethereum: 'ETH',
+  polygon: 'POL',
+  arbitrum: 'ETH',
+  bsc: 'BNB',
 }
 
 export async function syncCryptoAccount(
@@ -204,8 +359,11 @@ export async function syncCryptoAccount(
   let cryptoBalance = 0
 
   try {
-    if (network === 'ethereum') {
-      const txs = await fetchEthereumTxs(address)
+    if (EVM_NETWORKS.has(network)) {
+      // ── EVM chains (Ethereum, Polygon, Arbitrum, BSC) ──
+      const txs = await fetchEvmTxs(network, address)
+      const nativeSymbol = NETWORK_SYMBOLS[network] || 'ETH'
+
       for (const tx of txs) {
         const existing = await prisma.transaction.findFirst({
           where: { accountId, reference: tx.hash },
@@ -220,7 +378,7 @@ export async function syncCryptoAccount(
             accountId,
             type: isIncoming ? 'INCOME' : 'EXPENSE',
             amount: Math.abs(amount),
-            currency: 'ETH',
+            currency: nativeSymbol,
             date: new Date(Number(tx.timeStamp) * 1000),
             description: isIncoming
               ? `Получено от ${tx.from.slice(0, 8)}...`
@@ -232,19 +390,8 @@ export async function syncCryptoAccount(
         added++
       }
 
-      // Recalculate ETH balance from Etherscan balance endpoint
       try {
-        const apiKey = process.env.ETHERSCAN_API_KEY ?? ''
-        const balUrl =
-          `${ETHERSCAN_URL}?module=account&action=balance&address=${address}&tag=latest` +
-          (apiKey ? `&apikey=${apiKey}` : '')
-        const balRes = await fetch(balUrl, { signal: AbortSignal.timeout(10_000) })
-        if (balRes.ok) {
-          const balData = (await balRes.json()) as { status: string; result: string }
-          if (balData.status === '1') {
-            cryptoBalance = weiToEth(balData.result)
-          }
-        }
+        cryptoBalance = await fetchEvmBalance(network, address)
       } catch { /* use 0 */ }
 
     } else if (network === 'bitcoin') {
@@ -271,7 +418,6 @@ export async function syncCryptoAccount(
         added++
       }
 
-      // Balance from Blockstream
       try {
         const res = await fetch(`${BLOCKSTREAM_URL}/address/${address}`, {
           signal: AbortSignal.timeout(10_000),
@@ -308,13 +454,70 @@ export async function syncCryptoAccount(
         added++
       }
 
-      // SOL balance
       try {
         const lamports = await solanaRpc<{ value: number }>('getBalance', [
           address,
           { commitment: 'confirmed' },
         ])
         cryptoBalance = lamports.value / 1e9
+      } catch { /* use 0 */ }
+
+    } else if (network === 'ton') {
+      const txs = await fetchTonTxs(address)
+      for (const tx of txs) {
+        const existing = await prisma.transaction.findFirst({
+          where: { accountId, reference: tx.hash },
+        })
+        if (existing) { skipped++; continue }
+
+        await prisma.transaction.create({
+          data: {
+            accountId,
+            type: tx.isIncoming ? 'INCOME' : 'EXPENSE',
+            amount: tx.amount,
+            currency: 'TON',
+            date: tx.date,
+            description: tx.isIncoming
+              ? `Получено от ${tx.counterparty}...`
+              : `Отправлено на ${tx.counterparty}...`,
+            reference: tx.hash,
+            source: 'API',
+          },
+        })
+        added++
+      }
+
+      try {
+        cryptoBalance = await fetchTonBalance(address)
+      } catch { /* use 0 */ }
+
+    } else if (network === 'tron') {
+      const txs = await fetchTronTxs(address)
+      for (const tx of txs) {
+        const existing = await prisma.transaction.findFirst({
+          where: { accountId, reference: tx.hash },
+        })
+        if (existing) { skipped++; continue }
+
+        await prisma.transaction.create({
+          data: {
+            accountId,
+            type: tx.isIncoming ? 'INCOME' : 'EXPENSE',
+            amount: tx.amount,
+            currency: 'TRX',
+            date: tx.date,
+            description: tx.isIncoming
+              ? `Получено от ${tx.counterparty}...`
+              : `Отправлено на ${tx.counterparty}...`,
+            reference: tx.hash,
+            source: 'API',
+          },
+        })
+        added++
+      }
+
+      try {
+        cryptoBalance = await fetchTronBalance(address)
       } catch { /* use 0 */ }
     }
 

@@ -14,7 +14,7 @@ import {
   LogOut, Sparkles, Shield, Tag, Hash, Repeat2, Zap, Flag,
   TrendingUp, BrainCircuit, HandCoins, CalendarClock, Landmark, Activity,
   Users, Scissors, Trophy, PercentCircle, Receipt, GitBranch,
-  BarChart3, Banknote, LineChart,
+  BarChart3, Banknote, LineChart, Link2,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
@@ -59,6 +59,7 @@ const navGroups: NavGroup[] = [
       { title: 'Активы',      href: '/dashboard/net-worth',           icon: Landmark,        color: '#30D158' },
       { title: 'Инвестиции',  href: '/dashboard/investments',         icon: LineChart,       color: '#007AFF' },
       { title: 'Крипто',      href: '/dashboard/crypto',              icon: Bitcoin,         color: '#FF9F0A' },
+      { title: 'Интеграции',  href: '/dashboard/integrations',        icon: Link2,           color: '#5856D6' },
       { title: 'Отчёты',     href: '/dashboard/reports',             icon: FileText,        color: '#30D158' },
       { title: 'Санкей',      href: '/dashboard/reports/sankey',      icon: BarChart3,       color: '#5856D6' },
       { title: 'Налоги',      href: '/dashboard/reports/tax',         icon: Receipt,         color: '#64748B' },

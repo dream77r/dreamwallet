@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
 import { TRPCError } from '@trpc/server'
-import { detectCryptoNetwork } from '@/lib/crypto-detect'
+import { detectCryptoNetwork, type CryptoNetwork } from '@/lib/crypto-detect'
 import { syncCryptoAccount, getCryptoPrice } from '@/lib/crypto-sync'
 
 export const cryptoRouter = router({
@@ -17,21 +17,22 @@ export const cryptoRouter = router({
     })
   }),
 
-  /** Add a crypto wallet by address (auto-detects network) */
+  /** Add a crypto wallet by address (auto-detects network, use networkHint for EVM chains) */
   addWallet: protectedProcedure
     .input(
       z.object({
         address: z.string().min(10).max(128),
         name: z.string().min(1).max(100).optional(),
         walletId: z.string().cuid(),
+        networkHint: z.enum(['ethereum', 'polygon', 'arbitrum', 'bsc'] as const).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const detected = detectCryptoNetwork(input.address)
+      const detected = detectCryptoNetwork(input.address, input.networkHint as CryptoNetwork | undefined)
       if (!detected.network) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
-          message: 'Не удалось определить сеть по адресу. Поддерживаются: Ethereum, Bitcoin, Solana.',
+          message: 'Не удалось определить сеть по адресу. Поддерживаются: Ethereum, Bitcoin, Solana, TON, TRON, Polygon, Arbitrum, BSC.',
         })
       }
 
@@ -48,6 +49,7 @@ export const cryptoRouter = router({
         where: {
           walletId: input.walletId,
           cryptoAddress: input.address,
+          cryptoNetwork: detected.network,
         },
       })
       if (existing) {
@@ -134,5 +136,29 @@ export const cryptoRouter = router({
         })
       }
       return price
+    }),
+
+  /** Set auto-sync interval for a crypto account */
+  setSyncInterval: protectedProcedure
+    .input(z.object({
+      accountId: z.string().cuid(),
+      intervalMin: z.number().int().min(15).max(1440).nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const account = await ctx.prisma.account.findFirst({
+        where: {
+          id: input.accountId,
+          type: 'CRYPTO',
+          wallet: { userId: ctx.user.id },
+        },
+      })
+      if (!account) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Счёт не найден' })
+      }
+
+      return ctx.prisma.account.update({
+        where: { id: input.accountId },
+        data: { syncIntervalMin: input.intervalMin },
+      })
     }),
 })
