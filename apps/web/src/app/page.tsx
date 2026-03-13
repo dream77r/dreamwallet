@@ -18,8 +18,8 @@ export default function LandingPage() {
           <a href="#pricing" className="hover:text-white transition-colors">Тарифы</a>
         </div>
         <div className="flex items-center gap-3">
-          <Link href="/sign-in" className="text-sm text-white/60 hover:text-white transition-colors hidden sm:block">Войти</Link>
-          <Link href="/sign-up" className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 transition-colors">
+          <Link href="/login" className="text-sm text-white/60 hover:text-white transition-colors hidden sm:block">Войти</Link>
+          <Link href="/register" className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold hover:bg-indigo-400 transition-colors">
             Начать бесплатно
           </Link>
         </div>
@@ -49,11 +49,11 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/sign-up" className="flex items-center gap-2 rounded-2xl bg-indigo-500 px-8 py-4 text-base font-bold hover:bg-indigo-400 transition-all hover:scale-[1.02] active:scale-[0.98]">
+            <Link href="/register" className="flex items-center gap-2 rounded-2xl bg-indigo-500 px-8 py-4 text-base font-bold hover:bg-indigo-400 transition-all hover:scale-[1.02] active:scale-[0.98]">
               Попробовать бесплатно
               <ArrowRight className="h-4 w-4" />
             </Link>
-            <Link href="/sign-in" className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold hover:bg-white/10 transition-all">
+            <Link href="/login" className="flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-8 py-4 text-base font-semibold hover:bg-white/10 transition-all">
               Войти в аккаунт
             </Link>
           </div>
@@ -195,7 +195,7 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/sign-up" className="block text-center rounded-xl border border-white/10 py-3 text-sm font-semibold hover:bg-white/5 transition-colors">
+            <Link href="/register" className="block text-center rounded-xl border border-white/10 py-3 text-sm font-semibold hover:bg-white/5 transition-colors">
               Начать бесплатно
             </Link>
           </div>
@@ -218,7 +218,7 @@ export default function LandingPage() {
                 </li>
               ))}
             </ul>
-            <Link href="/sign-up" className="block text-center rounded-xl bg-indigo-500 py-3 text-sm font-bold hover:bg-indigo-400 transition-colors">
+            <Link href="/register" className="block text-center rounded-xl bg-indigo-500 py-3 text-sm font-bold hover:bg-indigo-400 transition-colors">
               Попробовать 14 дней бесплатно
             </Link>
           </div>
@@ -230,7 +230,7 @@ export default function LandingPage() {
         <div className="max-w-2xl mx-auto">
           <h2 className="text-3xl md:text-5xl font-black mb-4">Возьми финансы под контроль сегодня</h2>
           <p className="text-white/40 mb-10">Присоединяйся к тем, кто уже управляет своими деньгами осознанно</p>
-          <Link href="/sign-up" className="inline-flex items-center gap-2 rounded-2xl bg-indigo-500 px-10 py-4 text-base font-bold hover:bg-indigo-400 transition-all hover:scale-[1.02]">
+          <Link href="/register" className="inline-flex items-center gap-2 rounded-2xl bg-indigo-500 px-10 py-4 text-base font-bold hover:bg-indigo-400 transition-all hover:scale-[1.02]">
             Начать бесплатно
             <ArrowRight className="h-4 w-4" />
           </Link>
@@ -248,8 +248,8 @@ export default function LandingPage() {
           </div>
           <p className="text-xs text-white/20">© 2026 DreamWallet. Сделано с ❤️ для разумных финансов</p>
           <div className="flex gap-4 text-xs text-white/30">
-            <Link href="/sign-in" className="hover:text-white transition-colors">Войти</Link>
-            <Link href="/sign-up" className="hover:text-white transition-colors">Регистрация</Link>
+            <Link href="/login" className="hover:text-white transition-colors">Войти</Link>
+            <Link href="/register" className="hover:text-white transition-colors">Регистрация</Link>
           </div>
         </div>
       </footer>
