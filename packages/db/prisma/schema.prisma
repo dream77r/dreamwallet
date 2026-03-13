@@ -42,6 +42,8 @@ model User {
   personalWallet   Wallet?           @relation("PersonalWallet")
   projects         Project[]         @relation("ProjectOwner")
   projectMembers   ProjectMember[]
+  transactionSeens TransactionSeen[]
+  createdTransactions Transaction[] @relation("TransactionCreator")
   categories       Category[]
   subscriptions    Subscription[]
   notifications    Notification[]
@@ -53,6 +55,15 @@ model User {
   tags             Tag[]
   pushSubscriptions PushSubscription[]
   telegramConn     TelegramConnection?
+
+  // New feature relations
+  familyMembers_   FamilyMember[]
+  splitGroups      SplitGroup[]      @relation("SplitGroupCreator")
+  splitParticipants SplitParticipant[]
+  challenges       Challenge[]
+  achievements     Achievement[]
+  streak           UserStreak?
+  smartRuleSuggestions SmartRuleSuggestion[]
 
   @@map("users")
 }
@@ -126,6 +137,7 @@ model Wallet {
 
   accounts Account[]
   budgets  Budget[]
+  familyWallet FamilyWallet?
 
   @@map("wallets")
 }
@@ -133,6 +145,7 @@ model Wallet {
 enum WalletType {
   PERSONAL
   PROJECT
+  FAMILY
 }
 
 model Account {
@@ -162,6 +175,9 @@ model Account {
   transfersFrom   Transaction[]   @relation("TransferFrom")
   transfersTo     Transaction[]   @relation("TransferTo")
   recurringRules  RecurringRule[] @relation("AccountRecurring")
+  cashbackRules   CashbackRule[]
+  cashbackEntries CashbackEntry[]
+  investmentPositions InvestmentPosition[]
 
   @@map("accounts")
 }
@@ -191,16 +207,22 @@ model Transaction {
   counterparty  String?
   reference     String?
   isRecurring   Boolean         @default(false) @map("is_recurring")
-  source        TransactionSource @default(MANUAL)
-  metadata      Json?
-  createdAt     DateTime        @default(now()) @map("created_at")
-  updatedAt     DateTime        @updatedAt @map("updated_at")
+  source           TransactionSource @default(MANUAL)
+  originalAmount   Decimal?        @map("original_amount") @db.Decimal(15, 2)
+  originalCurrency String?         @map("original_currency")
+  exchangeRate     Decimal?        @map("exchange_rate") @db.Decimal(18, 8)
+  metadata         Json?
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
 
   account       Account         @relation("TransactionAccount", fields: [accountId], references: [id], onDelete: Cascade)
   categoryId    String?         @map("category_id")
   category      Category?       @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdById   String?         @map("created_by_id")
+  createdBy     User?           @relation("TransactionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   tags          TagOnTransaction[]
   attachments   Attachment[]
+  cashbackEntries CashbackEntry[]
 
   // Transfer fields
   transferFromAccountId String?  @map("transfer_from_account_id")
@@ -231,6 +253,8 @@ enum TransactionSource {
   BANK_SYNC
   API
   RECURRING
+  TELEGRAM_SMS
+  TELEGRAM_SCREENSHOT
 }
 
 // ─────────────────────────────────────────────
@@ -257,6 +281,8 @@ model Category {
   budgets      Budget[]
   autoRules    AutoCategoryRule[]
   recurringRules RecurringRule[] @relation("CategoryRecurring")
+  cashbackRules  CashbackRule[]
+  smartRuleSuggestions SmartRuleSuggestion[]
 
   @@unique([userId, name, parentId])
   @@map("categories")
@@ -340,6 +366,9 @@ model Project {
   wallet  Wallet?         @relation("ProjectWallet")
   members ProjectMember[]
   reports Report[]
+  incomeRules     IncomeRule[]
+  payouts         Payout[]
+  transactionSeens TransactionSeen[]
 
   @@map("projects")
 }
@@ -360,6 +389,8 @@ model ProjectMember {
 
   project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  incomeRule IncomeRule?
+  payouts    Payout[]
 
   @@unique([projectId, userId])
   @@map("project_members")
@@ -401,6 +432,7 @@ enum BankProvider {
   SBER
   TBANK
   ALFA
+  SALT_EDGE
   CUSTOM
 }
 
@@ -626,6 +658,7 @@ enum NotificationType {
   BANK_SYNC_ERROR
   BANK_SYNC_COMPLETE
   SYSTEM
+  PROACTIVE_ADVICE
 }
 
 // ─────────────────────────────────────────────
@@ -722,6 +755,7 @@ model TelegramConnection {
   notifyTransactions  Boolean   @default(true)  @map("notify_transactions")
   notifyBudgets       Boolean   @default(true)  @map("notify_budgets")
   notifyGoals         Boolean   @default(false) @map("notify_goals")
+  notifyAdvice        Boolean   @default(true)  @map("notify_advice")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -758,4 +792,377 @@ model AppSetting {
   updatedBy String?  @map("updated_by") // userId
 
   @@map("app_settings")
+}
+
+// ─────────────────────────────────────────────
+// Income Distribution & Payouts
+// ─────────────────────────────────────────────
+
+enum IncomeRuleType {
+  PERCENTAGE
+  FIXED
+}
+
+model IncomeRule {
+  id        String         @id @default(cuid())
+  projectId String         @map("project_id")
+  memberId  String         @map("member_id")
+  type      IncomeRuleType
+  value     Decimal        @db.Decimal(15, 2)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  ProjectMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, memberId])
+  @@unique([memberId])
+  @@map("income_rules")
+}
+
+model Payout {
+  id        String   @id @default(cuid())
+  projectId String   @map("project_id")
+  memberId  String   @map("member_id")
+  amount    Decimal  @db.Decimal(15, 2)
+  period    String   // "2026-03"
+  note      String?
+  paidAt    DateTime @default(now()) @map("paid_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  member  ProjectMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, period])
+  @@map("payouts")
+}
+
+model TransactionSeen {
+  id         String   @id @default(cuid())
+  projectId  String   @map("project_id")
+  userId     String   @map("user_id")
+  lastSeenAt DateTime @default(now()) @map("last_seen_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@map("transaction_seens")
+}
+
+// ─────────────────────────────────────────────
+// Exchange Rates (Multi-Currency)
+// ─────────────────────────────────────────────
+
+model ExchangeRate {
+  id       String   @id @default(cuid())
+  fromCur  String   @map("from_cur")
+  toCur    String   @map("to_cur")
+  rate     Decimal  @db.Decimal(18, 8)
+  date     DateTime @db.Date
+  source   String   @default("CBR") // CBR, ECB, manual
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([fromCur, toCur, date, source])
+  @@index([fromCur, toCur, date])
+  @@map("exchange_rates")
+}
+
+// ─────────────────────────────────────────────
+// Family Budget
+// ─────────────────────────────────────────────
+
+model FamilyWallet {
+  id        String          @id @default(cuid())
+  name      String
+  currency  String          @default("RUB")
+  walletId  String          @unique @map("wallet_id")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  wallet    Wallet          @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  members   FamilyMember[]
+  invites   FamilyInvite[]
+
+  @@map("family_wallets")
+}
+
+enum FamilyRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+model FamilyMember {
+  id              String       @id @default(cuid())
+  familyWalletId  String       @map("family_wallet_id")
+  userId          String       @map("user_id")
+  role            FamilyRole   @default(MEMBER)
+  spendingLimit   Decimal?     @db.Decimal(15, 2) @map("spending_limit")
+  joinedAt        DateTime     @default(now()) @map("joined_at")
+
+  familyWallet    FamilyWallet @relation(fields: [familyWalletId], references: [id], onDelete: Cascade)
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([familyWalletId, userId])
+  @@map("family_members")
+}
+
+model FamilyInvite {
+  id              String       @id @default(cuid())
+  familyWalletId  String       @map("family_wallet_id")
+  token           String       @unique
+  expiresAt       DateTime     @map("expires_at")
+  usedAt          DateTime?    @map("used_at")
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  familyWallet    FamilyWallet @relation(fields: [familyWalletId], references: [id], onDelete: Cascade)
+
+  @@map("family_invites")
+}
+
+// ─────────────────────────────────────────────
+// Split Expenses
+// ─────────────────────────────────────────────
+
+model SplitGroup {
+  id          String             @id @default(cuid())
+  name        String
+  currency    String             @default("RUB")
+  createdById String             @map("created_by_id")
+  shareToken  String?            @unique @map("share_token")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+
+  createdBy    User              @relation("SplitGroupCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  participants SplitParticipant[]
+  expenses     SplitExpense[]
+
+  @@map("split_groups")
+}
+
+model SplitParticipant {
+  id           String        @id @default(cuid())
+  groupId      String        @map("group_id")
+  userId       String?       @map("user_id")
+  externalName String?       @map("external_name")
+  externalEmail String?      @map("external_email")
+
+  group        SplitGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  shares       SplitShare[]
+  paidExpenses SplitExpense[] @relation("SplitExpensePayer")
+  payments     SplitPayment[] @relation("SplitPaymentFrom")
+  receivedPayments SplitPayment[] @relation("SplitPaymentTo")
+
+  @@map("split_participants")
+}
+
+model SplitExpense {
+  id          String        @id @default(cuid())
+  groupId     String        @map("group_id")
+  paidById    String        @map("paid_by_id")
+  description String
+  amount      Decimal       @db.Decimal(15, 2)
+  splitType   String        @default("equal") @map("split_type") // equal, custom, percent
+  date        DateTime      @default(now()) @db.Date
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  group       SplitGroup    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  paidBy      SplitParticipant @relation("SplitExpensePayer", fields: [paidById], references: [id], onDelete: Cascade)
+  shares      SplitShare[]
+
+  @@map("split_expenses")
+}
+
+model SplitShare {
+  id            String           @id @default(cuid())
+  expenseId     String           @map("expense_id")
+  participantId String           @map("participant_id")
+  amount        Decimal          @db.Decimal(15, 2)
+
+  expense       SplitExpense     @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  participant   SplitParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@unique([expenseId, participantId])
+  @@map("split_shares")
+}
+
+model SplitPayment {
+  id           String           @id @default(cuid())
+  groupId      String           @map("group_id")
+  fromId       String           @map("from_id")
+  toId         String           @map("to_id")
+  amount       Decimal          @db.Decimal(15, 2)
+  createdAt    DateTime         @default(now()) @map("created_at")
+
+  from         SplitParticipant @relation("SplitPaymentFrom", fields: [fromId], references: [id], onDelete: Cascade)
+  to           SplitParticipant @relation("SplitPaymentTo", fields: [toId], references: [id], onDelete: Cascade)
+
+  @@map("split_payments")
+}
+
+// ─────────────────────────────────────────────
+// Gamification
+// ─────────────────────────────────────────────
+
+enum ChallengeStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Challenge {
+  id         String          @id @default(cuid())
+  userId     String          @map("user_id")
+  type       String          // no_spend, budget_limit, savings_target, streak_keep
+  title      String
+  status     ChallengeStatus @default(ACTIVE)
+  progress   Int             @default(0)
+  target     Int
+  config     Json?           // category, amount, etc.
+  startsAt   DateTime        @map("starts_at")
+  endsAt     DateTime        @map("ends_at")
+  createdAt  DateTime        @default(now()) @map("created_at")
+
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("challenges")
+}
+
+model Achievement {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String   // first_tx, tx_100, budget_master, streak_7, streak_30, goal_reached
+  title     String
+  icon      String
+  earnedAt  DateTime @default(now()) @map("earned_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@map("achievements")
+}
+
+model UserStreak {
+  id             String   @id @default(cuid())
+  userId         String   @unique @map("user_id")
+  currentStreak  Int      @default(0) @map("current_streak")
+  longestStreak  Int      @default(0) @map("longest_streak")
+  lastActiveDate DateTime? @map("last_active_date") @db.Date
+  totalPoints    Int      @default(0) @map("total_points")
+  level          Int      @default(1)
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_streaks")
+}
+
+// ─────────────────────────────────────────────
+// Cashback Tracker
+// ─────────────────────────────────────────────
+
+model CashbackRule {
+  id          String   @id @default(cuid())
+  accountId   String   @map("account_id")
+  categoryId  String?  @map("category_id")
+  rate        Decimal  @db.Decimal(5, 2) // percentage
+  maxMonthly  Decimal? @db.Decimal(15, 2) @map("max_monthly")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@map("cashback_rules")
+}
+
+model CashbackEntry {
+  id            String   @id @default(cuid())
+  accountId     String   @map("account_id")
+  transactionId String?  @map("transaction_id")
+  amount        Decimal  @db.Decimal(15, 2)
+  isReceived    Boolean  @default(false) @map("is_received")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  account       Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transaction   Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+
+  @@map("cashback_entries")
+}
+
+// ─────────────────────────────────────────────
+// Smart Rule Suggestions
+// ─────────────────────────────────────────────
+
+enum SmartRuleStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+model SmartRuleSuggestion {
+  id          String          @id @default(cuid())
+  userId      String          @map("user_id")
+  pattern     String
+  field       String          @default("description")
+  categoryId  String          @map("category_id")
+  confidence  Decimal         @db.Decimal(5, 2)
+  status      SmartRuleStatus @default(PENDING)
+  matchCount  Int             @default(0) @map("match_count")
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category    Category        @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("smart_rule_suggestions")
+}
+
+// ─────────────────────────────────────────────
+// Investment Tracker
+// ─────────────────────────────────────────────
+
+model InvestmentPosition {
+  id        String    @id @default(cuid())
+  accountId String    @map("account_id")
+  ticker    String
+  name      String?
+  quantity  Decimal   @db.Decimal(15, 6)
+  avgPrice  Decimal   @db.Decimal(15, 2) @map("avg_price")
+  currency  String    @default("RUB")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  account   Account   @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  dividends DividendPayment[]
+
+  @@unique([accountId, ticker])
+  @@map("investment_positions")
+}
+
+model DividendPayment {
+  id         String   @id @default(cuid())
+  positionId String   @map("position_id")
+  amount     Decimal  @db.Decimal(15, 2)
+  date       DateTime @db.Date
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  position   InvestmentPosition @relation(fields: [positionId], references: [id], onDelete: Cascade)
+
+  @@map("dividend_payments")
+}
+
+model StockPrice {
+  id     String   @id @default(cuid())
+  ticker String
+  price  Decimal  @db.Decimal(15, 2)
+  date   DateTime @db.Date
+
+  @@unique([ticker, date])
+  @@index([ticker, date])
+  @@map("stock_prices")
 }

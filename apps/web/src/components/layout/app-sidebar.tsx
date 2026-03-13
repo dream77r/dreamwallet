@@ -12,7 +12,7 @@ import {
   LayoutDashboard, ArrowLeftRight, CreditCard, PieChart,
   FolderKanban, FolderOpen, Target, Upload, Settings, Wallet,
   LogOut, Sparkles, Shield, Tag, Hash, Repeat2, Zap, Flag,
-  TrendingUp, BrainCircuit, HandCoins, CalendarClock, Landmark,
+  TrendingUp, BrainCircuit, HandCoins, CalendarClock, Landmark, Activity,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
@@ -50,6 +50,7 @@ const navGroups: NavGroup[] = [
     items: [
       { title: 'Аналитика',   href: '/dashboard/analytics',           icon: PieChart,        color: '#007AFF' },
       { title: 'Прогноз',     href: '/dashboard/forecast',            icon: TrendingUp,      color: '#5AC8FA' },
+      { title: 'Привычки',    href: '/dashboard/habits',              icon: Activity,        color: '#FF2D55' },
       { title: 'Активы',      href: '/dashboard/net-worth',           icon: Landmark,        color: '#30D158' },
       { title: 'Крипто',      href: '/dashboard/crypto',              icon: Bitcoin,         color: '#FF9F0A' },
       { title: 'Отчёты',     href: '/dashboard/reports',             icon: FileText,        color: '#30D158' },

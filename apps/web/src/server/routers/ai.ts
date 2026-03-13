@@ -9,17 +9,24 @@ import { z } from 'zod'
 import { router, protectedProcedure, superAdminProcedure } from '../trpc'
 import { TRPCError } from '@trpc/server'
 import { OPENROUTER_MODELS, withRetry } from '@/lib/ai-models'
+import { aiCache } from '@/lib/redis'
+import { detectIntentFast } from '@dreamwallet/shared'
+import type { ChatBlock } from '@dreamwallet/shared'
+import {
+  executeShowBalance,
+  executeShowExpenses,
+  executeShowCategorySpend,
+  executeCreateBudget,
+  executeCreateTransaction,
+  executeShowBudgets,
+  executeShowGoals,
+  executeShowLast,
+} from '@/lib/chat-executors'
 
 export type { OpenRouterModel } from '@/lib/ai-models'
 
 const SETTINGS_KEY_MODELS = 'ai.availableModels'
 const SETTINGS_KEY_DEFAULT = 'ai.defaultModel'
-
-// ── In-memory caches for new AI features ─────────────────────────────────
-interface AnomalyCacheEntry { data: unknown[]; expiresAt: number }
-interface InsightsCacheEntry { data: unknown[]; expiresAt: number }
-const anomalyCache = new Map<string, AnomalyCacheEntry>()
-const insightsCache = new Map<string, InsightsCacheEntry>()
 
 // ── Helper: call OpenRouter ───────────────────────────────────────────────
 
@@ -176,17 +183,40 @@ export const aiRouter = router({
   // ── AI Chat Advisor ────────────────────────────────────────────────────
   chat: protectedProcedure
     .input(z.object({ message: z.string().min(1).max(500) }))
-    .mutation(async ({ ctx, input }) => {
-      // Get user's preferred model
+    .mutation(async ({ ctx, input }): Promise<{ blocks: ChatBlock[] }> => {
+      const userId = ctx.user.id
+
+      // 1. Fast intent detection (regex, no AI)
+      const intent = detectIntentFast(input.message)
+
+      // 2. If confident enough — execute directly
+      if (intent.confidence >= 0.5 && intent.intent !== 'unknown') {
+        const executors: Record<string, () => Promise<ChatBlock[]>> = {
+          show_balance: () => executeShowBalance(ctx.prisma, userId),
+          show_expenses: () => executeShowExpenses(ctx.prisma, userId, intent.params),
+          show_category_spend: () => executeShowCategorySpend(ctx.prisma, userId, intent.params),
+          create_budget: () => executeCreateBudget(ctx.prisma, userId, intent.params),
+          create_transaction: () => executeCreateTransaction(ctx.prisma, userId, intent.params),
+          show_budgets: () => executeShowBudgets(ctx.prisma, userId),
+          show_goals: () => executeShowGoals(ctx.prisma, userId),
+          show_last: () => executeShowLast(ctx.prisma, userId),
+        }
+        const executor = executors[intent.intent]
+        if (executor) {
+          const blocks = await executor()
+          return { blocks }
+        }
+      }
+
+      // 3. For advice/unknown — call AI
       const userRecord = await ctx.prisma.user.findUnique({
-        where: { id: ctx.user.id },
+        where: { id: userId },
         select: { aiModel: true },
       })
       const defaultRaw = await getSetting(ctx.prisma, SETTINGS_KEY_DEFAULT)
       const modelToUse = userRecord?.aiModel ?? defaultRaw ?? 'anthropic/claude-haiku-4-5-20251001'
 
-      // Get recent transactions for context
-      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
+      const wallet = await ctx.prisma.wallet.findFirst({ where: { userId } })
       const recentTransactions = wallet
         ? await ctx.prisma.transaction.findMany({
             where: { account: { walletId: wallet.id } },
@@ -216,11 +246,9 @@ ${summary || 'Транзакции не найдены.'}
         maxTokens: 800,
       })
 
-      if (!reply) {
-        return { reply: 'К сожалению, AI-сервис временно недоступен. Попробуйте позже.' }
+      return {
+        blocks: [{ type: 'text', content: reply || 'К сожалению, AI-сервис временно недоступен. Попробуйте позже.' }],
       }
-
-      return { reply }
     }),
 
   // ── AI Auto-Rule Suggestion ────────────────────────────────────────────
@@ -347,10 +375,9 @@ ${summary || 'Транзакции не найдены.'}
 
   // ── Detect Anomalies ───────────────────────────────────────────────────
   detectAnomalies: protectedProcedure.query(async ({ ctx }) => {
-    // In-memory cache per user, 6h TTL
-    const cacheKey = `anomalies:${ctx.user.id}`
-    const cached = anomalyCache.get(cacheKey)
-    if (cached && Date.now() < cached.expiresAt) return cached.data
+    const userId = ctx.user.id
+    const cached = await aiCache.get<unknown[]>(`ai:${userId}:anomalies`)
+    if (cached) return cached
 
     const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
     if (!wallet) return []
@@ -411,7 +438,7 @@ ${txSummary}
       if (!match) return []
       const parsed = anomalySchema.safeParse(JSON.parse(match[0]))
       const data = parsed.success ? parsed.data : []
-      anomalyCache.set(cacheKey, { data, expiresAt: Date.now() + 6 * 60 * 60 * 1000 })
+      await aiCache.set(`ai:${userId}:anomalies`, data, 6 * 3600)
       return data
     } catch {
       return []
@@ -420,9 +447,9 @@ ${txSummary}
 
   // ── Get Insights ───────────────────────────────────────────────────────
   getInsights: protectedProcedure.query(async ({ ctx }) => {
-    const cacheKey = `insights:${ctx.user.id}`
-    const cached = insightsCache.get(cacheKey)
-    if (cached && Date.now() < cached.expiresAt) return cached.data
+    const userId = ctx.user.id
+    const cached = await aiCache.get<unknown[]>(`ai:${userId}:insights`)
+    if (cached) return cached
 
     const wallet = await ctx.prisma.wallet.findFirst({ where: { userId: ctx.user.id } })
     if (!wallet) return []
@@ -500,10 +527,147 @@ ${txSummary}
       if (!match) return []
       const parsed = insightSchema.safeParse(JSON.parse(match[0]))
       const data = parsed.success ? parsed.data : []
-      insightsCache.set(cacheKey, { data, expiresAt: Date.now() + 24 * 60 * 60 * 1000 })
+      await aiCache.set(`ai:${userId}:insights`, data, 24 * 3600)
       return data
     } catch {
       return []
+    }
+  }),
+
+  // ── Analyze Habits ─────────────────────────────────────────────────────
+  analyzeHabits: protectedProcedure.query(async ({ ctx }) => {
+    const userId = ctx.user.id
+
+    type HabitsResult = {
+      patterns: Array<{ merchant: string; count: number; avgAmount: number; description: string }>
+      trends: Array<{ category: string; change: number; direction: 'growing' | 'shrinking' | 'stable' }>
+      recommendations: string[]
+    }
+
+    const cached = await aiCache.get<HabitsResult>(`ai:${userId}:habits`)
+    if (cached) return cached
+
+    const wallet = await ctx.prisma.wallet.findFirst({ where: { userId } })
+    if (!wallet) return { patterns: [], trends: [], recommendations: [] }
+
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+    const accounts = await ctx.prisma.account.findMany({
+      where: { walletId: wallet.id },
+      select: { id: true },
+    })
+    const accountIds = accounts.map(a => a.id)
+
+    const transactions = await ctx.prisma.transaction.findMany({
+      where: {
+        accountId: { in: accountIds },
+        date: { gte: sixMonthsAgo },
+        type: 'EXPENSE',
+      },
+      include: { category: { select: { name: true } } },
+      orderBy: { date: 'desc' },
+    })
+
+    if (transactions.length < 10) return { patterns: [], trends: [], recommendations: [] }
+
+    // Aggregate: top merchants
+    const merchantMap = new Map<string, { count: number; total: number }>()
+    for (const t of transactions) {
+      const key = (t.description ?? '').toLowerCase().trim()
+      if (!key) continue
+      const entry = merchantMap.get(key) ?? { count: 0, total: 0 }
+      entry.count++
+      entry.total += Number(t.amount)
+      merchantMap.set(key, entry)
+    }
+    const topMerchants = [...merchantMap.entries()]
+      .filter(([, v]) => v.count >= 3)
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 10)
+      .map(([name, v]) => `${name}: ${v.count} раз, средний чек ${Math.round(v.total / v.count)} руб`)
+      .join('\n')
+
+    // Aggregate: spending by day of week
+    const daySpend = [0, 0, 0, 0, 0, 0, 0]
+    const dayCount = [0, 0, 0, 0, 0, 0, 0]
+    for (const t of transactions) {
+      const day = t.date.getDay()
+      daySpend[day] += Number(t.amount)
+      dayCount[day]++
+    }
+    const days = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+    const dayStr = days.map((d, i) => `${d}: ${Math.round(daySpend[i])} руб (${dayCount[i]} операций)`).join('\n')
+
+    // Aggregate: category trends (first 3 months vs last 3 months)
+    const threeMonthsAgo = new Date()
+    threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+    const catFirst = new Map<string, number>()
+    const catLast = new Map<string, number>()
+    for (const t of transactions) {
+      const cat = t.category?.name ?? 'Без категории'
+      const map = t.date < threeMonthsAgo ? catFirst : catLast
+      map.set(cat, (map.get(cat) ?? 0) + Number(t.amount))
+    }
+    const allCats = new Set([...catFirst.keys(), ...catLast.keys()])
+    const trendsStr = [...allCats].map(cat => {
+      const first = catFirst.get(cat) ?? 0
+      const last = catLast.get(cat) ?? 0
+      const change = first > 0 ? Math.round(((last - first) / first) * 100) : 0
+      return `${cat}: ${Math.round(first)} → ${Math.round(last)} руб (${change > 0 ? '+' : ''}${change}%)`
+    }).join('\n')
+
+    // AI analysis
+    const userRecord = await ctx.prisma.user.findUnique({ where: { id: userId }, select: { aiModel: true } })
+    const defaultRaw = await getSetting(ctx.prisma, SETTINGS_KEY_DEFAULT)
+    const model = userRecord?.aiModel ?? defaultRaw ?? 'anthropic/claude-haiku-4-5-20251001'
+
+    const prompt = `Проанализируй финансовые привычки пользователя за 6 месяцев.
+
+Частые траты:
+${topMerchants || 'нет данных'}
+
+Расходы по дням недели:
+${dayStr}
+
+Тренды по категориям (первые 3 мес vs последние 3 мес):
+${trendsStr}
+
+Ответь ТОЛЬКО JSON (без markdown):
+{
+  "patterns": [{"merchant":"название","count":число,"avgAmount":число,"description":"краткое описание привычки"}],
+  "trends": [{"category":"название","change":число_процентов,"direction":"growing|shrinking|stable"}],
+  "recommendations": ["совет1","совет2","совет3"]
+}`
+
+    const raw = await callOpenRouter({ model, prompt, maxTokens: 800, systemPrompt: 'Ты финансовый аналитик. Отвечай на русском.' })
+
+    const habitsSchema = z.object({
+      patterns: z.array(z.object({
+        merchant: z.string(),
+        count: z.number(),
+        avgAmount: z.number(),
+        description: z.string(),
+      })),
+      trends: z.array(z.object({
+        category: z.string(),
+        change: z.number(),
+        direction: z.enum(['growing', 'shrinking', 'stable']),
+      })),
+      recommendations: z.array(z.string()),
+    })
+
+    const fallback: HabitsResult = { patterns: [], trends: [], recommendations: [] }
+
+    try {
+      const match = raw.match(/\{[\s\S]*\}/)
+      if (!match) return fallback
+      const parsed = habitsSchema.safeParse(JSON.parse(match[0]))
+      if (!parsed.success) return fallback
+      await aiCache.set(`ai:${userId}:habits`, parsed.data, 48 * 3600)
+      return parsed.data
+    } catch {
+      return fallback
     }
   }),
 

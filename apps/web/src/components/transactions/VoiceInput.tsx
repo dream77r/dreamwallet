@@ -7,12 +7,13 @@ import { cn } from '@/lib/utils'
 
 interface VoiceInputProps {
   onResult: (text: string) => void
+  onTranscript?: (text: string) => void
   className?: string
 }
 
 type RecordingState = 'idle' | 'recording' | 'processing'
 
-export function VoiceInput({ onResult, className }: VoiceInputProps) {
+export function VoiceInput({ onResult, onTranscript, className }: VoiceInputProps) {
   const [state, setState] = useState<RecordingState>('idle')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -39,7 +40,10 @@ export function VoiceInput({ onResult, className }: VoiceInputProps) {
           const res = await fetch('/api/voice', { method: 'POST', body: formData })
           if (res.ok) {
             const { text } = await res.json() as { text: string }
-            if (text) onResult(text)
+            if (text) {
+              onTranscript?.(text)
+              onResult(text)
+            }
           }
         } finally {
           setState('idle')

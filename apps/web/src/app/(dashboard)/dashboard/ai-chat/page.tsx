@@ -7,10 +7,14 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { BrainCircuit, Send, Loader2, User } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
+import { ChatBlockRenderer } from '@/components/ai/ChatBlockRenderer'
+import { VoiceInput } from '@/components/transactions/VoiceInput'
+import type { ChatBlock } from '@dreamwallet/shared'
 
 interface Message {
   role: 'user' | 'assistant'
-  content: string
+  content?: string
+  blocks?: ChatBlock[]
 }
 
 export default function AiChatPage() {
@@ -20,12 +24,12 @@ export default function AiChatPage() {
 
   const chatMutation = trpc.ai.chat.useMutation({
     onSuccess: (data) => {
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.reply }])
+      setMessages((prev) => [...prev, { role: 'assistant', blocks: data.blocks }])
     },
     onError: (err) => {
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', content: `Ошибка: ${err.message}` },
+        { role: 'assistant', blocks: [{ type: 'text', content: `Ошибка: ${err.message}` }] },
       ])
     },
   })
@@ -34,14 +38,17 @@ export default function AiChatPage() {
     scrollRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, chatMutation.isPending])
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    const trimmed = input.trim()
+  function sendMessage(text: string) {
+    const trimmed = text.trim()
     if (!trimmed || chatMutation.isPending) return
-
     setMessages((prev) => [...prev, { role: 'user', content: trimmed }])
     setInput('')
     chatMutation.mutate({ message: trimmed })
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    sendMessage(input)
   }
 
   return (
@@ -64,7 +71,7 @@ export default function AiChatPage() {
                 <div>
                   <p className="font-medium">Привет! Я ваш финансовый советник.</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Спросите меня о расходах, категориях или финансовых привычках.
+                    Спросите меня о расходах, балансе, бюджетах или попросите совет.
                   </p>
                 </div>
               </div>
@@ -81,13 +88,16 @@ export default function AiChatPage() {
                   </div>
                 )}
                 <div
-                  className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm whitespace-pre-wrap ${
+                  className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
                     msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
+                      ? 'bg-primary text-primary-foreground whitespace-pre-wrap'
                       : 'bg-muted'
                   }`}
                 >
-                  {msg.content}
+                  {msg.role === 'user' && msg.content}
+                  {msg.role === 'assistant' && msg.blocks && (
+                    <ChatBlockRenderer blocks={msg.blocks} />
+                  )}
                 </div>
                 {msg.role === 'user' && (
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
@@ -123,6 +133,7 @@ export default function AiChatPage() {
               disabled={chatMutation.isPending}
               className="flex-1"
             />
+            <VoiceInput onResult={(text) => sendMessage(text)} />
             <Button type="submit" size="icon" disabled={!input.trim() || chatMutation.isPending}>
               <Send className="h-4 w-4" />
             </Button>

@@ -6,6 +6,7 @@ import { csvImportProcessor } from './processors/csv-import'
 import { categorizeProcessor } from './processors/categorize'
 import { notificationProcessor } from './processors/notification'
 import { recurringProcessor } from './processors/recurring'
+import { processProactiveAdvice } from './processors/proactive-advice'
 import { createBot } from './telegram/bot'
 
 const logger = pino({ name: 'dreamwallet-worker' })
@@ -43,6 +44,7 @@ createWorker('csv-import', csvImportProcessor)
 createWorker('categorize', categorizeProcessor)
 createWorker('notification', notificationProcessor)
 createWorker('recurring', recurringProcessor)
+createWorker('proactive-advice', processProactiveAdvice)
 
 logger.info('All workers started')
 
@@ -66,6 +68,17 @@ notifQueue.add('recurring-reminder', { type: 'recurring_reminder' }, {
   logger.error(err, 'Failed to schedule recurring reminder cron')
 })
 
+
+// Proactive advice — every day at 20:00 Moscow time
+const proactiveAdviceQueue = new Queue('proactive-advice', { connection })
+proactiveAdviceQueue.add('proactive-advice-daily', {}, {
+  repeat: { pattern: '0 20 * * *', tz: 'Europe/Moscow' },
+  jobId: 'proactive-advice-daily-cron',
+}).then(() => {
+  logger.info('Proactive advice cron scheduled (daily 20:00 Europe/Moscow)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule proactive advice cron')
+})
 
 // Recurring transactions — every day at 09:00 Moscow time
 const recurringQueue = new Queue('recurring', { connection })
