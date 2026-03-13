@@ -5,8 +5,12 @@ node_modules/
 # Build
 dist/
 .next/
+.next-build/
+.next.backup/
+.next.broken.*/
 out/
 .turbo/
+*.tsbuildinfo
 
 # Environment
 .env
@@ -18,6 +22,7 @@ out/
 .idea/
 *.swp
 *.swo
+*.bak
 *~
 
 # OS

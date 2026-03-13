@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { router, protectedProcedure } from '../trpc'
 import { TRPCError } from '@trpc/server'
-import { createProjectSchema, updateProjectSchema } from '@dreamwallet/shared'
+import { createProjectSchema, updateProjectSchema, addProjectExpenseSchema } from '@dreamwallet/shared'
 import { PLAN_LIMITS } from '@dreamwallet/shared'
 
 export const projectRouter = router({
@@ -189,6 +189,96 @@ export const projectRouter = router({
           role: input.role,
         },
       })
+    }),
+
+  // Add expense (EDITOR+)
+  addExpense: protectedProcedure
+    .input(addProjectExpenseSchema)
+    .mutation(async ({ ctx, input }) => {
+      const member = await ctx.prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId: input.projectId, userId: ctx.user.id } },
+      })
+      if (!member || member.role === 'VIEWER') {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Недостаточно прав для добавления расходов' })
+      }
+
+      const wallet = await ctx.prisma.wallet.findUnique({
+        where: { projectId: input.projectId },
+        include: { accounts: { take: 1 } },
+      })
+      if (!wallet?.accounts[0]) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Кошелёк проекта не найден' })
+      }
+
+      const tx = await ctx.prisma.transaction.create({
+        data: {
+          accountId: wallet.accounts[0].id,
+          type: 'EXPENSE',
+          amount: input.amount,
+          currency: wallet.currency,
+          date: input.date,
+          description: input.description,
+          categoryId: input.categoryId,
+          source: 'MANUAL',
+          createdById: ctx.user.id,
+        },
+      })
+
+      // Update account balance
+      await ctx.prisma.account.update({
+        where: { id: wallet.accounts[0].id },
+        data: { balance: { decrement: input.amount } },
+      })
+
+      return tx
+    }),
+
+  // Get unseen transaction count
+  getUnseenCount: protectedProcedure
+    .input(z.object({ projectId: z.string().cuid() }))
+    .query(async ({ ctx, input }) => {
+      const member = await ctx.prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId: input.projectId, userId: ctx.user.id } },
+      })
+      if (!member) throw new TRPCError({ code: 'NOT_FOUND' })
+
+      const seen = await ctx.prisma.transactionSeen.findUnique({
+        where: { projectId_userId: { projectId: input.projectId, userId: ctx.user.id } },
+      })
+
+      const wallet = await ctx.prisma.wallet.findUnique({
+        where: { projectId: input.projectId },
+        include: { accounts: { select: { id: true } } },
+      })
+      if (!wallet) return 0
+
+      const accountIds = wallet.accounts.map(a => a.id)
+
+      const count = await ctx.prisma.transaction.count({
+        where: {
+          accountId: { in: accountIds },
+          createdById: { not: ctx.user.id },
+          ...(seen ? { createdAt: { gt: seen.lastSeenAt } } : {}),
+        },
+      })
+
+      return count
+    }),
+
+  // Mark transactions as seen
+  markSeen: protectedProcedure
+    .input(z.object({ projectId: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.transactionSeen.upsert({
+        where: { projectId_userId: { projectId: input.projectId, userId: ctx.user.id } },
+        update: { lastSeenAt: new Date() },
+        create: {
+          projectId: input.projectId,
+          userId: ctx.user.id,
+          lastSeenAt: new Date(),
+        },
+      })
+      return { success: true }
     }),
 
   // Remove member

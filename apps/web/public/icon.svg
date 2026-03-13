@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <!-- Background gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0f0ff;stop-opacity:1" />
+    </linearGradient>
+
+    <!-- Wallet body gradient -->
+    <linearGradient id="walletGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#5B5BD6" />
+      <stop offset="50%" style="stop-color:#4040B0" />
+      <stop offset="100%" style="stop-color:#2D2D8F" />
+    </linearGradient>
+
+    <!-- Wallet flap gradient -->
+    <linearGradient id="flapGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6E6EE0" />
+      <stop offset="100%" style="stop-color:#4848B8" />
+    </linearGradient>
+
+    <!-- Gold accent gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD966" />
+      <stop offset="100%" style="stop-color:#F0B429" />
+    </linearGradient>
+
+    <!-- Blue swirl gradient -->
+    <linearGradient id="swirlBlue" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#4FC3F7;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#0288D1;stop-opacity:0.6" />
+    </linearGradient>
+
+    <!-- Gold swirl gradient -->
+    <linearGradient id="swirlGold" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#FFD966;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#F0B429;stop-opacity:0.5" />
+    </linearGradient>
+
+    <!-- Pink swirl gradient -->
+    <linearGradient id="swirlPink" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#F48FB1;stop-opacity:0.9" />
+      <stop offset="100%" style="stop-color:#E91E8C;stop-opacity:0.5" />
+    </linearGradient>
+
+    <!-- Card slots gradient -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD966" />
+      <stop offset="100%" style="stop-color:#E6A817" />
+    </linearGradient>
+
+    <!-- Drop shadow filter -->
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#2D2D8F" flood-opacity="0.25"/>
+    </filter>
+
+    <!-- Glow filter -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Star sparkle filter -->
+    <filter id="sparkle">
+      <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <clipPath id="roundedClip">
+      <rect width="512" height="512" rx="112" ry="112"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" ry="112" fill="url(#bgGrad)"/>
+
+  <!-- Border -->
+  <rect x="6" y="6" width="500" height="500" rx="108" ry="108"
+        fill="none" stroke="#3030A0" stroke-width="10" opacity="0.9"/>
+
+  <!-- ===== SWIRLS (behind wallet) ===== -->
+  <!-- Blue swirl left -->
+  <path d="M 195 305 C 185 270, 175 240, 190 200 C 200 170, 215 150, 225 120"
+        fill="none" stroke="url(#swirlBlue)" stroke-width="7" stroke-linecap="round"
+        opacity="0.9" filter="url(#glow)"/>
+
+  <!-- Gold swirl middle -->
+  <path d="M 218 300 C 215 265, 220 235, 235 200 C 248 168, 260 148, 265 118"
+        fill="none" stroke="url(#swirlGold)" stroke-width="6" stroke-linecap="round"
+        opacity="0.9" filter="url(#glow)"/>
+
+  <!-- Pink swirl right -->
+  <path d="M 240 298 C 248 262, 265 238, 288 205 C 308 175, 325 155, 340 125"
+        fill="none" stroke="url(#swirlPink)" stroke-width="6" stroke-linecap="round"
+        opacity="0.9" filter="url(#glow)"/>
+
+  <!-- ===== WALLET BODY ===== -->
+  <g filter="url(#shadow)">
+    <!-- Main wallet body -->
+    <rect x="108" y="270" width="296" height="190" rx="18" ry="18" fill="url(#walletGrad)"/>
+
+    <!-- Wallet top flap -->
+    <rect x="108" y="242" width="296" height="48" rx="14" ry="14" fill="url(#flapGrad)"/>
+
+    <!-- Card slots (golden lines at top of wallet) -->
+    <rect x="130" y="248" width="60" height="8" rx="4" fill="url(#cardGrad)" opacity="0.9"/>
+    <rect x="200" y="248" width="60" height="8" rx="4" fill="url(#cardGrad)" opacity="0.9"/>
+    <rect x="270" y="248" width="60" height="8" rx="4" fill="url(#cardGrad)" opacity="0.9"/>
+
+    <!-- Wallet clasp button -->
+    <circle cx="380" cy="340" r="16" fill="url(#goldGrad)"/>
+    <circle cx="380" cy="340" r="10" fill="#F0B429"/>
+    <circle cx="380" cy="340" r="5" fill="#FFE08A"/>
+
+    <!-- Wallet shine highlight -->
+    <rect x="118" y="258" width="120" height="6" rx="3" fill="white" opacity="0.15"/>
+    <rect x="118" y="278" width="260" height="160" rx="14" fill="white" opacity="0.04"/>
+  </g>
+
+  <!-- ===== AIRPLANE ===== -->
+  <g transform="translate(168, 108) rotate(-30)" filter="url(#sparkle)">
+    <!-- Fuselage -->
+    <ellipse cx="0" cy="0" rx="28" ry="9" fill="#1565C0"/>
+    <!-- Wings -->
+    <path d="M -8,-5 L -18,-22 L 2,-18 Z" fill="#1976D2"/>
+    <path d="M -8,5 L -18,22 L 2,18 Z" fill="#1976D2"/>
+    <!-- Tail -->
+    <path d="M -22,-4 L -30,-14 L -18,-8 Z" fill="#1565C0"/>
+    <path d="M -22,4 L -30,14 L -18,8 Z" fill="#1565C0"/>
+    <!-- Nose -->
+    <ellipse cx="22" cy="0" rx="8" ry="5" fill="#42A5F5"/>
+    <!-- Window shine -->
+    <circle cx="8" cy="-2" r="3" fill="white" opacity="0.7"/>
+    <circle cx="-2" cy="-2" r="3" fill="white" opacity="0.5"/>
+  </g>
+
+  <!-- ===== HOUSE ===== -->
+  <g transform="translate(310, 118)" filter="url(#sparkle)">
+    <!-- Roof -->
+    <polygon points="0,-28 -26,0 26,0" fill="#E53935"/>
+    <!-- Walls -->
+    <rect x="-20" y="0" width="40" height="28" fill="#EF5350"/>
+    <!-- Door -->
+    <rect x="-7" y="10" width="14" height="18" rx="2" fill="#8B0000"/>
+    <!-- Window left -->
+    <rect x="-17" y="4" width="10" height="10" rx="1" fill="#90CAF9"/>
+    <!-- Window right -->
+    <rect x="7" y="4" width="10" height="10" rx="1" fill="#90CAF9"/>
+    <!-- Roof shine -->
+    <line x1="-12" y1="-8" x2="-4" y2="-18" stroke="white" stroke-width="2" opacity="0.4" stroke-linecap="round"/>
+  </g>
+
+  <!-- ===== PALM TREE ===== -->
+  <g transform="translate(358, 165)" filter="url(#sparkle)">
+    <!-- Trunk -->
+    <path d="M 0,50 C -3,30 -2,10 2,-10 C 4,-25 3,-38 0,-50"
+          fill="none" stroke="#795548" stroke-width="7" stroke-linecap="round"/>
+    <!-- Leaves -->
+    <path d="M 0,-48 C -20,-60 -38,-52 -42,-38" fill="none" stroke="#2E7D32" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 0,-48 C 18,-62 36,-56 40,-42" fill="none" stroke="#388E3C" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 0,-48 C -10,-72 -5,-82 8,-78" fill="none" stroke="#43A047" stroke-width="5" stroke-linecap="round"/>
+    <path d="M 0,-48 C 8,-70 16,-80 5,-82" fill="none" stroke="#2E7D32" stroke-width="4" stroke-linecap="round"/>
+    <path d="M 0,-48 C -28,-45 -36,-30 -28,-18" fill="none" stroke="#388E3C" stroke-width="4" stroke-linecap="round"/>
+    <!-- Coconuts -->
+    <circle cx="-4" cy="-46" r="5" fill="#795548"/>
+    <circle cx="4" cy="-50" r="4" fill="#6D4C41"/>
+  </g>
+
+  <!-- ===== SPARKLE STARS ===== -->
+  <!-- Large star top-left -->
+  <g transform="translate(145, 145)" filter="url(#sparkle)">
+    <path d="M0,-12 L2,-2 L12,0 L2,2 L0,12 L-2,2 L-12,0 L-2,-2 Z" fill="#FFD966" opacity="0.95"/>
+    <path d="M0,-7 L1,-1 L7,0 L1,1 L0,7 L-1,1 L-7,0 L-1,-1 Z" fill="white" opacity="0.6"/>
+  </g>
+
+  <!-- Small star -->
+  <g transform="translate(210, 130)">
+    <path d="M0,-7 L1.2,-1.2 L7,0 L1.2,1.2 L0,7 L-1.2,1.2 L-7,0 L-1.2,-1.2 Z" fill="#FFD966" opacity="0.85"/>
+  </g>
+
+  <!-- Tiny pink star -->
+  <g transform="translate(285, 100)">
+    <path d="M0,-6 L1,-1 L6,0 L1,1 L0,6 L-1,1 L-6,0 L-1,-1 Z" fill="#F48FB1" opacity="0.9"/>
+  </g>
+
+  <!-- Star right -->
+  <g transform="translate(388, 135)" filter="url(#sparkle)">
+    <path d="M0,-10 L1.8,-1.8 L10,0 L1.8,1.8 L0,10 L-1.8,1.8 L-10,0 L-1.8,-1.8 Z" fill="#FFD966" opacity="0.9"/>
+    <path d="M0,-5 L1,-1 L5,0 L1,1 L0,5 L-1,1 L-5,0 L-1,-1 Z" fill="white" opacity="0.5"/>
+  </g>
+
+  <!-- Tiny dot sparkles -->
+  <circle cx="160" cy="175" r="3.5" fill="#B3E5FC" opacity="0.8"/>
+  <circle cx="250" cy="105" r="3" fill="#FFD966" opacity="0.7"/>
+  <circle cx="330" cy="100" r="2.5" fill="#F48FB1" opacity="0.8"/>
+  <circle cx="408" cy="168" r="3" fill="#B3E5FC" opacity="0.7"/>
+  <circle cx="135" cy="210" r="2.5" fill="#FFD966" opacity="0.6"/>
+  <circle cx="178" cy="118" r="2" fill="#F48FB1" opacity="0.7"/>
+</svg>

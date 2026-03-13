@@ -2,7 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'dreamwallet-web',
-      script: 'apps/web/.next/standalone/apps/web/server.js',
+      script: 'apps/web/.next-build/standalone/apps/web/server.js',
       cwd: '/home/dreamwallet/projects/dreamwallet',
       env: {
         NODE_ENV: 'production',

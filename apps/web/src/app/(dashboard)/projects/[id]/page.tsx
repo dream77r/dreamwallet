@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { trpc } from '@/lib/trpc/client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -31,11 +31,14 @@ import {
   DollarSign,
   CreditCard,
   ArrowLeftRight,
-  Users,
   UserPlus,
   Trash2,
+  Plus,
+  Wallet,
 } from 'lucide-react'
 import Link from 'next/link'
+import { PayoutDialog } from '@/components/projects/PayoutDialog'
+import { useSession } from '@/lib/auth-client'
 
 function formatAmount(amount: number, currency = 'RUB') {
   return new Intl.NumberFormat('ru-RU', {
@@ -53,6 +56,11 @@ function formatDate(date: Date | string) {
   })
 }
 
+function getCurrentPeriod() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+}
+
 interface PageProps {
   params: Promise<{ id: string }>
 }
@@ -60,9 +68,11 @@ interface PageProps {
 export default function ProjectPage({ params }: PageProps) {
   const { id } = use(params)
   const router = useRouter()
+  const { data: session } = useSession()
 
   const { data: project, isLoading } = trpc.project.get.useQuery({ id })
   const { data: dashboard } = trpc.project.getDashboard.useQuery({ id })
+  const { data: unseenCount } = trpc.project.getUnseenCount.useQuery({ projectId: id })
 
   const walletId = project?.wallet?.id
 
@@ -76,7 +86,32 @@ export default function ProjectPage({ params }: PageProps) {
     { enabled: !!walletId }
   )
 
+  // Income tab
+  const [incomePeriod, setIncomePeriod] = useState(getCurrentPeriod())
+  const { data: distribution } = trpc.income.getDistribution.useQuery(
+    { projectId: id, period: incomePeriod },
+    { enabled: !!project }
+  )
+
+  // Payout dialog
+  const [payoutTarget, setPayoutTarget] = useState<{
+    memberId: string
+    memberName: string
+    balance: number
+  } | null>(null)
+
   const utils = trpc.useUtils()
+
+  // Mark seen
+  const markSeenMutation = trpc.project.markSeen.useMutation({
+    onSuccess: () => void utils.project.getUnseenCount.invalidate({ projectId: id }),
+  })
+
+  const handleTransactionsTab = useCallback(() => {
+    markSeenMutation.mutate({ projectId: id })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
   const removeMemberMutation = trpc.project.removeMember.useMutation({
     onSuccess: () => void utils.project.get.invalidate({ id }),
   })
@@ -92,6 +127,23 @@ export default function ProjectPage({ params }: PageProps) {
       setInviteOpen(false)
       setInviteEmail('')
       setInviteRole('VIEWER')
+    },
+  })
+
+  // Add expense dialog
+  const [expenseOpen, setExpenseOpen] = useState(false)
+  const [expenseAmount, setExpenseAmount] = useState('')
+  const [expenseDesc, setExpenseDesc] = useState('')
+  const [expenseDate, setExpenseDate] = useState(new Date().toISOString().slice(0, 10))
+
+  const addExpenseMutation = trpc.project.addExpense.useMutation({
+    onSuccess: () => {
+      void utils.transaction.list.invalidate()
+      void utils.project.getDashboard.invalidate({ id })
+      void utils.account.list.invalidate()
+      setExpenseOpen(false)
+      setExpenseAmount('')
+      setExpenseDesc('')
     },
   })
 
@@ -116,6 +168,10 @@ export default function ProjectPage({ params }: PageProps) {
   }
 
   const currency = project.wallet?.currency ?? 'RUB'
+  const currentUserId = session?.user?.id
+  const myMember = project.members.find(m => m.user.id === currentUserId)
+  const isOwner = project.ownerId === currentUserId
+  const canEdit = myMember && myMember.role !== 'VIEWER'
 
   return (
     <div className="space-y-6">
@@ -139,12 +195,22 @@ export default function ProjectPage({ params }: PageProps) {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview">
+      <Tabs defaultValue="overview" onValueChange={(v) => {
+        if (v === 'transactions') handleTransactionsTab()
+      }}>
         <TabsList>
           <TabsTrigger value="overview">Обзор</TabsTrigger>
           <TabsTrigger value="accounts">Счета</TabsTrigger>
-          <TabsTrigger value="transactions">Транзакции</TabsTrigger>
+          <TabsTrigger value="transactions" className="relative">
+            Транзакции
+            {(unseenCount ?? 0) > 0 && (
+              <Badge variant="destructive" className="ml-1.5 h-5 min-w-5 px-1 text-[10px]">
+                {unseenCount}
+              </Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="members">Участники</TabsTrigger>
+          <TabsTrigger value="income">Доход</TabsTrigger>
         </TabsList>
 
         {/* Обзор */}
@@ -226,7 +292,78 @@ export default function ProjectPage({ params }: PageProps) {
         </TabsContent>
 
         {/* Транзакции */}
-        <TabsContent value="transactions" className="mt-4">
+        <TabsContent value="transactions" className="mt-4 space-y-4">
+          {canEdit && (
+            <div className="flex justify-end">
+              <Dialog open={expenseOpen} onOpenChange={setExpenseOpen}>
+                <DialogTrigger asChild>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Расход
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-sm">
+                  <DialogHeader>
+                    <DialogTitle>Добавить расход</DialogTitle>
+                  </DialogHeader>
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault()
+                      addExpenseMutation.mutate({
+                        projectId: id,
+                        amount: parseFloat(expenseAmount),
+                        description: expenseDesc || undefined,
+                        date: new Date(expenseDate),
+                      })
+                    }}
+                    className="space-y-4"
+                  >
+                    <div className="space-y-2">
+                      <Label>Сумма</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={expenseAmount}
+                        onChange={(e) => setExpenseAmount(e.target.value)}
+                        placeholder="0.00"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Описание</Label>
+                      <Input
+                        value={expenseDesc}
+                        onChange={(e) => setExpenseDesc(e.target.value)}
+                        placeholder="За что"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Дата</Label>
+                      <Input
+                        type="date"
+                        value={expenseDate}
+                        onChange={(e) => setExpenseDate(e.target.value)}
+                        required
+                      />
+                    </div>
+                    {addExpenseMutation.error && (
+                      <p className="text-sm text-destructive">{addExpenseMutation.error.message}</p>
+                    )}
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={() => setExpenseOpen(false)}>
+                        Отмена
+                      </Button>
+                      <Button type="submit" disabled={addExpenseMutation.isPending}>
+                        {addExpenseMutation.isPending ? 'Сохранение...' : 'Добавить'}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+          )}
+
           {!transactions ? (
             <Skeleton className="h-40 w-full" />
           ) : transactions.items.length === 0 ? (
@@ -236,24 +373,45 @@ export default function ProjectPage({ params }: PageProps) {
             </div>
           ) : (
             <div className="space-y-2">
-              {transactions.items.map((tx: (typeof transactions.items)[0]) => (
-                <Card key={tx.id}>
-                  <CardContent className="flex items-center justify-between py-3">
-                    <div>
-                      <p className="text-sm font-medium">{tx.description ?? '—'}</p>
-                      <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
-                    </div>
-                    <span
-                      className={`text-sm font-semibold ${
-                        tx.type === 'INCOME' ? 'text-green-600' : tx.type === 'EXPENSE' ? 'text-destructive' : ''
-                      }`}
-                    >
-                      {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '-' : ''}
-                      {formatAmount(Number(tx.amount), currency)}
-                    </span>
-                  </CardContent>
-                </Card>
-              ))}
+              {transactions.items.map((tx: (typeof transactions.items)[0]) => {
+                const txWith = tx as typeof tx & {
+                  createdBy?: { id: string; name: string | null } | null
+                }
+                const isNewFromOther = Boolean(
+                  txWith.createdBy &&
+                  txWith.createdBy.id !== currentUserId
+                )
+                const createdByName = txWith.createdBy?.name ?? ''
+
+                return (
+                  <Card
+                    key={tx.id}
+                    className={isNewFromOther ? 'bg-blue-50 dark:bg-blue-950/30' : ''}
+                  >
+                    <CardContent className="flex items-center justify-between py-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium">{tx.description ?? '—'}</p>
+                          {isNewFromOther && createdByName && (
+                            <span className="text-xs text-blue-600 dark:text-blue-400">
+                              {createdByName}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">{formatDate(tx.date)}</p>
+                      </div>
+                      <span
+                        className={`text-sm font-semibold ${
+                          tx.type === 'INCOME' ? 'text-green-600' : tx.type === 'EXPENSE' ? 'text-destructive' : ''
+                        }`}
+                      >
+                        {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '-' : ''}
+                        {formatAmount(Number(tx.amount), currency)}
+                      </span>
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </TabsContent>
@@ -354,7 +512,151 @@ export default function ProjectPage({ params }: PageProps) {
             </div>
           </div>
         </TabsContent>
+
+        {/* Доход */}
+        <TabsContent value="income" className="mt-4 space-y-4">
+          {/* Period selector */}
+          <div className="flex items-center gap-2">
+            <Label>Период:</Label>
+            <Input
+              type="month"
+              value={incomePeriod}
+              onChange={(e) => setIncomePeriod(e.target.value)}
+              className="w-auto"
+            />
+          </div>
+
+          {!distribution ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              {[1, 2, 3].map(i => <Skeleton key={i} className="h-32" />)}
+            </div>
+          ) : (
+            <>
+              {/* Summary cards */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Выручка</CardTitle>
+                    <TrendingUp className="h-4 w-4 text-green-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-green-600">
+                      {formatAmount(distribution.revenue, currency)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">К распределению</CardTitle>
+                    <Wallet className="h-4 w-4 text-blue-500" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {formatAmount(distribution.revenue - distribution.totalFixed, currency)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      После фикс. выплат ({formatAmount(distribution.totalFixed, currency)})
+                    </p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Остаток владельца</CardTitle>
+                    <DollarSign className="h-4 w-4 text-blue-500" />
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const ownerDist = distribution.distribution.find(d => d.role === 'OWNER')
+                      const ownerEarned = ownerDist?.earned ?? 0
+                      return (
+                        <div className={`text-2xl font-bold ${ownerEarned >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                          {formatAmount(ownerEarned, currency)}
+                        </div>
+                      )
+                    })()}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Distribution table */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Распределение</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {distribution.distribution.map((d) => (
+                      <div key={d.memberId} className="flex items-center justify-between py-2 border-b last:border-0">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold">
+                            {d.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium">{d.name}</p>
+                            <div className="flex items-center gap-1.5">
+                              {d.ruleType === 'PERCENTAGE' && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{d.ruleValue}%</Badge>
+                              )}
+                              {d.ruleType === 'FIXED' && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                  {formatAmount(d.ruleValue ?? 0, currency)}
+                                </Badge>
+                              )}
+                              {d.role === 'OWNER' && !d.ruleType && (
+                                <Badge variant="default" className="text-[10px] px-1.5 py-0">Остаток</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="text-right">
+                            <p className="font-medium">{formatAmount(d.earned, currency)}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Выплачено: {formatAmount(d.paid, currency)}
+                            </p>
+                          </div>
+                          <div className="text-right min-w-[80px]">
+                            <p className={`font-semibold ${d.balance > 0 ? 'text-orange-600' : d.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              {d.balance > 0 ? formatAmount(d.balance, currency) : d.balance < 0 ? formatAmount(d.balance, currency) : 'Оплачено'}
+                            </p>
+                          </div>
+                          {isOwner && d.balance > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setPayoutTarget({
+                                memberId: d.memberId,
+                                memberName: d.name,
+                                balance: d.balance,
+                              })}
+                            >
+                              Выплатить
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
       </Tabs>
+
+      {/* Payout dialog */}
+      {payoutTarget && (
+        <PayoutDialog
+          open={!!payoutTarget}
+          onOpenChange={(open) => { if (!open) setPayoutTarget(null) }}
+          projectId={id}
+          memberId={payoutTarget.memberId}
+          memberName={payoutTarget.memberName}
+          balance={payoutTarget.balance}
+          period={incomePeriod}
+          currency={currency}
+        />
+      )}
     </div>
   )
 }
