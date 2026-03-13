@@ -11,6 +11,8 @@ export const widgetIdSchema = z.enum([
   'networth',
   'goals',
   'currency',
+  'gamification',
+  'runway',
 ])
 
 export type WidgetId = z.infer<typeof widgetIdSchema>
@@ -32,6 +34,8 @@ const DEFAULT_LAYOUT: WidgetConfig[] = [
   { id: 'forecast', enabled: true, order: 5 },
   { id: 'networth', enabled: true, order: 6 },
   { id: 'goals', enabled: true, order: 7 },
+  { id: 'gamification', enabled: true, order: 8 },
+  { id: 'runway', enabled: true, order: 9 },
 ]
 
 export const dashboardRouter = router({

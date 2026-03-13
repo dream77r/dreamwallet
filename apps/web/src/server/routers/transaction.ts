@@ -6,6 +6,7 @@ import { sendTelegramMessage, formatAmount } from '@/lib/telegram-notify'
 import { checkBudgetAlerts } from './budget-alerts'
 import { callOpenRouter } from './ai'
 import { updateStreak, checkAchievements } from '@/lib/gamification-engine'
+import { updateChallengeProgress } from '@/lib/challenge-engine'
 import crypto from 'crypto'
 
 // ── In-memory cache for AI category suggestions ─────────────────────────────
@@ -237,6 +238,7 @@ export const transactionRouter = router({
       // Gamification hooks (fire and forget)
       void updateStreak(ctx.prisma, ctx.user.id).catch(() => {})
       void checkAchievements(ctx.prisma, ctx.user.id).catch(() => {})
+      void updateChallengeProgress(ctx.prisma, ctx.user.id).catch(() => {})
 
       // Auto-calculate cashback for expenses
       if (input.type === 'EXPENSE' && transaction.categoryId) {
