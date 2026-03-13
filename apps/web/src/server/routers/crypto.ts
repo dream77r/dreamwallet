@@ -138,6 +138,50 @@ export const cryptoRouter = router({
       return price
     }),
 
+  /** Update crypto wallet (name, network, symbol) */
+  updateWallet: protectedProcedure
+    .input(z.object({
+      accountId: z.string().cuid(),
+      name: z.string().min(1).max(100).optional(),
+      cryptoNetwork: z.string().min(1).max(20).optional(),
+      cryptoSymbol: z.string().min(1).max(10).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const account = await ctx.prisma.account.findFirst({
+        where: { id: input.accountId, type: 'CRYPTO', wallet: { userId: ctx.user.id } },
+      })
+      if (!account) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Счёт не найден' })
+      }
+
+      return ctx.prisma.account.update({
+        where: { id: input.accountId },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.cryptoNetwork !== undefined && { cryptoNetwork: input.cryptoNetwork }),
+          ...(input.cryptoSymbol !== undefined && { cryptoSymbol: input.cryptoSymbol }),
+        },
+      })
+    }),
+
+  /** Delete crypto wallet and all its transactions */
+  deleteWallet: protectedProcedure
+    .input(z.object({ accountId: z.string().cuid() }))
+    .mutation(async ({ ctx, input }) => {
+      const account = await ctx.prisma.account.findFirst({
+        where: { id: input.accountId, type: 'CRYPTO', wallet: { userId: ctx.user.id } },
+      })
+      if (!account) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Счёт не найден' })
+      }
+
+      // Delete transactions first (cascade should handle it, but be explicit)
+      await ctx.prisma.transaction.deleteMany({ where: { accountId: input.accountId } })
+      await ctx.prisma.account.delete({ where: { id: input.accountId } })
+
+      return { deleted: true }
+    }),
+
   /** Set auto-sync interval for a crypto account */
   setSyncInterval: protectedProcedure
     .input(z.object({
