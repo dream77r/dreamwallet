@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -20,6 +20,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -29,25 +39,22 @@ import {
   Plus,
   Upload,
   Clock,
-  CheckCircle2,
-  AlertCircle,
-  XCircle,
   Loader2,
-  ExternalLink,
   Trash2,
+  Pencil,
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 
 const NETWORK_OPTIONS = [
-  { value: 'ethereum', label: 'Ethereum (ETH)', icon: '⟠' },
-  { value: 'bitcoin', label: 'Bitcoin (BTC)', icon: '₿' },
-  { value: 'solana', label: 'Solana (SOL)', icon: '◎' },
-  { value: 'ton', label: 'TON', icon: '💎' },
-  { value: 'tron', label: 'TRON (TRX)', icon: '⚡' },
-  { value: 'polygon', label: 'Polygon (POL)', icon: '⬡' },
-  { value: 'arbitrum', label: 'Arbitrum (ETH)', icon: '🔵' },
-  { value: 'bsc', label: 'BNB Chain (BNB)', icon: '🟡' },
+  { value: 'ethereum', label: 'Ethereum (ETH)', symbol: 'ETH', icon: '⟠' },
+  { value: 'bitcoin', label: 'Bitcoin (BTC)', symbol: 'BTC', icon: '₿' },
+  { value: 'solana', label: 'Solana (SOL)', symbol: 'SOL', icon: '◎' },
+  { value: 'ton', label: 'TON', symbol: 'TON', icon: '💎' },
+  { value: 'tron', label: 'TRON (TRX)', symbol: 'TRX', icon: '⚡' },
+  { value: 'polygon', label: 'Polygon (POL)', symbol: 'POL', icon: '⬡' },
+  { value: 'arbitrum', label: 'Arbitrum (ETH)', symbol: 'ETH', icon: '🔵' },
+  { value: 'bsc', label: 'BNB Chain (BNB)', symbol: 'BNB', icon: '🟡' },
 ] as const
 
 const SYNC_INTERVALS = [
@@ -70,6 +77,13 @@ const CRYPTO_EXCHANGES = [
   { key: 'bybit', name: 'Bybit', desc: 'Экспорт истории из Bybit', format: 'CSV (,)' },
 ] as const
 
+interface EditState {
+  accountId: string
+  name: string
+  network: string
+  symbol: string
+}
+
 export default function IntegrationsPage() {
   const router = useRouter()
   const [addDialogOpen, setAddDialogOpen] = useState(false)
@@ -78,9 +92,16 @@ export default function IntegrationsPage() {
   const [networkHint, setNetworkHint] = useState<string>('')
   const [syncingIds, setSyncingIds] = useState<Set<string>>(new Set())
 
+  // Edit state
+  const [editState, setEditState] = useState<EditState | null>(null)
+
+  // Delete state
+  const [deleteId, setDeleteId] = useState<string | null>(null)
+
   const utils = trpc.useUtils()
 
   const { data: cryptoAccounts, isLoading: cryptoLoading } = trpc.crypto.list.useQuery()
+  const deleteAccount = deleteId ? cryptoAccounts?.find((a) => a.id === deleteId) : null
   const { data: wallet } = trpc.wallet.get.useQuery()
   const personalWallet = wallet
 
@@ -120,6 +141,24 @@ export default function IntegrationsPage() {
     onError: (err) => toast.error(err.message),
   })
 
+  const updateWalletMut = trpc.crypto.updateWallet.useMutation({
+    onSuccess: () => {
+      toast.success('Кошелёк обновлён')
+      setEditState(null)
+      utils.crypto.list.invalidate()
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  const deleteWalletMut = trpc.crypto.deleteWallet.useMutation({
+    onSuccess: () => {
+      toast.success('Кошелёк удалён')
+      setDeleteId(null)
+      utils.crypto.list.invalidate()
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
   function handleSync(accountId: string) {
     setSyncingIds((prev) => new Set(prev).add(accountId))
     syncMut.mutate({ accountId })
@@ -135,6 +174,26 @@ export default function IntegrationsPage() {
       name: walletName.trim() || undefined,
       walletId: personalWallet.id,
       networkHint: evmHint,
+    })
+  }
+
+  function handleSaveEdit() {
+    if (!editState) return
+    const networkInfo = NETWORK_OPTIONS.find((n) => n.value === editState.network)
+    updateWalletMut.mutate({
+      accountId: editState.accountId,
+      name: editState.name,
+      cryptoNetwork: editState.network,
+      cryptoSymbol: networkInfo?.symbol || editState.symbol,
+    })
+  }
+
+  function openEdit(acc: NonNullable<typeof cryptoAccounts>[number]) {
+    setEditState({
+      accountId: acc.id,
+      name: acc.name,
+      network: acc.cryptoNetwork || 'ethereum',
+      symbol: acc.cryptoSymbol || 'ETH',
     })
   }
 
@@ -201,9 +260,27 @@ export default function IntegrationsPage() {
                           {acc.cryptoAddress}
                         </p>
                       </div>
-                      <Badge variant="outline" className="shrink-0 text-xs">
-                        {networkInfo?.label.split(' ')[0] || acc.cryptoNetwork}
-                      </Badge>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <Badge variant="outline" className="text-xs">
+                          {networkInfo?.label.split(' ')[0] || acc.cryptoNetwork}
+                        </Badge>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          onClick={() => openEdit(acc)}
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          onClick={() => setDeleteId(acc.id)}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
@@ -388,6 +465,96 @@ export default function IntegrationsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ─── Edit Wallet Dialog ─── */}
+      <Dialog open={!!editState} onOpenChange={(open) => { if (!open) setEditState(null) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Редактировать кошелёк</DialogTitle>
+            <DialogDescription>
+              Измените название или исправьте сеть, если она определилась неверно.
+            </DialogDescription>
+          </DialogHeader>
+
+          {editState && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Название</Label>
+                <Input
+                  value={editState.name}
+                  onChange={(e) => setEditState({ ...editState, name: e.target.value })}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Сеть</Label>
+                <Select
+                  value={editState.network}
+                  onValueChange={(v) => {
+                    const info = NETWORK_OPTIONS.find((n) => n.value === v)
+                    setEditState({
+                      ...editState,
+                      network: v,
+                      symbol: info?.symbol || editState.symbol,
+                    })
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {NETWORK_OPTIONS.map((n) => (
+                      <SelectItem key={n.value} value={n.value}>
+                        {n.icon} {n.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditState(null)}>
+              Отмена
+            </Button>
+            <Button
+              onClick={handleSaveEdit}
+              disabled={!editState?.name.trim() || updateWalletMut.isPending}
+            >
+              {updateWalletMut.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+              Сохранить
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Delete Confirmation ─── */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Удалить кошелёк?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteAccount
+                ? `Кошелёк «${deleteAccount.name}» и все его транзакции будут удалены безвозвратно.`
+                : 'Кошелёк и все его транзакции будут удалены безвозвратно.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Отмена</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteId) deleteWalletMut.mutate({ accountId: deleteId })
+              }}
+              disabled={deleteWalletMut.isPending}
+            >
+              {deleteWalletMut.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
+              Удалить
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
