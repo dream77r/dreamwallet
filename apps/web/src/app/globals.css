@@ -38,6 +38,14 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  /* Semantic finance colors */
+  --color-income: var(--income);
+  --color-expense: var(--expense);
+  --color-transfer: var(--transfer);
+  --color-income-foreground: var(--income-foreground);
+  --color-expense-foreground: var(--expense-foreground);
+  --color-transfer-foreground: var(--transfer-foreground);
+  /* Radii */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -48,20 +56,24 @@
 }
 
 :root {
-  /* iOS-style design — radius 16px standard */
-  --radius: 1rem;
+  /* Base radius — 20px для более мягкого вида */
+  --radius: 1.25rem;
 
   /* Glass tokens */
   --glass-bg: rgba(255, 255, 255, 0.72);
   --glass-border: rgba(255, 255, 255, 0.5);
   --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
 
-  /* Gradient tokens */
-  --gradient-primary: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
-  --gradient-success: linear-gradient(135deg, #34C759 0%, #30D158 100%);
-  --gradient-warm: linear-gradient(135deg, #FF9500 0%, #FF6B35 100%);
+  /* Gradient tokens — синий → фиолетовый (Revolut-стиль) */
+  --gradient-hero: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-hero-alt: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --gradient-card: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%);
+  --gradient-accent: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  --gradient-warm: linear-gradient(135deg, #f2994a 0%, #f2c94c 100%);
 
-  /* iOS #F2F2F7 systemGroupedBackground */
+  /* Light theme — чистый iOS-стиль */
   --background: oklch(0.961 0.002 286);
   --foreground: oklch(0.141 0 0);
   --card: oklch(1 0 0);
@@ -69,11 +81,11 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.141 0 0);
 
-  /* iOS Blue #007AFF */
-  --primary: oklch(0.585 0.232 265);
+  /* Primary — синий/фиолетовый */
+  --primary: oklch(0.546 0.245 275);
   --primary-foreground: oklch(1 0 0);
 
-  /* iOS #E5E5EA tertiary bg */
+  /* Secondary */
   --secondary: oklch(0.939 0.003 286);
   --secondary-foreground: oklch(0.141 0 0);
 
@@ -81,70 +93,99 @@
   --muted-foreground: oklch(0.556 0.004 286);
 
   --accent: oklch(0.939 0.003 286);
-  --accent-foreground: oklch(0.585 0.232 265);
+  --accent-foreground: oklch(0.546 0.245 275);
 
-  /* iOS Red #FF3B30 */
+  /* Destructive — iOS Red */
   --destructive: oklch(0.638 0.248 27);
 
-  /* iOS separator — solid equivalent of rgba(0,0,0,0.12) */
-  --border: oklch(0.882 0.004 286);
+  /* Borders */
+  --border: oklch(0.900 0.004 286);
   --input: oklch(0.939 0.003 286);
-  --ring: oklch(0.585 0.232 265);
+  --ring: oklch(0.546 0.245 275);
 
-  /* iOS system chart colors */
-  --chart-1: oklch(0.697 0.195 149);  /* iOS Green #34C759 */
-  --chart-2: oklch(0.638 0.248 27);   /* iOS Red #FF3B30 */
-  --chart-3: oklch(0.762 0.188 57);   /* iOS Orange #FF9500 */
-  --chart-4: oklch(0.585 0.232 265);  /* iOS Blue #007AFF */
-  --chart-5: oklch(0.65 0.22 285);    /* iOS Purple */
+  /* Chart colors */
+  --chart-1: oklch(0.697 0.195 149);  /* Green */
+  --chart-2: oklch(0.638 0.248 27);   /* Red */
+  --chart-3: oklch(0.762 0.188 57);   /* Orange */
+  --chart-4: oklch(0.546 0.245 275);  /* Purple-Blue */
+  --chart-5: oklch(0.65 0.22 285);    /* Purple */
 
-  /* Sidebar — same background as page */
-  --sidebar: oklch(0.961 0.002 286);
+  /* Semantic finance colors */
+  --income: oklch(0.697 0.195 149);          /* Green #34C759 */
+  --income-foreground: oklch(1 0 0);
+  --expense: oklch(0.638 0.248 27);          /* Red #FF3B30 */
+  --expense-foreground: oklch(1 0 0);
+  --transfer: oklch(0.546 0.245 275);        /* Primary purple-blue */
+  --transfer-foreground: oklch(1 0 0);
+
+  /* Sidebar */
+  --sidebar: oklch(0.975 0.002 286);
   --sidebar-foreground: oklch(0.141 0 0);
-  --sidebar-primary: oklch(0.585 0.232 265);
+  --sidebar-primary: oklch(0.546 0.245 275);
   --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(1 0 0);
-  --sidebar-accent-foreground: oklch(0.585 0.232 265);
-  --sidebar-border: oklch(0.900 0.004 286);
-  --sidebar-ring: oklch(0.585 0.232 265);
+  --sidebar-accent-foreground: oklch(0.546 0.245 275);
+  --sidebar-border: oklch(0.920 0.004 286);
+  --sidebar-ring: oklch(0.546 0.245 275);
 }
 
 .dark {
-  --glass-bg: rgba(28, 28, 30, 0.72);
+  /* Dark glass */
+  --glass-bg: rgba(30, 30, 45, 0.72);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.32);
 
-  --background: oklch(0.155 0.005 286);
+  /* Dark gradients — более насыщенные */
+  --gradient-hero: linear-gradient(135deg, #4c3fa0 0%, #7b2ff7 100%);
+  --gradient-hero-alt: linear-gradient(135deg, #2d5aa0 0%, #00b4d8 100%);
+  --gradient-card: linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%);
+
+  /* Deep navy — тёплый тёмный (не чёрный) */
+  --background: oklch(0.15 0.02 270);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.169 0 0);
+  --card: oklch(0.19 0.015 270);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.169 0 0);
+  --popover: oklch(0.19 0.015 270);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.585 0.232 265);
+
+  /* Primary — чуть ярче в тёмной теме */
+  --primary: oklch(0.62 0.24 275);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.224 0 0);
+
+  --secondary: oklch(0.24 0.015 270);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.224 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.224 0 0);
+  --muted: oklch(0.24 0.015 270);
+  --muted-foreground: oklch(0.65 0.01 270);
+  --accent: oklch(0.24 0.015 270);
   --accent-foreground: oklch(0.985 0 0);
+
   --destructive: oklch(0.638 0.248 27);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.585 0.232 265);
+
+  --border: oklch(1 0 0 / 8%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.62 0.24 275);
+
   --chart-1: oklch(0.697 0.195 149);
   --chart-2: oklch(0.638 0.248 27);
   --chart-3: oklch(0.762 0.188 57);
-  --chart-4: oklch(0.585 0.232 265);
+  --chart-4: oklch(0.62 0.24 275);
   --chart-5: oklch(0.65 0.22 285);
-  --sidebar: oklch(0.169 0 0);
+
+  --income: oklch(0.697 0.195 149);
+  --income-foreground: oklch(1 0 0);
+  --expense: oklch(0.638 0.248 27);
+  --expense-foreground: oklch(1 0 0);
+  --transfer: oklch(0.62 0.24 275);
+  --transfer-foreground: oklch(1 0 0);
+
+  --sidebar: oklch(0.17 0.018 270);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.585 0.232 265);
+  --sidebar-primary: oklch(0.62 0.24 275);
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.224 0 0);
+  --sidebar-accent: oklch(0.24 0.015 270);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.585 0.232 265);
+  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-ring: oklch(0.62 0.24 275);
 }
 
 @layer base {
@@ -155,34 +196,34 @@
     @apply bg-background text-foreground;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 }
 
 @layer components {
-  /* Safe area for iOS bottom nav */
+  /* ====== SAFE AREAS ====== */
   .pb-safe {
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 8px);
   }
 
-  /* iOS haptic-style press */
-  .active\:scale-95:active {
-    transform: scale(0.95);
-  }
-
-  /* iOS card shadow */
+  /* ====== SHADOWS — iOS-стиль ====== */
   .shadow-card {
     box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
+  }
+  .shadow-card-hover {
+    box-shadow: 0 12px 40px rgb(0 0 0 / 12%);
   }
   .shadow-sm-ios {
     box-shadow: 0 1px 0 rgb(0 0 0 / 8%);
   }
 
-  /* Glass cards */
+  /* ====== GLASS MORPHISM ====== */
   .glass-card {
     background: var(--glass-bg);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
     border: 1px solid var(--glass-border);
+    border-radius: var(--radius-2xl);
   }
   .card-default {
     background: var(--glass-bg);
@@ -213,12 +254,68 @@
     border-top: 1px solid var(--glass-border);
   }
 
-  /* Typography */
+  /* ====== GRADIENT CLASSES ====== */
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  .gradient-hero-alt {
+    background: var(--gradient-hero-alt);
+  }
+  .gradient-card {
+    background: var(--gradient-card);
+  }
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  .gradient-success {
+    background: var(--gradient-success);
+  }
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+  /* Gradient text */
+  .gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  /* Gradient border on hover */
+  .gradient-border-hover {
+    position: relative;
+  }
+  .gradient-border-hover::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--gradient-primary);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    -webkit-mask-composite: xor;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .gradient-border-hover:hover::before {
+    opacity: 1;
+  }
+
+  /* ====== TYPOGRAPHY ====== */
   .text-display {
-    font-size: 42px;
-    letter-spacing: -0.02em;
+    font-size: 48px;
+    letter-spacing: -0.03em;
     font-weight: 700;
     line-height: 1;
+  }
+  .text-title {
+    font-size: 24px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    line-height: 1.2;
   }
   .text-headline {
     font-size: 28px;
@@ -232,9 +329,64 @@
     letter-spacing: 0.06em;
     font-weight: 600;
   }
+
+  /* ====== TAP TARGETS ====== */
+  .tap-target {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ====== CARD HOVER — подъём при наведении ====== */
+  .card-hover {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+  }
+  .card-hover:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  /* ====== SEMANTIC FINANCE COLORS ====== */
+  .text-income { color: var(--income); }
+  .text-expense { color: var(--expense); }
+  .text-transfer { color: var(--transfer); }
+  .bg-income { background-color: var(--income); }
+  .bg-expense { background-color: var(--expense); }
+  .bg-transfer { background-color: var(--transfer); }
+  .bg-income\/10 { background-color: color-mix(in oklch, var(--income) 10%, transparent); }
+  .bg-expense\/10 { background-color: color-mix(in oklch, var(--expense) 10%, transparent); }
+  .bg-transfer\/10 { background-color: color-mix(in oklch, var(--transfer) 10%, transparent); }
+
+  /* ====== PERIOD PILLS ====== */
+  .period-pill {
+    @apply px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200;
+    @apply text-muted-foreground hover:text-foreground;
+  }
+  .period-pill-active {
+    @apply px-3 py-1.5 rounded-full text-sm font-medium;
+    @apply bg-primary text-primary-foreground shadow-sm;
+  }
+
+  /* ====== BUDGET PROGRESS RING ====== */
+  .progress-ring-track {
+    stroke: var(--muted);
+    fill: none;
+  }
+  .progress-ring-fill {
+    fill: none;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.6s ease;
+  }
 }
 
-/* Fade up animation — вне @layer для надёжности */
+/* ====== ANIMATIONS — вне @layer для надёжности ====== */
+
+/* Fade up */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(8px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -257,3 +409,63 @@
   background: linear-gradient(90deg, transparent 25%, rgba(255, 255, 255, 0.06) 50%, transparent 75%);
   background-size: 200% 100%;
 }
+
+/* Spring number animation */
+@keyframes springNumber {
+  0% { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-spring-number {
+  animation: springNumber 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+/* Pulse glow (для AI иконок) */
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+  50% { box-shadow: 0 0 20px 4px rgba(102, 126, 234, 0.2); }
+}
+.animate-pulse-glow {
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+
+/* Gold shimmer (для достижений) */
+@keyframes goldShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.animate-gold-shimmer {
+  background: linear-gradient(90deg, #f7d774 0%, #ffd700 25%, #fff8dc 50%, #ffd700 75%, #f7d774 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: goldShimmer 3s linear infinite;
+}
+
+/* Slide in from bottom (для drawer/modal) */
+@keyframes slideInBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.animate-slide-in-bottom {
+  animation: slideInBottom 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+/* Confetti burst (для 100% целей) */
+@keyframes confettiBurst {
+  0% { transform: scale(0) rotate(0deg); opacity: 1; }
+  50% { transform: scale(1.2) rotate(180deg); opacity: 0.8; }
+  100% { transform: scale(0) rotate(360deg); opacity: 0; }
+}
+.animate-confetti {
+  animation: confettiBurst 0.8s ease-out both;
+}
+
+/* Stagger delay utility */
+.stagger-1 { animation-delay: 50ms; }
+.stagger-2 { animation-delay: 100ms; }
+.stagger-3 { animation-delay: 150ms; }
+.stagger-4 { animation-delay: 200ms; }
+.stagger-5 { animation-delay: 250ms; }
+.stagger-6 { animation-delay: 300ms; }

@@ -22,17 +22,16 @@ import { useRouter } from 'next/navigation'
 
 type NavItem = { title: string; href: string; icon: React.ElementType; color: string }
 
-// 4 groups: Primary (always visible), Finance (collapsible), Insights (collapsed), Tools (collapsed)
 const primaryItems: NavItem[] = [
-  { title: 'Обзор',       href: '/dashboard',              icon: LayoutDashboard, color: '#007AFF' },
+  { title: 'Обзор',       href: '/dashboard',              icon: LayoutDashboard, color: '#667eea' },
   { title: 'Транзакции',  href: '/dashboard/transactions',  icon: ArrowLeftRight,  color: '#34C759' },
-  { title: 'Счета',       href: '/dashboard/accounts',      icon: CreditCard,      color: '#5856D6' },
-  { title: 'Аналитика',   href: '/dashboard/analytics',     icon: PieChart,        color: '#007AFF' },
+  { title: 'Счета',       href: '/dashboard/accounts',      icon: CreditCard,      color: '#764ba2' },
+  { title: 'Аналитика',   href: '/dashboard/analytics',     icon: PieChart,        color: '#4facfe' },
 ]
 
 const financeItems: NavItem[] = [
   { title: 'Бюджеты',     href: '/dashboard/budgets',             icon: Target,          color: '#FF9500' },
-  { title: 'Цели',        href: '/dashboard/goals',               icon: Flag,            color: '#5856D6' },
+  { title: 'Цели',        href: '/dashboard/goals',               icon: Flag,            color: '#764ba2' },
   { title: 'Регулярные',  href: '/dashboard/recurring',           icon: Repeat2,         color: '#FF9500' },
   { title: 'Долги',       href: '/dashboard/debts',               icon: HandCoins,       color: '#FF3B30' },
   { title: 'Подписки',    href: '/dashboard/subscriptions-tracker', icon: CalendarClock, color: '#FF2D55' },
@@ -46,25 +45,25 @@ const insightsItems: NavItem[] = [
   { title: 'Привычки',    href: '/dashboard/habits',              icon: Activity,        color: '#FF2D55' },
   { title: 'Что если',    href: '/dashboard/whatif',              icon: GitBranch,       color: '#AF52DE' },
   { title: 'Активы',      href: '/dashboard/net-worth',           icon: Landmark,        color: '#30D158' },
-  { title: 'Инвестиции',  href: '/dashboard/investments',         icon: LineChart,       color: '#007AFF' },
+  { title: 'Инвестиции',  href: '/dashboard/investments',         icon: LineChart,       color: '#667eea' },
   { title: 'Крипто',      href: '/dashboard/crypto',              icon: Bitcoin,         color: '#FF9F0A' },
   { title: 'Отчёты',     href: '/dashboard/reports',             icon: FileText,        color: '#30D158' },
-  { title: 'Санкей',      href: '/dashboard/reports/sankey',      icon: BarChart3,       color: '#5856D6' },
+  { title: 'Санкей',      href: '/dashboard/reports/sankey',      icon: BarChart3,       color: '#764ba2' },
   { title: 'Налоги',      href: '/dashboard/reports/tax',         icon: Receipt,         color: '#64748B' },
   { title: 'Итоги',       href: '/dashboard/wrapped',             icon: Sparkles,        color: '#AF52DE' },
 ]
 
 const toolsItems: NavItem[] = [
-  { title: 'AI Советник', href: '/dashboard/ai-chat',             icon: BrainCircuit,    color: '#5856D6' },
+  { title: 'AI Советник', href: '/dashboard/ai-chat',             icon: BrainCircuit,    color: '#764ba2' },
   { title: 'Импорт',      href: '/dashboard/import',              icon: Upload,          color: '#636366' },
   { title: 'Категории',   href: '/dashboard/categories',          icon: Tag,             color: '#FF6B35' },
   { title: 'Теги',        href: '/dashboard/tags',                icon: Hash,            color: '#32ADE6' },
   { title: 'Достижения',  href: '/dashboard/achievements',        icon: Trophy,          color: '#FFD60A' },
   { title: 'Семья',       href: '/dashboard/family',              icon: Users,           color: '#FF2D55' },
   { title: 'Банки',       href: '/dashboard/bank-connections',    icon: Banknote,        color: '#34C759' },
-  { title: 'Интеграции',  href: '/dashboard/integrations',        icon: Link2,           color: '#5856D6' },
-  { title: 'Проекты',     href: '/dashboard/projects',            icon: FolderKanban,    color: '#007AFF' },
-  { title: 'Пространства',href: '/projects',                      icon: FolderOpen,      color: '#5856D6' },
+  { title: 'Интеграции',  href: '/dashboard/integrations',        icon: Link2,           color: '#764ba2' },
+  { title: 'Проекты',     href: '/dashboard/projects',            icon: FolderKanban,    color: '#667eea' },
+  { title: 'Пространства',href: '/projects',                      icon: FolderOpen,      color: '#764ba2' },
 ]
 
 function NavItemRow({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -77,20 +76,20 @@ function NavItemRow({ item, pathname }: { item: NavItem; pathname: string }) {
       <SidebarMenuButton
         asChild
         isActive={isActive}
-        className={`rounded-xl px-2 py-2 h-auto transition-all duration-150 ${
+        className={`group/navitem rounded-xl px-2 py-2 h-auto transition-all duration-200 ${
           isActive
-            ? 'bg-gradient-to-r from-primary/10 to-primary/5 shadow-sm text-primary font-medium'
-            : 'hover:bg-muted text-foreground/80'
+            ? 'bg-gradient-to-r from-primary/12 via-primary/8 to-transparent shadow-sm text-primary font-semibold'
+            : 'hover:bg-muted/60 text-foreground/75 hover:text-foreground'
         }`}
       >
         <Link href={item.href} className="flex items-center gap-3">
           <div
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-white"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-white transition-transform duration-200 group-hover/navitem:scale-110"
             style={{ backgroundColor: item.color }}
           >
             <item.icon className="h-4 w-4" strokeWidth={2} />
           </div>
-          <span className="text-[14px] font-medium">{item.title}</span>
+          <span className="text-[14px] font-medium transition-all duration-200 group-hover/navitem:translate-x-0.5">{item.title}</span>
         </Link>
       </SidebarMenuButton>
     </SidebarMenuItem>
@@ -108,7 +107,6 @@ function CollapsibleGroup({
   pathname: string
   defaultOpen?: boolean
 }) {
-  // Auto-open if any child is active
   const hasActive = items.some(item =>
     item.href === '/dashboard' ? pathname === item.href : pathname.startsWith(item.href)
   )
@@ -154,14 +152,14 @@ export function AppSidebar() {
   }
 
   return (
-    <Sidebar variant="inset" className="border-r border-border w-[240px]">
+    <Sidebar variant="inset" className="border-r border-sidebar-border w-[240px]">
       {/* Logo */}
       <SidebarHeader className="pb-3">
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link href="/dashboard">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-sm">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-hero text-white shadow-sm">
                   <Wallet className="h-5 w-5" strokeWidth={2} />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
@@ -174,9 +172,8 @@ export function AppSidebar() {
         </SidebarMenu>
       </SidebarHeader>
 
-      {/* Navigation — 4 groups */}
+      {/* Navigation */}
       <SidebarContent className="px-2 gap-0">
-        {/* Primary — always visible */}
         <SidebarGroup className="py-1">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
@@ -187,22 +184,17 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Finance — collapsible */}
         <CollapsibleGroup label="Финансы" items={financeItems} pathname={pathname} defaultOpen />
-
-        {/* Insights — collapsed by default */}
         <CollapsibleGroup label="Аналитика" items={insightsItems} pathname={pathname} />
-
-        {/* Tools — collapsed by default */}
         <CollapsibleGroup label="Инструменты" items={toolsItems} pathname={pathname} />
       </SidebarContent>
 
       {/* Footer */}
-      <SidebarFooter className="border-t border-border pt-2 px-2">
+      <SidebarFooter className="border-t border-sidebar-border pt-2 px-2">
         <SidebarMenu className="gap-0.5">
           {isAdmin && (
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="rounded-xl px-2 py-2 h-auto hover:bg-muted">
+              <SidebarMenuButton asChild className="rounded-xl px-2 py-2 h-auto hover:bg-muted/60">
                 <Link href="/admin" className="flex items-center gap-3">
                   <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-destructive text-white">
                     <Shield className="h-4 w-4" strokeWidth={2} />
@@ -213,7 +205,7 @@ export function AppSidebar() {
             </SidebarMenuItem>
           )}
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="rounded-xl px-2 py-2 h-auto hover:bg-muted">
+            <SidebarMenuButton asChild className="rounded-xl px-2 py-2 h-auto hover:bg-muted/60">
               <Link href="/dashboard/settings" className="flex items-center gap-3">
                 <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-[#636366] text-white">
                   <Settings className="h-4 w-4" strokeWidth={2} />
@@ -223,9 +215,9 @@ export function AppSidebar() {
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton asChild className="rounded-xl px-2 py-2 h-auto hover:bg-muted">
+            <SidebarMenuButton asChild className="rounded-xl px-2 py-2 h-auto hover:bg-muted/60">
               <Link href="/dashboard/pricing" className="flex items-center gap-3">
-                <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white">
+                <div className="flex h-7 w-7 items-center justify-center rounded-[10px] gradient-hero text-white">
                   <Sparkles className="h-4 w-4" strokeWidth={2} />
                 </div>
                 <span className="text-[14px] font-medium">Тарифы</span>
@@ -235,7 +227,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               onClick={handleSignOut}
-              className="rounded-xl px-2 py-2 h-auto hover:bg-red-50 dark:hover:bg-red-950/20 text-muted-foreground hover:text-red-600 transition-colors"
+              className="rounded-xl px-2 py-2 h-auto hover:bg-expense/10 text-muted-foreground hover:text-expense transition-colors"
             >
               <div className="flex items-center gap-3 w-full">
                 <div className="flex h-7 w-7 items-center justify-center rounded-[10px] bg-muted">
