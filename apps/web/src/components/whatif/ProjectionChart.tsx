@@ -35,7 +35,7 @@ export function ProjectionChart({
     return (
       <Card className="rounded-3xl">
         <CardContent className="p-8 text-center">
-          <p className="text-gray-500">Нет данных для построения графика</p>
+          <p className="text-muted-foreground">Нет данных для построения графика</p>
         </CardContent>
       </Card>
     )

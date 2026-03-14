@@ -51,6 +51,16 @@
   /* iOS-style design — radius 16px standard */
   --radius: 1rem;
 
+  /* Glass tokens */
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.5);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+
+  /* Gradient tokens */
+  --gradient-primary: linear-gradient(135deg, #007AFF 0%, #5856D6 100%);
+  --gradient-success: linear-gradient(135deg, #34C759 0%, #30D158 100%);
+  --gradient-warm: linear-gradient(135deg, #FF9500 0%, #FF6B35 100%);
+
   /* iOS #F2F2F7 systemGroupedBackground */
   --background: oklch(0.961 0.002 286);
   --foreground: oklch(0.141 0 0);
@@ -100,7 +110,11 @@
 }
 
 .dark {
-  --background: oklch(0.141 0 0);
+  --glass-bg: rgba(28, 28, 30, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+
+  --background: oklch(0.155 0.005 286);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.169 0 0);
   --card-foreground: oklch(0.985 0 0);
@@ -162,6 +176,62 @@
   .shadow-sm-ios {
     box-shadow: 0 1px 0 rgb(0 0 0 / 8%);
   }
+
+  /* Glass cards */
+  .glass-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+  }
+  .card-default {
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow);
+  }
+  .card-elevated {
+    background: var(--glass-bg);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
+  .card-interactive {
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .card-interactive:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  }
+  .card-interactive:active {
+    transform: scale(0.98);
+  }
+
+  /* Glass nav */
+  .glass-nav {
+    background: var(--glass-bg);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-top: 1px solid var(--glass-border);
+  }
+
+  /* Typography */
+  .text-display {
+    font-size: 42px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .text-headline {
+    font-size: 28px;
+    letter-spacing: -0.01em;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .text-caption {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
 }
 
 /* Fade up animation — вне @layer для надёжности */
@@ -171,4 +241,19 @@
 }
 .animate-fade-up {
   animation: fadeUp 200ms ease-out both;
+}
+
+/* Shimmer skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(0, 0, 0, 0.04) 50%, transparent 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+.dark .animate-shimmer {
+  background: linear-gradient(90deg, transparent 25%, rgba(255, 255, 255, 0.06) 50%, transparent 75%);
+  background-size: 200% 100%;
 }

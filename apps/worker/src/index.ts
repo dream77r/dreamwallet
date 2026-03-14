@@ -11,6 +11,7 @@ import { gamificationProcessor } from './processors/gamification'
 import { smartRulesProcessor } from './processors/smart-rules'
 import { proactiveAdviceProcessor } from './processors/proactive-advice'
 import { stockPricesProcessor } from './processors/stock-prices'
+import { cryptoSyncProcessor } from './processors/crypto-sync'
 import { createBot } from './telegram/bot'
 
 const logger = pino({ name: 'dreamwallet-worker' })
@@ -53,6 +54,7 @@ createWorker('gamification', gamificationProcessor)
 createWorker('smart-rules', smartRulesProcessor)
 createWorker('proactive-advice', proactiveAdviceProcessor)
 createWorker('stock-prices', stockPricesProcessor)
+createWorker('crypto-sync', cryptoSyncProcessor)
 
 logger.info('All workers started')
 
@@ -130,6 +132,17 @@ stockPricesQueue.add('sync-prices', {}, {
   logger.info('Stock prices cron scheduled (Mon-Fri 19:00 Europe/Moscow)')
 }).catch((err) => {
   logger.error(err, 'Failed to schedule stock prices cron')
+})
+
+// Crypto auto-sync — every 30 minutes
+const cryptoSyncQueue = new Queue('crypto-sync', { connection })
+cryptoSyncQueue.add('auto-sync', {}, {
+  repeat: { pattern: '*/30 * * * *' },
+  jobId: 'crypto-sync-cron',
+}).then(() => {
+  logger.info('Crypto auto-sync cron scheduled (every 30 min)')
+}).catch((err) => {
+  logger.error(err, 'Failed to schedule crypto auto-sync cron')
 })
 
 // Recurring transactions — every day at 09:00 Moscow time

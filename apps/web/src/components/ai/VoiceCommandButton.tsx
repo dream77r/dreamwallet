@@ -148,14 +148,14 @@ export function VoiceCommandButton({ className, onResult }: VoiceCommandButtonPr
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 {transcript && (
-                  <p className="text-sm text-gray-600 mb-2">
-                    <span className="text-xs text-gray-400 block mb-0.5">Вы сказали:</span>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    <span className="text-xs text-muted-foreground block mb-0.5">Вы сказали:</span>
                     {transcript}
                   </p>
                 )}
 
                 {queryMutation.isPending && (
-                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                     Обрабатываю...
                   </div>
@@ -163,8 +163,8 @@ export function VoiceCommandButton({ className, onResult }: VoiceCommandButtonPr
 
                 {showResult && queryMutation.data && (
                   <div className="text-sm">
-                    <span className="text-xs text-gray-400 block mb-0.5">Ответ:</span>
-                    <p className="text-gray-800">
+                    <span className="text-xs text-muted-foreground block mb-0.5">Ответ:</span>
+                    <p className="text-foreground">
                       {(queryMutation.data as any).response ?? (queryMutation.data as any).answer}
                     </p>
                   </div>
@@ -172,7 +172,7 @@ export function VoiceCommandButton({ className, onResult }: VoiceCommandButtonPr
               </div>
               <button
                 onClick={dismiss}
-                className="text-gray-400 hover:text-gray-600 shrink-0"
+                className="text-muted-foreground hover:text-foreground shrink-0"
               >
                 <X className="h-4 w-4" />
               </button>

@@ -1,4 +1,4 @@
-export type CryptoNetwork = 'ethereum' | 'bitcoin' | 'solana' | 'bsc'
+export type CryptoNetwork = 'ethereum' | 'bitcoin' | 'solana' | 'bsc' | 'polygon' | 'arbitrum' | 'ton' | 'tron'
 
 export interface CryptoNetworkInfo {
   network: CryptoNetwork | null
@@ -13,16 +13,36 @@ function isBase58(str: string): boolean {
 }
 
 /**
+ * EVM-compatible networks that share the same 0x address format.
+ * Use `networkHint` to disambiguate.
+ */
+export const EVM_NETWORKS: Record<string, { network: CryptoNetwork; symbol: string; name: string }> = {
+  ethereum: { network: 'ethereum', symbol: 'ETH', name: 'Ethereum' },
+  polygon: { network: 'polygon', symbol: 'POL', name: 'Polygon' },
+  arbitrum: { network: 'arbitrum', symbol: 'ETH', name: 'Arbitrum' },
+  bsc: { network: 'bsc', symbol: 'BNB', name: 'BNB Chain' },
+}
+
+/**
  * Detect crypto network from wallet address.
- * - 0x... (40 hex chars) → ethereum (same format as BSC, defaulting to ethereum)
+ * - 0x... (40 hex chars) → ethereum (or use networkHint for polygon/arbitrum/bsc)
  * - bc1... / 1... / 3... → bitcoin
  * - 32-44 base58 chars → solana
+ * - EQ/UQ prefix (48 chars raw) → TON
+ * - T + 33 base58 chars → TRON
  */
-export function detectCryptoNetwork(address: string): CryptoNetworkInfo {
+export function detectCryptoNetwork(
+  address: string,
+  networkHint?: CryptoNetwork,
+): CryptoNetworkInfo {
   const trimmed = address.trim()
 
-  // Ethereum / BSC: 0x + 40 hex chars
+  // Ethereum / Polygon / Arbitrum / BSC: 0x + 40 hex chars
   if (/^0x[0-9a-fA-F]{40}$/.test(trimmed)) {
+    if (networkHint && EVM_NETWORKS[networkHint]) {
+      const info = EVM_NETWORKS[networkHint]
+      return { network: info.network, symbol: info.symbol, name: info.name }
+    }
     return { network: 'ethereum', symbol: 'ETH', name: 'Ethereum' }
   }
 
@@ -33,6 +53,16 @@ export function detectCryptoNetwork(address: string): CryptoNetworkInfo {
   // Bitcoin legacy (starts with 1 or 3)
   if (/^[13][a-km-zA-HJ-NP-Z1-9]{25,34}$/.test(trimmed)) {
     return { network: 'bitcoin', symbol: 'BTC', name: 'Bitcoin' }
+  }
+
+  // TON: EQ or UQ prefix + 46 base64url chars (total 48)
+  if (/^[EU]Q[A-Za-z0-9_-]{46}$/.test(trimmed)) {
+    return { network: 'ton', symbol: 'TON', name: 'TON' }
+  }
+
+  // TRON: T + 33 base58 chars (total 34)
+  if (/^T[a-km-zA-HJ-NP-Z1-9]{33}$/.test(trimmed)) {
+    return { network: 'tron', symbol: 'TRX', name: 'TRON' }
   }
 
   // Solana: base58, 32-44 chars (not matching bitcoin pattern)

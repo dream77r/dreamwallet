@@ -54,12 +54,12 @@ export function FamilyMemberCard({
               <Badge variant={roleVariants[role]}>{roleLabels[role]}</Badge>
             </div>
             {email && (
-              <p className="text-xs text-gray-400 mt-0.5 truncate">{email}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 truncate">{email}</p>
             )}
 
             <div className="mt-3 space-y-1">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-500">Расходы за месяц</span>
+                <span className="text-muted-foreground">Расходы за месяц</span>
                 <span
                   className={`font-semibold tabular-nums ${
                     limitExceeded ? 'text-red-600' : ''
@@ -71,12 +71,12 @@ export function FamilyMemberCard({
 
               {spendingLimit != null && (
                 <>
-                  <div className="flex items-center justify-between text-xs text-gray-400">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>Лимит</span>
                     <span>{spendingLimit.toLocaleString('ru-RU')} ₽</span>
                   </div>
                   {limitPercent !== null && (
-                    <div className="bg-gray-100 rounded-full h-1.5 mt-1">
+                    <div className="bg-muted rounded-full h-1.5 mt-1">
                       <div
                         className={`rounded-full h-1.5 transition-all ${
                           limitExceeded ? 'bg-red-500' : 'bg-blue-500'
@@ -94,7 +94,7 @@ export function FamilyMemberCard({
             <Button
               variant="ghost"
               size="icon"
-              className="text-gray-400 hover:text-red-500 shrink-0 ml-2"
+              className="text-muted-foreground hover:text-red-500 shrink-0 ml-2"
               onClick={onRemove}
               title="Удалить участника"
             >

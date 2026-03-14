@@ -26,10 +26,20 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      await signIn.email({ email, password })
-      router.push(callbackUrl)
+      const result = await signIn.email({
+        email,
+        password,
+        callbackURL: callbackUrl,
+      }, {
+        onError: () => {
+          toast.error('Неверный email или пароль')
+        },
+        onSuccess: () => {
+          router.push(callbackUrl)
+        },
+      })
     } catch {
-      toast.error('Неверный email или пароль')
+      toast.error('Ошибка при входе')
     } finally {
       setLoading(false)
     }

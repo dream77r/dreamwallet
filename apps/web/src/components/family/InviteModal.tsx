@@ -57,7 +57,7 @@ export function InviteModal({ open, onOpenChange }: InviteModalProps) {
         <div className="space-y-4">
           {!inviteMutation.data ? (
             <div className="text-center py-4">
-              <Link2 className="h-10 w-10 mx-auto text-gray-300 mb-3" />
+              <Link2 className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
               <Button onClick={handleGenerate} disabled={inviteMutation.isPending}>
                 {inviteMutation.isPending ? (
                   <>
@@ -71,7 +71,7 @@ export function InviteModal({ open, onOpenChange }: InviteModalProps) {
             </div>
           ) : (
             <div className="space-y-3">
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 Ссылка действительна 7 дней
               </p>
               <div className="flex gap-2">

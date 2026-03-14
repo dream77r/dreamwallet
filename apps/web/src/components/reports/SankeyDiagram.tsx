@@ -30,7 +30,7 @@ export function SankeyDiagram({
     return (
       <Card className="rounded-3xl">
         <CardContent className="p-8 text-center">
-          <p className="text-gray-500">Нет данных для диаграммы</p>
+          <p className="text-muted-foreground">Нет данных для диаграммы</p>
         </CardContent>
       </Card>
     )
@@ -61,16 +61,16 @@ export function SankeyDiagram({
             labelPadding={12}
             labelTextColor={{ from: 'color', modifiers: [['darker', 1]] }}
             nodeTooltip={({ node }) => (
-              <div className="bg-white rounded-xl px-3 py-2 shadow-lg border text-sm">
+              <div className="bg-popover text-popover-foreground rounded-xl px-3 py-2 shadow-lg border text-sm">
                 <strong>{node.label}</strong>
                 <br />
                 {node.value.toLocaleString('ru-RU')} ₽
               </div>
             )}
             linkTooltip={({ link }) => (
-              <div className="bg-white rounded-xl px-3 py-2 shadow-lg border text-sm">
+              <div className="bg-popover text-popover-foreground rounded-xl px-3 py-2 shadow-lg border text-sm">
                 <span>{link.source.label}</span>
-                <span className="mx-1 text-gray-400">→</span>
+                <span className="mx-1 text-muted-foreground">→</span>
                 <span>{link.target.label}</span>
                 <br />
                 <strong>{link.value.toLocaleString('ru-RU')} ₽</strong>

@@ -9,13 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { toast } from 'sonner'
-import { RefreshCw, Plus, Bitcoin, Wallet2 } from 'lucide-react'
+import { RefreshCw, Plus, Wallet2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ru } from 'date-fns/locale'
 
@@ -24,6 +31,10 @@ const NETWORK_COLORS: Record<string, string> = {
   bitcoin: 'bg-orange-100 text-orange-800',
   solana: 'bg-green-100 text-green-800',
   bsc: 'bg-yellow-100 text-yellow-800',
+  polygon: 'bg-violet-100 text-violet-800',
+  arbitrum: 'bg-blue-100 text-blue-800',
+  ton: 'bg-sky-100 text-sky-800',
+  tron: 'bg-red-100 text-red-800',
 }
 
 const NETWORK_LABELS: Record<string, string> = {
@@ -31,6 +42,10 @@ const NETWORK_LABELS: Record<string, string> = {
   bitcoin: 'Bitcoin',
   solana: 'Solana',
   bsc: 'BSC',
+  polygon: 'Polygon',
+  arbitrum: 'Arbitrum',
+  ton: 'TON',
+  tron: 'TRON',
 }
 
 function formatRub(amount: number): string {
@@ -112,6 +127,129 @@ function AddWalletDialog({ walletId, onAdded }: { walletId: string; onAdded: () 
   )
 }
 
+interface CryptoAccount {
+  id: string
+  name: string
+  cryptoAddress: string | null
+  cryptoNetwork: string | null
+  cryptoSymbol: string | null
+  balance: number | string
+  lastSyncAt: Date | string | null
+}
+
+function EditWalletDialog({
+  account,
+  open,
+  onOpenChange,
+  onSaved,
+}: {
+  account: CryptoAccount
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onSaved: () => void
+}) {
+  const [name, setName] = useState(account.name)
+
+  const updateMutation = trpc.crypto.updateWallet.useMutation({
+    onSuccess: () => {
+      toast.success('Кошелёк обновлён')
+      onOpenChange(false)
+      onSaved()
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Редактировать кошелёк</DialogTitle>
+          <DialogDescription>
+            {account.cryptoAddress ? shortenAddress(account.cryptoAddress) : ''}
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div>
+            <label className="text-sm font-medium mb-1 block">Название</label>
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          <Button
+            className="w-full"
+            disabled={!name.trim() || updateMutation.isPending}
+            onClick={() => updateMutation.mutate({ accountId: account.id, name: name.trim() })}
+          >
+            {updateMutation.isPending ? 'Сохраняю...' : 'Сохранить'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DeleteWalletDialog({
+  account,
+  open,
+  onOpenChange,
+  onDeleted,
+}: {
+  account: CryptoAccount
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  onDeleted: () => void
+}) {
+  const deleteMutation = trpc.crypto.deleteWallet.useMutation({
+    onSuccess: () => {
+      toast.success('Кошелёк удалён')
+      onOpenChange(false)
+      onDeleted()
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Удалить кошелёк?</DialogTitle>
+          <DialogDescription>
+            Будут удалены все транзакции этого счёта. Это действие нельзя отменить.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 pt-2">
+          <div className="rounded-lg border p-3">
+            <p className="font-medium">{account.name}</p>
+            {account.cryptoAddress && (
+              <p className="text-sm text-muted-foreground font-mono">
+                {shortenAddress(account.cryptoAddress)}
+              </p>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              className="flex-1"
+              onClick={() => onOpenChange(false)}
+            >
+              Отмена
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1"
+              disabled={deleteMutation.isPending}
+              onClick={() => deleteMutation.mutate({ accountId: account.id })}
+            >
+              {deleteMutation.isPending ? 'Удаляю...' : 'Удалить'}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function CryptoPage() {
   const utils = trpc.useUtils()
 
@@ -131,6 +269,18 @@ export default function CryptoPage() {
     },
     onError: (err) => toast.error(err.message),
   })
+
+  const deleteMutation = trpc.crypto.deleteWallet.useMutation({
+    onSuccess: () => {
+      toast.success('Кошелёк удалён')
+      void utils.crypto.list.invalidate()
+    },
+    onError: (err) => toast.error(err.message),
+  })
+
+  // Edit / Delete dialog state
+  const [editAccount, setEditAccount] = useState<CryptoAccount | null>(null)
+  const [deleteAccount, setDeleteAccount] = useState<CryptoAccount | null>(null)
 
   // Auto-sync on page open
   const syncAllMutation = trpc.crypto.syncAll.useMutation({
@@ -193,9 +343,31 @@ export default function CryptoPage() {
                   <CardTitle className="text-base font-semibold leading-tight">
                     {account.name}
                   </CardTitle>
-                  <Badge className={`text-xs shrink-0 ${NETWORK_COLORS[network] ?? ''}`}>
-                    {NETWORK_LABELS[network] ?? network}
-                  </Badge>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Badge className={`text-xs ${NETWORK_COLORS[network] ?? ''}`}>
+                      {NETWORK_LABELS[network] ?? network}
+                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-7 w-7">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditAccount(account as unknown as CryptoAccount)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Редактировать
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => setDeleteAccount(account as unknown as CryptoAccount)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Удалить
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
                 {account.cryptoAddress && (
                   <p className="text-xs text-muted-foreground font-mono mt-1">
@@ -232,6 +404,30 @@ export default function CryptoPage() {
           )
         })}
       </div>
+
+      {editAccount && (
+        <EditWalletDialog
+          account={editAccount}
+          open={!!editAccount}
+          onOpenChange={(v) => { if (!v) setEditAccount(null) }}
+          onSaved={() => {
+            setEditAccount(null)
+            void utils.crypto.list.invalidate()
+          }}
+        />
+      )}
+
+      {deleteAccount && (
+        <DeleteWalletDialog
+          account={deleteAccount}
+          open={!!deleteAccount}
+          onOpenChange={(v) => { if (!v) setDeleteAccount(null) }}
+          onDeleted={() => {
+            setDeleteAccount(null)
+            void utils.crypto.list.invalidate()
+          }}
+        />
+      )}
     </div>
   )
 }

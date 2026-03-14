@@ -70,8 +70,8 @@ function TrendIcon({ trend, color }: { trend: 'safe' | 'warning' | 'danger'; col
 
 export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
   return (
-    <div className="bg-white rounded-3xl shadow-card p-6 animate-fade-up">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-[#8E8E93] mb-4">
+    <div className="bg-card rounded-3xl shadow-card p-6 animate-fade-up">
+      <p className="text-caption text-muted-foreground mb-4">
         Прогноз баланса
       </p>
 
@@ -82,7 +82,7 @@ export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
           <Skeleton className="h-4 w-32 rounded-lg" />
         </div>
       ) : !data ? (
-        <p className="text-sm text-[#8E8E93]">Недостаточно данных для прогноза</p>
+        <p className="text-sm text-muted-foreground">Недостаточно данных для прогноза</p>
       ) : data.currentBalance <= 0 ? (
         <div className="flex items-center gap-3">
           <AlertCircle className="w-6 h-6" style={{ color: '#FF3B30' }} />
@@ -90,7 +90,7 @@ export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
             <p className="text-lg font-semibold" style={{ color: '#FF3B30' }}>
               Баланс отрицательный
             </p>
-            <p className="text-sm text-[#8E8E93]">
+            <p className="text-sm text-muted-foreground">
               {formatCurrency(data.currentBalance)} ₽
             </p>
           </div>
@@ -102,7 +102,7 @@ export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
             <p className="text-lg font-semibold" style={{ color: '#34C759' }}>
               Безопасно
             </p>
-            <p className="text-sm text-[#8E8E93]">Доходы покрывают расходы</p>
+            <p className="text-sm text-muted-foreground">Доходы покрывают расходы</p>
           </div>
         </div>
       ) : data.daysUntilZero !== null ? (
@@ -116,11 +116,11 @@ export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
                   {data.daysUntilZero} {pluralizeDays(data.daysUntilZero)}
                 </p>
                 {data.projectedZeroDate && (
-                  <p className="text-sm text-[#8E8E93] mt-1">
+                  <p className="text-sm text-muted-foreground mt-1">
                     {formatDate(data.projectedZeroDate)}
                   </p>
                 )}
-                <p className="text-sm text-[#8E8E93] mt-1">
+                <p className="text-sm text-muted-foreground mt-1">
                   Средний расход: {formatCurrency(data.dailyBurnRate)} ₽/день
                 </p>
               </div>
@@ -128,7 +128,7 @@ export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
           )
         })()
       ) : (
-        <p className="text-sm text-[#8E8E93]">Недостаточно данных для прогноза</p>
+        <p className="text-sm text-muted-foreground">Недостаточно данных для прогноза</p>
       )}
     </div>
   )
