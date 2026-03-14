@@ -1,8 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -27,6 +26,9 @@ import {
   Legend,
 } from 'recharts'
 import { trpc } from '@/lib/trpc/client'
+import { PageHeader } from '@/components/ui/page-header'
+import { StatCarousel, StatCard } from '@/components/ui/stat-carousel'
+import { ChartContainer, PeriodPills } from '@/components/ui/chart-container'
 
 type Period = '1m' | '3m' | '6m' | '12m'
 
@@ -39,6 +41,14 @@ const periodConfig: Record<Period, { label: string; months: number }> = {
 
 const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
 const CHART_COLORS = ['#6366f1','#22c55e','#f59e0b','#ec4899','#14b8a6','#f97316','#8b5cf6','#06b6d4','#ef4444','#a3e635']
+
+const TOOLTIP_STYLE = {
+  borderRadius: 16,
+  border: 'none',
+  backgroundColor: 'var(--glass-bg)',
+  backdropFilter: 'blur(20px)',
+  boxShadow: 'var(--glass-shadow)',
+}
 
 function formatAmount(amount: number) {
   return new Intl.NumberFormat('ru-RU', {
@@ -160,118 +170,142 @@ export default function AnalyticsPage() {
 
   const isLoading = !walletId || cashFlowLoading
 
+  const periodPills = (
+    <PeriodPills
+      periods={[
+        { label: '1М', value: '1m' },
+        { label: '3М', value: '3m' },
+        { label: '6М', value: '6m' },
+        { label: '1Г', value: '12m' },
+      ]}
+      active={period}
+      onChange={(v) => setPeriod(v as Period)}
+    />
+  )
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Аналитика</h1>
-          <p className="text-muted-foreground text-sm">Детальный анализ финансов</p>
-        </div>
-        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'analytics' | 'report')}>
-          <TabsList>
-            <TabsTrigger value="analytics">Графики</TabsTrigger>
-            <TabsTrigger value="report">Отчёт</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      <PageHeader
+        title="Аналитика"
+        description="Детальный анализ финансов"
+        actions={
+          <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'analytics' | 'report')}>
+            <TabsList>
+              <TabsTrigger value="analytics">Графики</TabsTrigger>
+              <TabsTrigger value="report">Отчёт</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        }
+      />
 
       {mainTab === 'report' && <ReportTab />}
 
       {mainTab === 'analytics' && <>
         <div className="flex justify-end">
-          <Tabs value={period} onValueChange={(v) => setPeriod(v as Period)}>
-            <TabsList>
-              {(Object.entries(periodConfig) as [Period, { label: string }][]).map(([key, cfg]) => (
-                <TabsTrigger key={key} value={key}>{cfg.label}</TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+          {periodPills}
         </div>
 
         {/* KPI Summary */}
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {[
-            {
-              label: 'Доходы', value: totalIncome, color: 'text-green-600',
-              change: incomeChange, goodWhenPositive: true,
-            },
-            {
-              label: 'Расходы', value: totalExpense, color: 'text-red-600',
-              change: expenseChange, goodWhenPositive: false,
-            },
-            {
-              label: 'Накоплено', value: totalSavings,
-              color: totalSavings >= 0 ? 'text-green-600' : 'text-red-600',
-              change: null, goodWhenPositive: true,
-            },
-            {
-              label: 'Норма сбережений', value: null, rate: savingsRate,
-              color: savingsRate >= 20 ? 'text-green-600' : savingsRate >= 10 ? 'text-yellow-600' : 'text-red-600',
-              change: null, goodWhenPositive: true,
-            },
-          ].map(({ label, value, rate, color, change, goodWhenPositive }) => (
-            <Card key={label}>
-              <CardContent className="pt-5 pb-4">
-                <p className="text-xs text-muted-foreground mb-1">{label}</p>
-                {isLoading ? <Skeleton className="h-7 w-28" /> : (
-                  <p className={`text-xl font-semibold ${color}`}>
-                    {value !== null && value !== undefined ? formatAmount(value) : `${rate}%`}
-                  </p>
-                )}
-                {change !== null && change !== undefined && (
-                  <div className="flex items-center gap-1 mt-1 text-xs">
-                    {change > 0 ? (
-                      <><TrendingUp className={`h-3 w-3 ${goodWhenPositive ? 'text-green-600' : 'text-red-500'}`} />
-                        <span className={goodWhenPositive ? 'text-green-600' : 'text-red-500'}>+{change}%</span></>
-                    ) : change < 0 ? (
-                      <><TrendingDown className={`h-3 w-3 ${goodWhenPositive ? 'text-red-500' : 'text-green-600'}`} />
-                        <span className={goodWhenPositive ? 'text-red-500' : 'text-green-600'}>{change}%</span></>
-                    ) : (
-                      <><Minus className="h-3 w-3 text-muted-foreground" /><span className="text-muted-foreground">0%</span></>
-                    )}
-                    <span className="text-muted-foreground">к пред. периоду</span>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <StatCarousel columns={4}>
+          {/* Income */}
+          <StatCard
+            label="Доходы"
+            value={
+              isLoading
+                ? <Skeleton className="h-7 w-28" />
+                : <span className="text-income">{formatAmount(totalIncome)}</span>
+            }
+            trend={incomeChange !== null ? { value: incomeChange, label: 'к пред. периоду' } : undefined}
+          />
+
+          {/* Expenses */}
+          <StatCard
+            label="Расходы"
+            value={
+              isLoading
+                ? <Skeleton className="h-7 w-28" />
+                : <span className="text-expense">{formatAmount(totalExpense)}</span>
+            }
+            trend={
+              expenseChange !== null
+                ? {
+                    value: -expenseChange, // invert so positive expense growth shows as bad (red)
+                    label: 'к пред. периоду',
+                  }
+                : undefined
+            }
+          />
+
+          {/* Savings */}
+          <StatCard
+            label="Накоплено"
+            value={
+              isLoading
+                ? <Skeleton className="h-7 w-28" />
+                : (
+                  <span className={totalSavings >= 0 ? 'text-income' : 'text-expense'}>
+                    {formatAmount(totalSavings)}
+                  </span>
+                )
+            }
+          />
+
+          {/* Savings rate */}
+          <StatCard
+            label="Норма сбережений"
+            value={
+              isLoading
+                ? <Skeleton className="h-7 w-16" />
+                : (
+                  <span className={
+                    savingsRate >= 20 ? 'text-income' : savingsRate >= 10 ? 'text-yellow-500' : 'text-expense'
+                  }>
+                    {savingsRate}%
+                  </span>
+                )
+            }
+          />
+        </StatCarousel>
 
         {/* Income vs Expense chart */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Доходы и расходы</CardTitle>
-            <CardDescription>По месяцам за {periodConfig[period].label.toLowerCase()}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
-              <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
-                Нет данных за выбранный период
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={chartData} barCategoryGap="35%">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                  <Tooltip formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''} labelStyle={{ fontWeight: 600 }} contentStyle={{ borderRadius: 12, border: 'none', backgroundColor: 'hsl(var(--card))', color: 'hsl(var(--card-foreground))', boxShadow: '0 4px 24px rgba(0,0,0,0.3)' }} />
-                  <Legend />
-                  <Bar dataKey="income" name="Доходы" fill="#22c55e" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="expense" name="Расходы" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <ChartContainer
+          title="Доходы и расходы"
+          subtitle={`По месяцам за ${periodConfig[period].label.toLowerCase()}`}
+          height={{ mobile: 220, desktop: 280 }}
+        >
+          {isLoading ? (
+            <Skeleton className="h-full w-full" />
+          ) : chartData.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+              Нет данных за выбранный период
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} barCategoryGap="35%">
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                <YAxis tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                <Tooltip
+                  formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
+                  labelStyle={{ fontWeight: 600 }}
+                  contentStyle={TOOLTIP_STYLE}
+                />
+                <Legend />
+                <Bar dataKey="income" name="Доходы" fill="#22c55e" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expense" name="Расходы" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </ChartContainer>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
           {/* Category breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Расходы по категориям</CardTitle>
-              <CardDescription>Этот месяц vs прошлый месяц</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
+          <div className="glass-card card-default rounded-2xl p-4 md:p-6">
+            <div className="mb-4">
+              <h3 className="font-semibold text-base">Расходы по категориям</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">Этот месяц vs прошлый месяц</p>
+            </div>
+            <div className="space-y-4">
               {!thisCategoryData ? (
                 Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-8 w-full" />)
               ) : categoryBreakdown.length === 0 ? (
@@ -291,7 +325,7 @@ export default function AnalyticsPage() {
                         </div>
                         <div className="flex items-center gap-2">
                           {change !== null && (
-                            <span className={`text-xs ${change > 0 ? 'text-red-500' : change < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                            <span className={`text-xs ${change > 0 ? 'text-expense' : change < 0 ? 'text-income' : 'text-muted-foreground'}`}>
                               {change > 0 ? '+' : ''}{change}%
                             </span>
                           )}
@@ -305,53 +339,59 @@ export default function AnalyticsPage() {
                   )
                 })
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Savings trend */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Динамика сбережений</CardTitle>
-              <CardDescription>Сумма и норма накоплений по месяцам</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? <Skeleton className="h-[280px] w-full" /> : chartData.length === 0 ? (
-                <div className="flex h-[280px] items-center justify-center text-muted-foreground text-sm">
-                  Нет данных за выбранный период
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
-                    <YAxis yAxisId="amount" orientation="left" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
-                    <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
-                    <Tooltip formatter={((value: number | undefined, name: string) => { if (value === undefined) return ""; return name === 'Накоплено' ? formatAmount(value as number) : `${value}%`; }) as never} />
-                    <Legend />
-                    <Line yAxisId="amount" type="monotone" dataKey="savings" name="Накоплено" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                    <Line yAxisId="rate" type="monotone" dataKey="savingsRate" name="Норма, %" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </CardContent>
-          </Card>
+          <ChartContainer
+            title="Динамика сбережений"
+            subtitle="Сумма и норма накоплений по месяцам"
+            height={{ mobile: 220, desktop: 280 }}
+          >
+            {isLoading ? (
+              <Skeleton className="h-full w-full" />
+            ) : chartData.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
+                Нет данных за выбранный период
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis dataKey="month" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} />
+                  <YAxis yAxisId="amount" orientation="left" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={formatK} />
+                  <YAxis yAxisId="rate" orientation="right" tick={{ fontSize: 12 }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v}%`} />
+                  <Tooltip
+                    formatter={((value: number | undefined, name: string) => {
+                      if (value === undefined) return ''
+                      return name === 'Накоплено' ? formatAmount(value as number) : `${value}%`
+                    }) as never}
+                    contentStyle={TOOLTIP_STYLE}
+                  />
+                  <Legend />
+                  <Line yAxisId="amount" type="monotone" dataKey="savings" name="Накоплено" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  <Line yAxisId="rate" type="monotone" dataKey="savingsRate" name="Норма, %" stroke="hsl(var(--chart-3))" strokeWidth={2} strokeDasharray="5 5" dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </ChartContainer>
         </div>
 
         {/* Top counterparties */}
         {topCounterparties.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Топ контрагентов</CardTitle>
-              <CardDescription>Где вы тратите больше всего</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="glass-card card-default rounded-2xl p-4 md:p-6">
+            <div className="mb-4">
+              <h3 className="font-semibold text-base">Топ контрагентов</h3>
+              <p className="text-sm text-muted-foreground mt-0.5">Где вы тратите больше всего</p>
+            </div>
+            <div className="space-y-3">
               {topCounterparties.map(([name, amount]: [string, number]) => {
                 const pct = maxCounterparty > 0 ? (amount / maxCounterparty) * 100 : 0
                 return (
                   <div key={name}>
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-sm font-medium truncate max-w-[200px]">{name}</span>
-                      <span className="text-sm font-semibold text-red-500">{formatAmount(amount)}</span>
+                      <span className="text-sm font-semibold text-expense">{formatAmount(amount)}</span>
                     </div>
                     <div className="h-2 bg-muted rounded-full overflow-hidden">
                       <div
@@ -362,8 +402,8 @@ export default function AnalyticsPage() {
                   </div>
                 )
               })}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         )}
       </>}
     </div>
@@ -421,49 +461,36 @@ function ReportTab() {
           <Skeleton className="h-40" />
         </div>
       ) : !report ? (
-        <Card>
-          <CardContent className="p-8 text-center text-muted-foreground">
-            Нет данных за выбранный месяц
-          </CardContent>
-        </Card>
+        <div className="glass-card card-default rounded-2xl p-8 text-center text-muted-foreground">
+          Нет данных за выбранный месяц
+        </div>
       ) : (
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-3 gap-4">
-            <Card className="border-green-100 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20">
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Доходы</p>
-                <p className="text-xl font-semibold text-green-600">{formatAmount(report.income.total)}</p>
-                <p className="text-xs text-muted-foreground">{report.income.count} транзакций</p>
-              </CardContent>
-            </Card>
-            <Card className="border-red-100 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20">
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Расходы</p>
-                <p className="text-xl font-semibold text-red-600">{formatAmount(report.expense.total)}</p>
-                <p className="text-xs text-muted-foreground">{report.expense.count} транзакций</p>
-              </CardContent>
-            </Card>
-            <Card className={report.savings >= 0
-              ? 'border-blue-100 bg-blue-50/50 dark:border-blue-900/30 dark:bg-blue-950/20'
-              : 'border-gray-100 bg-gray-50/50 dark:border-gray-900/30 dark:bg-gray-950/20'
-            }>
-              <CardContent className="p-4">
-                <p className="text-xs text-muted-foreground mb-1">Сбережения</p>
-                <p className={`text-xl font-semibold ${report.savings >= 0 ? 'text-blue-600' : 'text-gray-500'}`}>
-                  {formatAmount(report.savings)}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="glass-card card-default rounded-2xl p-4">
+              <p className="text-xs text-muted-foreground mb-1">Доходы</p>
+              <p className="text-xl font-semibold text-income">{formatAmount(report.income.total)}</p>
+              <p className="text-xs text-muted-foreground">{report.income.count} транзакций</p>
+            </div>
+            <div className="glass-card card-default rounded-2xl p-4">
+              <p className="text-xs text-muted-foreground mb-1">Расходы</p>
+              <p className="text-xl font-semibold text-expense">{formatAmount(report.expense.total)}</p>
+              <p className="text-xs text-muted-foreground">{report.expense.count} транзакций</p>
+            </div>
+            <div className="glass-card card-default rounded-2xl p-4">
+              <p className="text-xs text-muted-foreground mb-1">Сбережения</p>
+              <p className={`text-xl font-semibold ${report.savings >= 0 ? 'text-income' : 'text-expense'}`}>
+                {formatAmount(report.savings)}
+              </p>
+            </div>
           </div>
 
           {/* Top-5 categories */}
           {report.byCategory.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Топ-5 категорий расходов</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="glass-card card-default rounded-2xl p-4 md:p-6">
+              <h3 className="font-semibold text-base mb-4">Топ-5 категорий расходов</h3>
+              <div className="space-y-4">
                 {report.byCategory.map((cat, i) => {
                   const maxAmount = report.byCategory[0]?.amount ?? 1
                   const pct = maxAmount > 0 ? Math.round((cat.amount / maxAmount) * 100) : 0
@@ -480,36 +507,33 @@ function ReportTab() {
                     </div>
                   )
                 })}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
           {/* Top-5 expenses */}
           {report.topExpenses.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Топ-5 крупнейших трат</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {report.topExpenses.map((tx, i) => (
-                    <div key={i} className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{tx.description || 'Без описания'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {tx.category?.name ?? 'Без категории'} &middot; {new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
-                        </p>
-                      </div>
-                      <span className="shrink-0 ml-4 font-semibold text-red-600">
-                        -{formatAmount(Number(tx.amount))}
-                      </span>
+            <div className="glass-card card-default rounded-2xl p-4 md:p-6">
+              <h3 className="font-semibold text-base mb-4">Топ-5 крупнейших трат</h3>
+              <div className="space-y-3">
+                {report.topExpenses.map((tx, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium truncate">{tx.description || 'Без описания'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {tx.category?.name ?? 'Без категории'} &middot; {new Date(tx.date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+                    <span className="shrink-0 ml-4 font-semibold text-expense">
+                      -{formatAmount(Number(tx.amount))}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
-        </>)}
+        </>
+      )}
     </div>
   )
 }

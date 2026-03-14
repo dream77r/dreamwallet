@@ -58,6 +58,8 @@ import { TransactionForm } from '@/components/transactions/transaction-form'
 import { QuickAddModal } from '@/components/transactions/QuickAddModal'
 import { InlineCategoryPicker } from '@/components/transactions/InlineCategoryPicker'
 import { SuggestRuleDialog, type SuggestRulePayload } from '@/components/transactions/SuggestRuleDialog'
+import { PageHeader } from '@/components/ui/page-header'
+import { StatCarousel, StatCard } from '@/components/ui/stat-carousel'
 
 const PAGE_SIZE = 20
 
@@ -70,21 +72,21 @@ const typeLabels: Record<TxType, string> = {
 }
 
 const typeBadgeVariants: Record<TxType, string> = {
-  INCOME: 'bg-green-100 text-green-700',
-  EXPENSE: 'bg-red-100 text-red-700',
-  TRANSFER: 'bg-blue-100 text-blue-700',
+  INCOME: 'bg-income/10 text-income',
+  EXPENSE: 'bg-expense/10 text-expense',
+  TRANSFER: 'bg-transfer/10 text-transfer',
 }
 
 const typeIcons: Record<TxType, React.ReactNode> = {
-  INCOME: <ArrowUpRight className="h-3.5 w-3.5 text-green-600" />,
-  EXPENSE: <ArrowDownRight className="h-3.5 w-3.5 text-red-600" />,
-  TRANSFER: <ArrowLeftRight className="h-3.5 w-3.5 text-blue-600" />,
+  INCOME: <ArrowUpRight className="h-3.5 w-3.5 text-income" />,
+  EXPENSE: <ArrowDownRight className="h-3.5 w-3.5 text-expense" />,
+  TRANSFER: <ArrowLeftRight className="h-3.5 w-3.5 text-transfer" />,
 }
 
 function getDisplayDescription(description: string | null, counterparty: string | null, fallback: string): string {
-  const isBankGarbage = (s: string) => 
+  const isBankGarbage = (s: string) =>
     s.includes('Операция по карте') || s.includes('место совершения операции') || s.includes('дата создания транзакции')
-  
+
   if (description && !isBankGarbage(description)) {
     return description.slice(0, 50) + (description.length > 50 ? '...' : '')
   }
@@ -311,6 +313,62 @@ function TransactionsPage() {
 
   const editingTx = transactions.find(t => t.id === editingId)
 
+  const headerActions = (
+    <>
+      {/* Categorization buttons */}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => { setIsKeywordCategorizing(true); autoCategorize.mutate({ useAI: false }) }}
+        disabled={isKeywordCategorizing || isAutoCategorizing}
+        title="Категоризировать по ключевым словам"
+      >
+        <Tag className="h-4 w-4 mr-1.5" />
+        <span className="hidden sm:inline">{isKeywordCategorizing ? 'Обрабатываю...' : 'Категории'}</span>
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => { setIsAutoCategorizing(true); autoCategorize.mutate({ useAI: true }) }}
+        disabled={isAutoCategorizing || isKeywordCategorizing}
+        title="AI категоризация"
+        className="text-indigo-600 hover:text-indigo-700 border-indigo-200 hover:border-indigo-300"
+      >
+        <Sparkles className="h-4 w-4 mr-1.5" />
+        <span className="hidden sm:inline">{isAutoCategorizing ? 'AI...' : 'AI'}</span>
+      </Button>
+      {/* Secondary actions dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="outline" size="sm">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuItem onClick={handleExport} disabled={exportQuery.isFetching}>
+            <Download className="h-4 w-4 mr-2" />
+            {exportQuery.isFetching ? 'Экспорт...' : 'Экспорт CSV'}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => { setIsCleaning(true); cleanDescriptions.mutate() }}
+            disabled={isCleaning}
+          >
+            <Wand2 className="h-4 w-4 mr-2" />
+            {isCleaning ? 'Чищу...' : 'Очистить описания'}
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <label className="cursor-pointer w-full flex items-center">
+              <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} />
+              <Camera className="h-4 w-4 mr-2" />
+              {parseReceiptMutation.isPending ? 'Сканирую...' : 'Сканировать чек'}
+            </label>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <TransactionForm />
+    </>
+  )
+
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
       <QuickAddModal open={quickAddOpen} onOpenChange={setQuickAddOpen} />
@@ -326,181 +384,128 @@ function TransactionsPage() {
           onOpenChange={(o) => { if (!o) setEditingId(null) }}
         />
       )}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Транзакции</h1>
-          <p className="text-muted-foreground text-sm">
-            {isLoading ? 'Загрузка...' : `${total} записей`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {/* Categorization buttons */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { setIsKeywordCategorizing(true); autoCategorize.mutate({ useAI: false }) }}
-            disabled={isKeywordCategorizing || isAutoCategorizing}
-            title="Категоризировать по ключевым словам"
-          >
-            <Tag className="h-4 w-4 mr-1.5" />
-            <span className="hidden sm:inline">{isKeywordCategorizing ? 'Обрабатываю...' : 'Категории'}</span>
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { setIsAutoCategorizing(true); autoCategorize.mutate({ useAI: true }) }}
-            disabled={isAutoCategorizing || isKeywordCategorizing}
-            title="AI категоризация"
-            className="text-indigo-600 hover:text-indigo-700 border-indigo-200 hover:border-indigo-300"
-          >
-            <Sparkles className="h-4 w-4 mr-1.5" />
-            <span className="hidden sm:inline">{isAutoCategorizing ? 'AI...' : 'AI'}</span>
-          </Button>
-          {/* Secondary actions dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={handleExport} disabled={exportQuery.isFetching}>
-                <Download className="h-4 w-4 mr-2" />
-                {exportQuery.isFetching ? 'Экспорт...' : 'Экспорт CSV'}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => { setIsCleaning(true); cleanDescriptions.mutate() }}
-                disabled={isCleaning}
-              >
-                <Wand2 className="h-4 w-4 mr-2" />
-                {isCleaning ? 'Чищу...' : 'Очистить описания'}
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <label className="cursor-pointer w-full flex items-center">
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={handleScanReceipt} />
-                  <Camera className="h-4 w-4 mr-2" />
-                  {parseReceiptMutation.isPending ? 'Сканирую...' : 'Сканировать чек'}
-                </label>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <TransactionForm />
-        </div>
-      </div>
 
-      {/* Summary row — compact single card */}
-      <div className="flex gap-2">
-        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
-          <p className="text-xs text-muted-foreground">Доходы</p>
-          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
-            <p className="text-sm font-bold tabular-nums text-green-500">+{formatAmount(totalIncome)}</p>
-          )}
-        </div>
-        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
-          <p className="text-xs text-muted-foreground">Расходы</p>
-          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
-            <p className="text-sm font-bold tabular-nums text-red-500">-{formatAmount(totalExpense)}</p>
-          )}
-        </div>
-        <div className="flex-1 bg-card rounded-2xl px-4 py-3">
-          <p className="text-xs text-muted-foreground">Итого</p>
-          {isLoading ? <Skeleton className="h-5 w-16 mt-1" /> : (
-            <p className={`text-sm font-bold tabular-nums ${net >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {net >= 0 ? '+' : ''}{formatAmount(net)}
-            </p>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="Транзакции"
+        description={isLoading ? 'Загрузка...' : `${total} записей`}
+        actions={headerActions}
+      />
+
+      {/* Summary row */}
+      <StatCarousel columns={3}>
+        <StatCard
+          label="ДОХОДЫ"
+          value={
+            isLoading
+              ? <Skeleton className="h-5 w-16 mt-1" />
+              : <span className="text-income">+{formatAmount(totalIncome)}</span>
+          }
+        />
+        <StatCard
+          label="РАСХОДЫ"
+          value={
+            isLoading
+              ? <Skeleton className="h-5 w-16 mt-1" />
+              : <span className="text-expense">-{formatAmount(totalExpense)}</span>
+          }
+        />
+        <StatCard
+          label="ИТОГО"
+          value={
+            isLoading
+              ? <Skeleton className="h-5 w-16 mt-1" />
+              : <span className={net >= 0 ? 'text-income' : 'text-expense'}>
+                  {net >= 0 ? '+' : ''}{formatAmount(net)}
+                </span>
+          }
+        />
+      </StatCarousel>
 
       {/* Filters */}
-      <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-        <CardContent className="pt-5 pb-4">
-          <div className="flex flex-wrap gap-3 items-center">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Поиск по описанию или контрагенту..."
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPage(1) }}
-                className="pl-9"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1) }}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Тип" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все типы</SelectItem>
-                <SelectItem value="INCOME">Доходы</SelectItem>
-                <SelectItem value="EXPENSE">Расходы</SelectItem>
-                <SelectItem value="TRANSFER">Переводы</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1) }}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Категория" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все категории</SelectItem>
-                {categories?.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={tagFilter || 'all'} onValueChange={(v) => { setTagFilter(v === 'all' ? '' : v); setPage(1) }}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Тег" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все теги</SelectItem>
-                {tags?.map((tag) => (
-                  <SelectItem key={tag.id} value={tag.name}>{tag.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {(search || typeFilter !== 'all' || categoryFilter !== 'all' || tagFilter) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => { setSearch(''); setTypeFilter('all'); setCategoryFilter('all'); setTagFilter(''); setPage(1) }}
-              >
-                <X className="mr-1 h-3.5 w-3.5" />
-                Сбросить
-              </Button>
-            )}
+      <div className="glass-card card-default rounded-2xl px-5 py-4">
+        <div className="flex flex-wrap gap-3 items-center">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Поиск по описанию или контрагенту..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
+              className="pl-9"
+            />
           </div>
-        </CardContent>
-      </Card>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Тип" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все типы</SelectItem>
+              <SelectItem value="INCOME">Доходы</SelectItem>
+              <SelectItem value="EXPENSE">Расходы</SelectItem>
+              <SelectItem value="TRANSFER">Переводы</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1) }}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Категория" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все категории</SelectItem>
+              {categories?.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={tagFilter || 'all'} onValueChange={(v) => { setTagFilter(v === 'all' ? '' : v); setPage(1) }}>
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Тег" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все теги</SelectItem>
+              {tags?.map((tag) => (
+                <SelectItem key={tag.id} value={tag.name}>{tag.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {(search || typeFilter !== 'all' || categoryFilter !== 'all' || tagFilter) && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSearch(''); setTypeFilter('all'); setCategoryFilter('all'); setTagFilter(''); setPage(1) }}
+            >
+              <X className="mr-1 h-3.5 w-3.5" />
+              Сбросить
+            </Button>
+          )}
+        </div>
+      </div>
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="flex items-center gap-3 py-3 px-4">
-            <span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
-            <div className="flex gap-2 ml-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setBulkCategoryOpen(true)}
-              >
-                <Tag className="mr-1.5 h-3.5 w-3.5" />
-                Категория
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-                onClick={handleBulkDelete}
-              >
-                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-                Удалить
-              </Button>
-              <Button variant="ghost" size="sm" onClick={clearSelection}>
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="border border-primary/20 gradient-card rounded-2xl px-4 py-3 flex items-center gap-3">
+          <span className="text-sm font-medium">Выбрано: {selectedIds.size}</span>
+          <div className="flex gap-2 ml-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkCategoryOpen(true)}
+            >
+              <Tag className="mr-1.5 h-3.5 w-3.5" />
+              Категория
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-expense hover:text-expense border-expense/30 hover:border-expense/50"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+              Удалить
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              <X className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* Bulk category dialog */}
@@ -541,7 +546,7 @@ function TransactionsPage() {
 
 
       {/* Mobile list — iOS Apple Wallet style */}
-      <div className="md:hidden space-y-1 bg-card rounded-2xl shadow-sm overflow-hidden dark:shadow-none">
+      <div className="md:hidden space-y-1 glass-card card-default rounded-2xl overflow-hidden">
         {isLoading ? (
           <div className="p-4 space-y-3">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -562,12 +567,12 @@ function TransactionsPage() {
             return (
               <div key={tx.id}>
                 <div
-                  className="flex items-center justify-between px-4 py-3 active:bg-muted transition-colors"
+                  className="flex items-center justify-between px-4 py-3 active:bg-muted transition-colors tap-target"
                   onClick={() => setEditingId(tx.id)}
                 >
                   <div className="flex items-center gap-3">
                     <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${
-                      type === 'INCOME' ? 'bg-green-500/15' : type === 'EXPENSE' ? 'bg-red-500/15' : 'bg-blue-500/15'
+                      type === 'INCOME' ? 'bg-income/15' : type === 'EXPENSE' ? 'bg-expense/15' : 'bg-transfer/15'
                     }`}>
                       {typeIcons[type]}
                     </div>
@@ -587,7 +592,7 @@ function TransactionsPage() {
                   </div>
                   <div className="text-right">
                     <p className={`text-sm font-bold tabular-nums ${
-                      type === 'INCOME' ? 'text-green-600' : type === 'TRANSFER' ? 'text-blue-600' : 'text-red-500'
+                      type === 'INCOME' ? 'text-income' : type === 'TRANSFER' ? 'text-transfer' : 'text-expense'
                     }`}>
                       {type === 'INCOME' ? '+' : '-'}{formatAmount(amount, tx.currency)}
                     </p>
@@ -601,10 +606,9 @@ function TransactionsPage() {
         )}
       </div>
 
-      {/* Desktop table */}
       {/* Desktop table — hidden on mobile */}
-      <div className="hidden md:block"><Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none overflow-hidden">
-        <CardContent className="p-0">
+      <div className="hidden md:block">
+        <div className="glass-card card-default rounded-2xl overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
@@ -675,8 +679,8 @@ function TransactionsPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className={`flex h-7 w-7 items-center justify-center rounded-full ${
-                            type === 'INCOME' ? 'bg-green-100' :
-                            type === 'EXPENSE' ? 'bg-red-100' : 'bg-blue-100'
+                            type === 'INCOME' ? 'bg-income/10' :
+                            type === 'EXPENSE' ? 'bg-expense/10' : 'bg-transfer/10'
                           }`}>
                             {typeIcons[type]}
                           </div>
@@ -717,8 +721,8 @@ function TransactionsPage() {
                       </TableCell>
                       <TableCell className="text-right pr-6">
                         <span className={`font-semibold text-sm ${
-                          type === 'INCOME' ? 'text-green-600' :
-                          type === 'TRANSFER' ? 'text-blue-600' : 'text-red-600'
+                          type === 'INCOME' ? 'text-income' :
+                          type === 'TRANSFER' ? 'text-transfer' : 'text-expense'
                         }`}>
                           {type === 'INCOME' ? '+' : '-'}{formatAmount(amount, tx.currency)}
                         </span>
@@ -733,7 +737,7 @@ function TransactionsPage() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setEditingId(tx.id)}>Редактировать</DropdownMenuItem>
                             <DropdownMenuItem
-                              className="text-red-600"
+                              className="text-expense"
                               onClick={() => deleteMutation.mutate({ id: tx.id })}
                             >
                               Удалить
@@ -747,9 +751,7 @@ function TransactionsPage() {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
-
+        </div>
       </div>{/* end desktop table */}
 
       {/* Pagination */}
@@ -761,7 +763,7 @@ function TransactionsPage() {
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 rounded-xl tap-target"
             disabled={page === 1}
             onClick={() => setPage(p => p - 1)}
           >
@@ -774,7 +776,7 @@ function TransactionsPage() {
                 key={p}
                 variant={p === page ? 'default' : 'outline'}
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 rounded-xl tap-target"
                 onClick={() => setPage(p)}
               >
                 {p}
@@ -783,7 +785,7 @@ function TransactionsPage() {
           <Button
             variant="outline"
             size="icon"
-            className="h-8 w-8"
+            className="h-8 w-8 rounded-xl tap-target"
             disabled={page === totalPages}
             onClick={() => setPage(p => p + 1)}
           >

@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { ArrowLeftRight, Sparkles, Upload, Target, Flag } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/animated-number'
-import { RecentTransactionsWidget } from './RecentTransactionsWidget'
+import { GradientHero } from '@/components/ui/gradient-hero'
+import { ActionRow, ActionButton } from '@/components/ui/action-row'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 import type { ReactNode } from 'react'
 
 interface MobileHomeProps {
@@ -31,11 +33,11 @@ function formatAmount(amount: number, currency = 'RUB') {
 }
 
 const quickActions = [
-  { label: 'Перевод', href: '/dashboard/transactions', icon: ArrowLeftRight, color: '#007AFF' },
-  { label: 'AI', href: '/dashboard/ai-chat', icon: Sparkles, color: '#AF52DE' },
-  { label: 'Импорт', href: '/dashboard/import', icon: Upload, color: '#636366' },
-  { label: 'Бюджеты', href: '/dashboard/budgets', icon: Target, color: '#FF9500' },
-  { label: 'Цели', href: '/dashboard/goals', icon: Flag, color: '#5856D6' },
+  { label: 'Перевод', href: '/dashboard/transactions', icon: ArrowLeftRight, color: '#667eea' },
+  { label: 'AI', href: '/dashboard/ai-chat', icon: Sparkles, color: '#764ba2' },
+  { label: 'Импорт', href: '/dashboard/import', icon: Upload, color: '#667eea' },
+  { label: 'Бюджеты', href: '/dashboard/budgets', icon: Target, color: '#667eea' },
+  { label: 'Цели', href: '/dashboard/goals', icon: Flag, color: '#667eea' },
 ]
 
 export function MobileHome({
@@ -57,7 +59,7 @@ export function MobileHome({
   return (
     <div className="space-y-4 animate-fade-up">
       {/* Zone 1: Balance Hero */}
-      <div className="rounded-3xl p-5 text-white relative overflow-hidden" style={{ background: 'var(--gradient-primary)' }}>
+      <GradientHero variant="default">
         {/* Greeting */}
         {greetingLoading ? (
           <div className="h-5 w-40 animate-pulse bg-white/20 rounded-lg mb-3" />
@@ -78,11 +80,11 @@ export function MobileHome({
         <div className="flex items-center gap-4 text-sm">
           <div>
             <p className="text-white/60 text-xs">Доходы</p>
-            <p className="font-semibold">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
+            <p className="font-semibold text-income">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
           </div>
           <div>
             <p className="text-white/60 text-xs">Расходы</p>
-            <p className="font-semibold">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
+            <p className="font-semibold text-expense">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
           </div>
           {/* Score dot + streak badge */}
           <div className="ml-auto flex items-center gap-2">
@@ -99,34 +101,29 @@ export function MobileHome({
             )}
           </div>
         </div>
-      </div>
+      </GradientHero>
 
       {/* Zone 2: Quick Actions */}
-      <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-hide">
+      <ActionRow>
         {quickActions.map((action) => (
-          <Link
-            key={action.label}
-            href={action.href}
-            className="flex items-center gap-2 shrink-0 rounded-full bg-card px-4 py-2.5 shadow-sm active:scale-95 transition-transform"
-          >
-            <div
-              className="flex h-6 w-6 items-center justify-center rounded-full text-white"
-              style={{ backgroundColor: action.color }}
-            >
-              <action.icon className="h-3.5 w-3.5" strokeWidth={2} />
-            </div>
-            <span className="text-sm font-medium">{action.label}</span>
+          <Link key={action.label} href={action.href}>
+            <ActionButton
+              icon={<action.icon className="h-3.5 w-3.5" strokeWidth={2} />}
+              label={action.label}
+              variant={action.label === 'AI' ? 'gradient' : 'primary'}
+              onClick={() => {}}
+            />
           </Link>
         ))}
-      </div>
+      </ActionRow>
 
       {/* Zone 3: Activity Feed */}
-      <div className="space-y-4">
-        {transactionsSlot}
-        {budgetsSlot}
-        {goalsSlot}
-        {insightsSlot}
-      </div>
+      <StaggerList className="space-y-4">
+        <StaggerItem>{transactionsSlot}</StaggerItem>
+        <StaggerItem>{budgetsSlot}</StaggerItem>
+        <StaggerItem>{goalsSlot}</StaggerItem>
+        <StaggerItem>{insightsSlot}</StaggerItem>
+      </StaggerList>
     </div>
   )
 }

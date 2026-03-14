@@ -1,19 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,6 +20,15 @@ import {
 import { Target, Plus, Pencil, Trash2, TrendingUp, Calendar, CheckCircle2, PiggyBank } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/page-header'
+import { GradientHero } from '@/components/ui/gradient-hero'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -169,11 +170,11 @@ function GoalFormDialog({ open, onOpenChange, initialData }: GoalFormDialogProps
   const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { onOpenChange(o); if (!o && !isEdit) resetForm() }}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Редактировать цель' : 'Новая цель'}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal open={open} onOpenChange={(o) => { onOpenChange(o); if (!o && !isEdit) resetForm() }}>
+      <ResponsiveModalContent className="max-w-sm">
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>{isEdit ? 'Редактировать цель' : 'Новая цель'}</ResponsiveModalTitle>
+        </ResponsiveModalHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Пресеты (только при создании) */}
@@ -262,7 +263,7 @@ function GoalFormDialog({ open, onOpenChange, initialData }: GoalFormDialogProps
                 <button
                   key={c}
                   type="button"
-                  className="h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
+                  className="tap-target h-7 w-7 rounded-full border-2 transition-transform hover:scale-110"
                   style={{
                     backgroundColor: c,
                     borderColor: form.color === c ? '#000' : 'transparent',
@@ -279,8 +280,8 @@ function GoalFormDialog({ open, onOpenChange, initialData }: GoalFormDialogProps
             {isPending ? 'Сохранение...' : isEdit ? 'Сохранить' : 'Создать цель'}
           </Button>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -315,11 +316,11 @@ function AddProgressDialog({ goal, open, onOpenChange }: AddProgressDialogProps)
   const remaining = toNum(goal.targetAmount) - toNum(goal.currentAmount)
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-xs">
-        <DialogHeader>
-          <DialogTitle>Пополнить копилку</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+      <ResponsiveModalContent className="max-w-xs">
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>Пополнить копилку</ResponsiveModalTitle>
+        </ResponsiveModalHeader>
         <div className="space-y-4 pt-1">
           <p className="text-sm text-muted-foreground">
             {goal.icon} {goal.name} — осталось накопить{' '}
@@ -358,8 +359,8 @@ function AddProgressDialog({ goal, open, onOpenChange }: AddProgressDialogProps)
             {addMutation.isPending ? 'Сохранение...' : 'Пополнить'}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -390,11 +391,11 @@ function GoalCard({ goal }: GoalCardProps) {
 
   return (
     <>
-      <Card className={`relative overflow-hidden transition-shadow hover:shadow-md ${goal.isCompleted ? 'opacity-80' : ''}`}>
+      <div className={`glass-card card-interactive rounded-2xl relative overflow-hidden ${goal.isCompleted ? 'opacity-80' : ''}`}>
         {/* Цветная полоска сверху */}
-        <div className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: color }} />
+        <div className="absolute inset-x-0 top-0 h-1 rounded-t-2xl" style={{ backgroundColor: color }} />
 
-        <CardHeader className="pt-5 pb-2">
+        <div className="pt-5 pb-2 px-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               {/* Круглая иконка */}
@@ -408,7 +409,7 @@ function GoalCard({ goal }: GoalCardProps) {
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold leading-tight">{goal.name}</h3>
                   {goal.isCompleted && (
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    <CheckCircle2 className="h-4 w-4 text-income" />
                   )}
                 </div>
                 {dl && (
@@ -427,7 +428,7 @@ function GoalCard({ goal }: GoalCardProps) {
               </Button>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-expense hover:text-expense">
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </AlertDialogTrigger>
@@ -451,9 +452,9 @@ function GoalCard({ goal }: GoalCardProps) {
               </AlertDialog>
             </div>
           </div>
-        </CardHeader>
+        </div>
 
-        <CardContent className="space-y-3 pb-4">
+        <div className="space-y-3 pb-4 px-4">
           {/* Суммы */}
           <div className="flex items-baseline justify-between">
             <span className="text-2xl font-bold" style={{ color }}>
@@ -491,13 +492,13 @@ function GoalCard({ goal }: GoalCardProps) {
           )}
 
           {goal.isCompleted && (
-            <div className="flex items-center justify-center gap-2 rounded-lg bg-green-50 py-2 text-sm font-medium text-green-700 dark:bg-green-950/30 dark:text-green-400">
+            <div className="flex items-center justify-center gap-2 rounded-lg bg-income/10 py-2 text-sm font-medium text-income">
               <CheckCircle2 className="h-4 w-4" />
               Цель достигнута! 🎉
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <GoalFormDialog open={editOpen} onOpenChange={setEditOpen} initialData={goal} />
       <AddProgressDialog goal={goal} open={progressOpen} onOpenChange={setProgressOpen} />
@@ -519,61 +520,60 @@ export default function GoalsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Финансовые цели</h1>
-          <p className="text-sm text-muted-foreground">Откладывай на мечты и отслеживай прогресс</p>
-        </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Новая цель
-        </Button>
-      </div>
+      <PageHeader
+        title="Финансовые цели"
+        description="Откладывай на мечты и отслеживай прогресс"
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Новая цель
+          </Button>
+        }
+      />
 
       {/* Общий прогресс */}
-      {!isLoading && active.length > 0 && (
-        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-              <TrendingUp className="h-6 w-6 text-primary" />
+      {!isLoading && active.length > 0 && totalTarget > 0 && (
+        <GradientHero variant="default" className="mb-2">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/20">
+              <TrendingUp className="h-6 w-6" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium">Всего по {active.length} целям</p>
+              <p className="text-sm font-medium opacity-90">Всего по {active.length} целям</p>
               <div className="mt-1 flex items-center gap-3 text-sm">
-                <span className="font-semibold">{formatAmount(totalCurrent)}</span>
-                <span className="text-muted-foreground">из {formatAmount(totalTarget)}</span>
-                <Badge variant="secondary" className="ml-auto">
+                <span className="font-bold text-lg">{formatAmount(totalCurrent)}</span>
+                <span className="opacity-70">из {formatAmount(totalTarget)}</span>
+                <span className="ml-auto bg-white/20 rounded-full px-2.5 py-0.5 text-xs font-bold">
                   {Math.round((totalCurrent / totalTarget) * 100)}%
-                </Badge>
+                </span>
               </div>
-              <Progress
-                value={Math.min(100, (totalCurrent / totalTarget) * 100)}
-                className="mt-2 h-1.5"
-              />
+              <div className="mt-2 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-white rounded-full transition-all"
+                  style={{ width: `${Math.min(100, (totalCurrent / totalTarget) * 100)}%` }}
+                />
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </GradientHero>
       )}
 
       {/* Список */}
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-5 space-y-3">
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-11 w-11 rounded-xl" />
-                  <Skeleton className="h-5 flex-1" />
-                </div>
-                <Skeleton className="h-7 w-32" />
-                <Skeleton className="h-2.5 w-full rounded-full" />
-              </CardContent>
-            </Card>
+            <div key={i} className="glass-card rounded-2xl p-5 space-y-3">
+              <div className="flex items-center gap-3">
+                <Skeleton className="h-11 w-11 rounded-xl" />
+                <Skeleton className="h-5 flex-1" />
+              </div>
+              <Skeleton className="h-7 w-32" />
+              <Skeleton className="h-2.5 w-full rounded-full" />
+            </div>
           ))}
         </div>
       ) : goals.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center border-dashed py-20 text-muted-foreground">
+        <div className="glass-card rounded-2xl flex flex-col items-center justify-center border-dashed py-20 text-muted-foreground">
           <div className="mb-4 text-5xl">🎯</div>
           <p className="mb-1 text-lg font-medium text-foreground">Пока нет целей</p>
           <p className="mb-6 text-sm">Поставь финансовую цель и начни двигаться к ней</p>
@@ -581,7 +581,7 @@ export default function GoalsPage() {
             <Plus className="mr-1.5 h-4 w-4" />
             Создать первую цель
           </Button>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-8">
           {/* Активные */}
@@ -590,9 +590,13 @@ export default function GoalsPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 В процессе ({active.length})
               </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {active.map((g) => <GoalCard key={g.id} goal={g} />)}
-              </div>
+              <StaggerList className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {active.map((g) => (
+                  <StaggerItem key={g.id}>
+                    <GoalCard goal={g} />
+                  </StaggerItem>
+                ))}
+              </StaggerList>
             </div>
           )}
 
@@ -602,9 +606,13 @@ export default function GoalsPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Достигнуто 🎉 ({completed.length})
               </p>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {completed.map((g) => <GoalCard key={g.id} goal={g} />)}
-              </div>
+              <StaggerList className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {completed.map((g) => (
+                  <StaggerItem key={g.id}>
+                    <GoalCard goal={g} />
+                  </StaggerItem>
+                ))}
+              </StaggerList>
             </div>
           )}
         </div>
