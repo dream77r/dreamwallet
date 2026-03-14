@@ -59,7 +59,6 @@ import { QuickAddModal } from '@/components/transactions/QuickAddModal'
 import { InlineCategoryPicker } from '@/components/transactions/InlineCategoryPicker'
 import { SuggestRuleDialog, type SuggestRulePayload } from '@/components/transactions/SuggestRuleDialog'
 import { PageHeader } from '@/components/ui/page-header'
-import { StatCarousel, StatCard } from '@/components/ui/stat-carousel'
 
 const PAGE_SIZE = 20
 
@@ -391,35 +390,53 @@ function TransactionsPage() {
         actions={headerActions}
       />
 
-      {/* Summary row */}
-      <StatCarousel columns={3}>
-        <StatCard
-          label="ДОХОДЫ"
-          value={
-            isLoading
-              ? <Skeleton className="h-5 w-16 mt-1" />
-              : <span className="text-income">+{formatAmount(totalIncome)}</span>
-          }
-        />
-        <StatCard
-          label="РАСХОДЫ"
-          value={
-            isLoading
-              ? <Skeleton className="h-5 w-16 mt-1" />
-              : <span className="text-expense">-{formatAmount(totalExpense)}</span>
-          }
-        />
-        <StatCard
-          label="ИТОГО"
-          value={
-            isLoading
-              ? <Skeleton className="h-5 w-16 mt-1" />
-              : <span className={net >= 0 ? 'text-income' : 'text-expense'}>
-                  {net >= 0 ? '+' : ''}{formatAmount(net)}
-                </span>
-          }
-        />
-      </StatCarousel>
+      {/* Summary — gradient on mobile, glass on desktop */}
+      <div className="md:hidden gradient-hero rounded-2xl p-4 text-white">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider opacity-50">Доходы</p>
+            {isLoading ? <div className="h-5 w-16 bg-white/20 rounded animate-pulse" /> : (
+              <p className="text-base font-bold">+{formatAmount(totalIncome)}</p>
+            )}
+          </div>
+          <div className="w-px h-8 bg-white/20" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider opacity-50">Расходы</p>
+            {isLoading ? <div className="h-5 w-16 bg-white/20 rounded animate-pulse" /> : (
+              <p className="text-base font-bold">-{formatAmount(totalExpense)}</p>
+            )}
+          </div>
+          <div className="w-px h-8 bg-white/20" />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-wider opacity-50">Итого</p>
+            {isLoading ? <div className="h-5 w-16 bg-white/20 rounded animate-pulse" /> : (
+              <p className="text-base font-bold">{net >= 0 ? '+' : ''}{formatAmount(net)}</p>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="hidden md:grid grid-cols-3 gap-3">
+        <div className="glass-card card-default rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground mb-0.5">Доходы</p>
+          {isLoading ? <Skeleton className="h-5 w-16" /> : (
+            <p className="text-lg font-bold text-income">+{formatAmount(totalIncome)}</p>
+          )}
+        </div>
+        <div className="glass-card card-default rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground mb-0.5">Расходы</p>
+          {isLoading ? <Skeleton className="h-5 w-16" /> : (
+            <p className="text-lg font-bold text-expense">-{formatAmount(totalExpense)}</p>
+          )}
+        </div>
+        <div className="glass-card card-default rounded-2xl px-4 py-3">
+          <p className="text-xs text-muted-foreground mb-0.5">Итого</p>
+          {isLoading ? <Skeleton className="h-5 w-16" /> : (
+            <p className={`text-lg font-bold ${net >= 0 ? 'text-income' : 'text-expense'}`}>
+              {net >= 0 ? '+' : ''}{formatAmount(net)}
+            </p>
+          )}
+        </div>
+      </div>
 
       {/* Filters */}
       <div className="glass-card card-default rounded-2xl px-5 py-4">

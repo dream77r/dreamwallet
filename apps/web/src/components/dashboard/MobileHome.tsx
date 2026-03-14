@@ -1,10 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowLeftRight, Sparkles, Upload, Target, Flag } from 'lucide-react'
+import { ArrowLeftRight, Sparkles, Upload, Target, Flag, TrendingUp, TrendingDown } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/animated-number'
-import { GradientHero } from '@/components/ui/gradient-hero'
-import { ActionRow, ActionButton } from '@/components/ui/action-row'
 import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 import type { ReactNode } from 'react'
 
@@ -14,12 +12,10 @@ interface MobileHomeProps {
   isLoading: boolean
   greeting: { message: string; status: string } | undefined
   greetingLoading: boolean
-  // Slots for feed
   transactionsSlot: ReactNode
   budgetsSlot: ReactNode
   goalsSlot: ReactNode
   insightsSlot: ReactNode
-  // Gamification
   gamificationData?: { streak?: number } | undefined
   scoreData?: { score?: number } | undefined
 }
@@ -33,11 +29,11 @@ function formatAmount(amount: number, currency = 'RUB') {
 }
 
 const quickActions = [
-  { label: 'Перевод', href: '/dashboard/transactions', icon: ArrowLeftRight, color: '#667eea' },
-  { label: 'AI', href: '/dashboard/ai-chat', icon: Sparkles, color: '#764ba2' },
-  { label: 'Импорт', href: '/dashboard/import', icon: Upload, color: '#667eea' },
-  { label: 'Бюджеты', href: '/dashboard/budgets', icon: Target, color: '#667eea' },
-  { label: 'Цели', href: '/dashboard/goals', icon: Flag, color: '#667eea' },
+  { label: 'Перевод', href: '/dashboard/transactions', icon: ArrowLeftRight, gradient: false },
+  { label: 'AI', href: '/dashboard/ai-chat', icon: Sparkles, gradient: true },
+  { label: 'Импорт', href: '/dashboard/import', icon: Upload, gradient: false },
+  { label: 'Бюджеты', href: '/dashboard/budgets', icon: Target, gradient: false },
+  { label: 'Цели', href: '/dashboard/goals', icon: Flag, gradient: false },
 ]
 
 export function MobileHome({
@@ -57,67 +53,84 @@ export function MobileHome({
   const streak = gamificationData?.streak
 
   return (
-    <div className="space-y-4 animate-fade-up">
-      {/* Zone 1: Balance Hero */}
-      <GradientHero variant="default">
-        {/* Greeting */}
-        {greetingLoading ? (
-          <div className="h-5 w-40 animate-pulse bg-white/20 rounded-lg mb-3" />
-        ) : greeting ? (
-          <p className="text-sm font-medium text-white/80 mb-1 truncate">{greeting.message}</p>
-        ) : null}
+    <div className="space-y-5 animate-fade-up">
+      {/* ─── Hero Card ─── */}
+      <div className="gradient-hero rounded-2xl p-5 text-white relative overflow-hidden">
+        {/* Decorative */}
+        <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-white/[0.06]" />
+        <div className="absolute -bottom-12 -left-12 w-32 h-32 rounded-full bg-white/[0.04]" />
 
-        {/* Balance */}
-        {isLoading ? (
-          <div className="h-10 w-40 animate-pulse bg-white/20 rounded-xl mb-3" />
-        ) : (
-          <p className="text-[36px] font-bold tracking-tight leading-none mb-3">
-            <AnimatedNumber value={stats?.totalBalance ?? 0} currency={wallet?.currency} className="text-white" />
-          </p>
-        )}
+        <div className="relative z-10">
+          {/* Greeting */}
+          {greetingLoading ? (
+            <div className="h-4 w-48 animate-pulse bg-white/20 rounded-lg mb-3" />
+          ) : greeting ? (
+            <p className="text-sm font-medium opacity-75 mb-2 line-clamp-1">{greeting.message}</p>
+          ) : null}
 
-        {/* Income / Expense summary */}
-        <div className="flex items-center gap-4 text-sm">
-          <div>
-            <p className="text-white/60 text-xs">Доходы</p>
-            <p className="font-semibold text-income">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
-          </div>
-          <div>
-            <p className="text-white/60 text-xs">Расходы</p>
-            <p className="font-semibold text-expense">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
-          </div>
-          {/* Score dot + streak badge */}
-          <div className="ml-auto flex items-center gap-2">
-            {scoreDot != null && (
-              <div className="flex items-center gap-1">
-                <div className={`w-2.5 h-2.5 rounded-full ${scoreDot >= 70 ? 'bg-green-400' : scoreDot >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`} />
-                <span className="text-xs text-white/70">{scoreDot}</span>
-              </div>
-            )}
-            {streak != null && streak > 0 && (
-              <span className="text-xs bg-white/20 rounded-full px-2 py-0.5 font-medium">
-                🔥 {streak}д
-              </span>
-            )}
+          {/* Balance — main number */}
+          {isLoading ? (
+            <div className="h-10 w-44 animate-pulse bg-white/20 rounded-xl mb-4" />
+          ) : (
+            <p className="text-[36px] font-bold tracking-tight leading-none mb-4">
+              <AnimatedNumber value={stats?.totalBalance ?? 0} currency={wallet?.currency} className="text-white" />
+            </p>
+          )}
+
+          {/* Income / Expense pills */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-white/[0.12] rounded-lg px-2.5 py-1.5">
+              <TrendingUp className="h-3.5 w-3.5 opacity-70" />
+              {isLoading ? <div className="h-4 w-14 bg-white/15 rounded animate-pulse" /> : (
+                <span className="text-xs font-bold">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</span>
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 bg-white/[0.12] rounded-lg px-2.5 py-1.5">
+              <TrendingDown className="h-3.5 w-3.5 opacity-70" />
+              {isLoading ? <div className="h-4 w-14 bg-white/15 rounded animate-pulse" /> : (
+                <span className="text-xs font-bold">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</span>
+              )}
+            </div>
+
+            {/* Score + Streak */}
+            <div className="ml-auto flex items-center gap-1.5">
+              {scoreDot != null && (
+                <div className="flex items-center gap-1 bg-white/[0.12] rounded-lg px-2 py-1.5">
+                  <div className={`w-2 h-2 rounded-full ${scoreDot >= 70 ? 'bg-green-400' : scoreDot >= 40 ? 'bg-yellow-400' : 'bg-red-400'}`} />
+                  <span className="text-[11px] font-bold">{scoreDot}</span>
+                </div>
+              )}
+              {streak != null && streak > 0 && (
+                <div className="bg-white/[0.12] rounded-lg px-2 py-1.5">
+                  <span className="text-[11px] font-bold">🔥{streak}</span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </GradientHero>
+      </div>
 
-      {/* Zone 2: Quick Actions */}
-      <ActionRow>
+      {/* ─── Quick Actions — horizontal scroll ─── */}
+      <div className="flex gap-3 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide snap-x snap-mandatory">
         {quickActions.map((action) => (
-          <Link key={action.label} href={action.href}>
-            <ActionButton
-              icon={<action.icon className="h-3.5 w-3.5" strokeWidth={2} />}
-              label={action.label}
-              variant={action.label === 'AI' ? 'gradient' : 'primary'}
-              onClick={() => {}}
-            />
+          <Link
+            key={action.label}
+            href={action.href}
+            className="flex flex-col items-center gap-1.5 snap-start shrink-0 active:scale-95 transition-transform"
+          >
+            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+              action.gradient
+                ? 'gradient-hero text-white shadow-sm'
+                : 'bg-primary/10 text-primary'
+            }`}>
+              <action.icon className="h-5 w-5" strokeWidth={2} />
+            </div>
+            <span className="text-[11px] font-medium text-muted-foreground">{action.label}</span>
           </Link>
         ))}
-      </ActionRow>
+      </div>
 
-      {/* Zone 3: Activity Feed */}
+      {/* ─── Activity Feed ─── */}
       <StaggerList className="space-y-4">
         <StaggerItem>{transactionsSlot}</StaggerItem>
         <StaggerItem>{budgetsSlot}</StaggerItem>

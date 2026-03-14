@@ -1,6 +1,6 @@
 'use client'
 
-import { TrendingUp, TrendingDown, ArrowLeftRight, Wallet } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 
@@ -21,76 +21,76 @@ interface BalanceWidgetProps {
 export function BalanceWidget({ stats, wallet, isLoading }: BalanceWidgetProps) {
   if (!isLoading && (!wallet?.accounts?.length)) {
     return (
-      <div className="glass-card card-default rounded-2xl p-8 animate-fade-up flex flex-col items-center justify-center gap-3 text-center">
-        <span className="text-4xl">💳</span>
-        <p className="text-sm font-medium text-foreground">Добавьте счёт, чтобы видеть баланс</p>
-        <p className="text-xs text-muted-foreground">Банковская карта, наличные или накопительный</p>
-        <Link href="/dashboard/accounts" className="text-sm font-semibold text-primary hover:underline">Создать счёт →</Link>
+      <div className="gradient-hero rounded-2xl p-8 text-white flex flex-col items-center justify-center gap-3 text-center min-h-[200px]">
+        <Wallet className="h-10 w-10 opacity-60" />
+        <p className="text-base font-semibold">Добавьте счёт, чтобы видеть баланс</p>
+        <p className="text-sm opacity-70">Банковская карта, наличные или накопительный</p>
+        <Link href="/dashboard/accounts" className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold bg-white/20 hover:bg-white/30 rounded-xl px-4 py-2.5 transition-colors">
+          Создать счёт <ArrowRight className="h-4 w-4" />
+        </Link>
       </div>
     )
   }
 
+  const savingsRate = stats && stats.monthIncome > 0
+    ? Math.round((stats.monthNet / stats.monthIncome) * 100)
+    : null
+
   return (
-    <div className="space-y-3">
-      <div className="glass-card card-default rounded-2xl p-6 animate-fade-up">
-        <p className="text-caption text-muted-foreground mb-1">Общий баланс</p>
+    <div className="gradient-hero rounded-2xl relative overflow-hidden">
+      {/* Decorative blobs */}
+      <div className="absolute -top-24 -right-24 w-64 h-64 rounded-full bg-white/[0.06]" />
+      <div className="absolute -bottom-20 -left-20 w-48 h-48 rounded-full bg-white/[0.04]" />
+
+      <div className="relative z-10 p-5 md:p-7 text-white">
+        {/* Balance */}
+        <p className="text-xs font-medium uppercase tracking-wider opacity-60 mb-1">Общий баланс</p>
         {isLoading ? (
-          <div className="h-12 w-48 animate-pulse bg-muted rounded-xl mb-4" />
+          <div className="h-11 w-56 animate-pulse bg-white/20 rounded-xl mb-5" />
         ) : (
-          <p className="text-display text-foreground mb-4">
-            <AnimatedNumber value={stats?.totalBalance ?? 0} currency={wallet?.currency} />
+          <p className="text-[40px] md:text-display font-bold tracking-tight leading-none mb-5">
+            <AnimatedNumber value={stats?.totalBalance ?? 0} currency={wallet?.currency} className="text-white" />
           </p>
         )}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="w-7 h-7 rounded-lg bg-income/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-income" />
+
+        {/* Income / Expense / Savings row */}
+        <div className="flex flex-wrap items-stretch gap-2">
+          {/* Income */}
+          <div className="flex items-center gap-2.5 bg-white/[0.12] rounded-xl px-3.5 py-2.5 flex-1 min-w-[140px]">
+            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+              <TrendingUp className="h-4 w-4" />
             </div>
-            {isLoading ? <div className="h-4 w-20 animate-pulse bg-muted rounded" /> : (
-              <div>
-                <p className="text-[11px] text-muted-foreground font-medium">Доходы</p>
-                <p className="text-sm font-bold text-income">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
+            {isLoading ? <div className="h-5 w-16 animate-pulse bg-white/15 rounded" /> : (
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider opacity-50">Доходы</p>
+                <p className="text-sm font-bold truncate">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
               </div>
             )}
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-7 h-7 rounded-lg bg-expense/10 flex items-center justify-center">
-              <TrendingDown className="h-4 w-4 text-expense" />
+
+          {/* Expense */}
+          <div className="flex items-center gap-2.5 bg-white/[0.12] rounded-xl px-3.5 py-2.5 flex-1 min-w-[140px]">
+            <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center shrink-0">
+              <TrendingDown className="h-4 w-4" />
             </div>
-            {isLoading ? <div className="h-4 w-20 animate-pulse bg-muted rounded" /> : (
-              <div>
-                <p className="text-[11px] text-muted-foreground font-medium">Расходы</p>
-                <p className="text-sm font-bold text-expense">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
+            {isLoading ? <div className="h-5 w-16 animate-pulse bg-white/15 rounded" /> : (
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-wider opacity-50">Расходы</p>
+                <p className="text-sm font-bold truncate">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
               </div>
             )}
           </div>
-          {stats && stats.monthIncome > 0 && (
-            <div className="ml-auto">
-              <p className="text-[11px] text-muted-foreground font-medium text-right">Сохранено</p>
-              <p className="text-sm font-bold text-primary text-right">
-                {Math.round((stats.monthNet / stats.monthIncome) * 100)}%
-              </p>
+
+          {/* Savings Rate */}
+          {savingsRate !== null && (
+            <div className="flex items-center justify-center bg-white/[0.12] rounded-xl px-4 py-2.5 min-w-[80px]">
+              <div className="text-center">
+                <p className="text-xl font-bold leading-tight">{savingsRate}%</p>
+                <p className="text-[10px] uppercase tracking-wider opacity-50">норма</p>
+              </div>
             </div>
           )}
         </div>
-      </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {[
-          { label: 'Чистый доход', value: formatAmount(Math.abs(stats?.monthNet ?? 0), wallet?.currency), prefix: (stats?.monthNet ?? 0) >= 0 ? '+' : '-', colorClass: (stats?.monthNet ?? 0) >= 0 ? 'text-income' : 'text-expense', icon: ArrowLeftRight, bgColor: (stats?.monthNet ?? 0) >= 0 ? 'var(--income)' : 'var(--expense)' },
-          { label: 'Счётов', value: String(wallet?.accounts.length ?? 0), prefix: '', colorClass: 'text-primary', icon: Wallet, bgColor: 'var(--primary)' },
-        ].map((stat, i) => (
-          <div key={i} className="glass-card card-default rounded-2xl p-4 animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: stat.bgColor + '1A' }}>
-              <stat.icon className={`h-5 w-5 ${stat.colorClass}`} />
-            </div>
-            {isLoading ? (
-              <div className="h-6 w-16 animate-pulse bg-muted rounded mb-1" />
-            ) : (
-              <p className={`text-xl font-bold ${stat.colorClass}`}>{stat.prefix}{stat.value}</p>
-            )}
-            <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
-          </div>
-        ))}
       </div>
     </div>
   )

@@ -11,7 +11,6 @@ import { MonthComparisonWidget } from './MonthComparisonWidget'
 import { GamificationWidget } from './GamificationWidget'
 import { RunwayWidget } from './RunwayWidget'
 import { AiInsights } from './ai-insights'
-import { GlassCard } from '@/components/ui/glass-card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist'
 import { TransactionForm } from '@/components/transactions/transaction-form'
@@ -56,21 +55,9 @@ export function DesktopDashboard({
   const widgetMap: Record<string, React.ReactNode> = {
     balance: <BalanceWidget key="balance" stats={stats} wallet={wallet} isLoading={isLoading} />,
     cashflow: <CashflowWidget key="cashflow" cashFlowData={cashFlowData} categoryData={categoryData} isLoading={cashFlowLoading || categoryLoading} monthLabel={monthLabel} />,
-    score: (
-      <GlassCard key="score">
-        <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
-      </GlassCard>
-    ),
-    forecast: (
-      <GlassCard key="forecast">
-        <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
-      </GlassCard>
-    ),
-    networth: (
-      <GlassCard key="networth">
-        <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
-      </GlassCard>
-    ),
+    score: <FinancialScoreWidget key="score" data={dash?.score} isLoading={dashLoading} />,
+    forecast: <ForecastWidget key="forecast" data={dash?.forecast} isLoading={dashLoading} />,
+    networth: <MonthComparisonWidget key="networth" data={dash?.comparison} isLoading={dashLoading} />,
     budgets: <BudgetsWidget key="budgets" budgets={dash?.budgets} isLoading={dashLoading} monthLabel={monthLabel} />,
     'recent-transactions': <RecentTransactionsWidget key="recent-transactions" transactions={transactions} isLoading={txLoading} />,
     goals: <GoalsWidget key="goals" goals={dash?.goals} />,
@@ -83,10 +70,11 @@ export function DesktopDashboard({
     : null
 
   return (
-    <div className="space-y-4 animate-fade-up">
-      <div className="flex items-center justify-between gap-4 pb-1">
-        {greetingNode}
-        <div className="flex items-center gap-2">
+    <div className="space-y-6 animate-fade-up">
+      {/* Header: Greeting + Actions */}
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">{greetingNode}</div>
+        <div className="flex items-center gap-2 shrink-0">
           {layoutLoading ? (
             <DashboardCustomizerSkeleton />
           ) : layout ? (
@@ -99,75 +87,70 @@ export function DesktopDashboard({
       <OnboardingChecklist />
 
       {layoutLoading ? (
-        <>
-          <Skeleton className="h-32 w-full rounded-2xl" />
-          <Skeleton className="h-80 w-full rounded-2xl" />
-          <Skeleton className="h-64 w-full rounded-2xl" />
-        </>
+        <div className="space-y-4">
+          <Skeleton className="h-44 w-full rounded-2xl" />
+          <div className="grid grid-cols-3 gap-4">
+            <Skeleton className="h-56 rounded-2xl" />
+            <Skeleton className="h-56 rounded-2xl" />
+            <Skeleton className="h-56 rounded-2xl" />
+          </div>
+        </div>
       ) : sortedWidgets ? (
-        sortedWidgets
+        <div className="space-y-4">{sortedWidgets}</div>
       ) : (
-        <StaggerList className="space-y-4">
-          {/* Row 1: Balance + Score */}
+        <StaggerList className="space-y-5">
+          {/* Hero: Balance — full width gradient */}
           <StaggerItem>
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-8 glass-card card-interactive rounded-2xl p-1">
-                {widgetMap['balance']}
-              </div>
-              <div className="col-span-4 glass-card card-interactive rounded-2xl p-1">
+            {widgetMap['balance']}
+          </StaggerItem>
+
+          {/* Row 2: 3-column — Score, Forecast, Month Comparison */}
+          <StaggerItem>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="glass-card card-default rounded-2xl overflow-hidden">
                 {widgetMap['score']}
               </div>
-            </div>
-          </StaggerItem>
-
-          {/* Row 2: Cashflow + Forecast */}
-          <StaggerItem>
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-8 glass-card card-interactive rounded-2xl p-1">
-                {widgetMap['cashflow']}
-              </div>
-              <div className="col-span-4 glass-card card-interactive rounded-2xl p-1">
+              <div className="glass-card card-default rounded-2xl overflow-hidden">
                 {widgetMap['forecast']}
               </div>
-            </div>
-          </StaggerItem>
-
-          {/* Row 3: Recent Transactions + Budgets */}
-          <StaggerItem>
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-6 glass-card card-interactive rounded-2xl p-1">
-                {widgetMap['recent-transactions']}
-              </div>
-              <div className="col-span-6 glass-card card-interactive rounded-2xl p-1">
-                {widgetMap['budgets']}
+              <div className="glass-card card-default rounded-2xl overflow-hidden">
+                {widgetMap['networth']}
               </div>
             </div>
           </StaggerItem>
 
-          {/* Row 4: Goals (full width) */}
+          {/* Row 3: Cashflow — full width */}
           <StaggerItem>
-            <div className="glass-card card-interactive rounded-2xl p-1">
-              {widgetMap['goals']}
+            {widgetMap['cashflow']}
+          </StaggerItem>
+
+          {/* Row 4: Transactions + Budgets — 2 column */}
+          <StaggerItem>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {widgetMap['recent-transactions']}
+              {widgetMap['budgets']}
             </div>
           </StaggerItem>
 
-          {/* Row 5: Gamification + Runway */}
+          {/* Row 5: Goals — full width */}
           <StaggerItem>
-            <div className="grid grid-cols-12 gap-4">
-              <div className="col-span-6 glass-card card-interactive rounded-2xl p-1">
-                {widgetMap['gamification']}
-              </div>
-              <div className="col-span-6 glass-card card-interactive rounded-2xl p-1">
-                {widgetMap['runway']}
-              </div>
+            {widgetMap['goals']}
+          </StaggerItem>
+
+          {/* Row 6: Gamification + Runway — 2 column */}
+          <StaggerItem>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {widgetMap['gamification']}
+              {widgetMap['runway']}
             </div>
+          </StaggerItem>
+
+          {/* AI Insights */}
+          <StaggerItem>
+            <AiInsights />
           </StaggerItem>
         </StaggerList>
       )}
-
-      <div className="glass-card card-default rounded-2xl p-4 animate-pulse-glow">
-        <AiInsights />
-      </div>
     </div>
   )
 }
