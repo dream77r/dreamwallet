@@ -28,6 +28,7 @@ export interface ForecastResult {
   totalIncome: number
   totalExpense: number
   daily: ForecastDay[]
+  avgBalance: number
   minBalanceDay: { date: string; balance: number } | null
 }
 
@@ -59,7 +60,7 @@ function setCached(key: string, data: ForecastResult): void {
 
 export const forecastRouter = router({
   get: protectedProcedure
-    .input(z.object({ days: z.union([z.literal(30), z.literal(60), z.literal(90)]).default(30) }))
+    .input(z.object({ days: z.union([z.literal(7), z.literal(30), z.literal(60), z.literal(90), z.literal(180)]).default(30) }))
     .query(async ({ ctx, input }) => {
       const userId = ctx.user.id
       const cacheKey = `${userId}:${input.days}`
@@ -148,8 +149,16 @@ export const forecastRouter = router({
         day.balance = Math.round(runningBalance)
       }
 
-      // ── Find first day balance goes negative ─────────────────────────────────
-      const firstDeficitDay = daily.find((d) => d.balance < 0) ?? null
+      // ── Stats ─────────────────────────────────────────────────────────────────
+      const avgBalance = daily.length > 0
+        ? Math.round(daily.reduce((s, d) => s + d.balance, 0) / daily.length)
+        : 0
+
+      // Real minimum balance day (regardless of sign)
+      const minDay = daily.reduce(
+        (min, d) => (d.balance < min.balance ? d : min),
+        daily[0] ?? { date: '', balance: 0 },
+      )
 
       const result: ForecastResult = {
         periodDays: input.days,
@@ -157,9 +166,10 @@ export const forecastRouter = router({
         endBalance: Math.round(runningBalance),
         totalIncome: Math.round(totalIncome),
         totalExpense: Math.round(totalExpense),
+        avgBalance,
         daily,
-        minBalanceDay: firstDeficitDay
-          ? { date: firstDeficitDay.date, balance: firstDeficitDay.balance }
+        minBalanceDay: minDay && minDay.date
+          ? { date: minDay.date, balance: minDay.balance }
           : null,
       }
 

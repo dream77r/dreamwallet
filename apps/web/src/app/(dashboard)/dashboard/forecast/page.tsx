@@ -22,7 +22,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
 
-type DayRange = 30 | 60 | 90
+type DayRange = 7 | 30 | 60 | 90 | 180
 
 function formatAmount(amount: number, compact = false) {
   if (compact && Math.abs(amount) >= 1000) {
@@ -89,7 +89,7 @@ export default function ForecastPage() {
   })
 
   // Chart: sample every N days for readability
-  const step = days === 30 ? 3 : days === 60 ? 5 : 7
+  const step = days === 7 ? 1 : days === 30 ? 3 : days === 60 ? 5 : days === 90 ? 7 : 14
   const chartData = data?.daily
     .filter((_, i, arr) => i % step === 0 || i === arr.length - 1)
     .map((d) => ({
@@ -112,9 +112,11 @@ export default function ForecastPage() {
         </div>
         <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as DayRange)}>
           <TabsList>
+            <TabsTrigger value="7">7 дней</TabsTrigger>
             <TabsTrigger value="30">30 дней</TabsTrigger>
             <TabsTrigger value="60">60 дней</TabsTrigger>
             <TabsTrigger value="90">90 дней</TabsTrigger>
+            <TabsTrigger value="180">180 дней</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -126,7 +128,7 @@ export default function ForecastPage() {
       ) : (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-1.5">
@@ -171,6 +173,27 @@ export default function ForecastPage() {
                 </CardTitle>
               </CardHeader>
             </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Средний остаток</CardDescription>
+                <CardTitle className="text-xl">{formatAmount(data!.avgBalance)}</CardTitle>
+              </CardHeader>
+            </Card>
+
+            {data!.minBalanceDay && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Минимальный баланс</CardDescription>
+                  <CardTitle className={`text-xl ${data!.minBalanceDay.balance < 0 ? 'text-red-600' : ''}`}>
+                    {formatAmount(data!.minBalanceDay.balance)}
+                    <p className="text-xs font-normal text-muted-foreground mt-0.5">
+                      {format(new Date(data!.minBalanceDay.date), 'd MMM yyyy', { locale: ru })}
+                    </p>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            )}
           </div>
 
           {/* Deficit banner */}
