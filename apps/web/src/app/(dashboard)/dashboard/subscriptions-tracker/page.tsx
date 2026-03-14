@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -24,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CalendarClock, Plus, Pencil, Trash2, CreditCard, TrendingDown, Hash, DollarSign } from 'lucide-react'
+import { CalendarClock, Plus, Pencil, Trash2, TrendingDown, Hash, DollarSign } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { QuickAddDialog } from '@/components/subscriptions/QuickAddDialog'
@@ -35,14 +34,17 @@ import {
   normalizeToMonthly,
   type SubscriptionCategoryKey,
 } from '@dreamwallet/shared'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
+import { StatCarousel, StatCard } from '@/components/ui/stat-carousel'
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 
 // ─── Helpers ──────────────────────────────────────────
 
@@ -123,11 +125,11 @@ function EditDialog({
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Редактировать подписку</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+      <ResponsiveModalContent className="max-w-sm">
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>Редактировать подписку</ResponsiveModalTitle>
+        </ResponsiveModalHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -156,8 +158,8 @@ function EditDialog({
             {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
           </Button>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -230,65 +232,25 @@ export default function SubscriptionsTrackerPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Подписки</h1>
-          <p className="text-sm text-muted-foreground">Трекер активных подписок и регулярных списаний</p>
-        </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Добавить
-        </Button>
-      </div>
+      <PageHeader
+        title="Подписки"
+        description="Трекер активных подписок и регулярных списаний"
+        actions={
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Добавить
+          </Button>
+        }
+      />
 
       {/* Stat cards */}
       {!isLoading && subscriptions.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-100 text-red-600">
-                <TrendingDown className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">В месяц</p>
-                <p className="text-sm font-semibold">{formatAmount(totalMonthly)}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
-                <CalendarClock className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">В год</p>
-                <p className="text-sm font-semibold">{formatAmount(totalYearly)}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-100 text-blue-600">
-                <Hash className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Всего</p>
-                <p className="text-sm font-semibold">{subscriptions.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-green-100 text-green-600">
-                <DollarSign className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Средняя</p>
-                <p className="text-sm font-semibold">{formatAmount(avgPrice)}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <StatCarousel columns={4}>
+          <StatCard label="В МЕСЯЦ" value={formatAmount(totalMonthly)} icon={<TrendingDown className="h-4 w-4" />} />
+          <StatCard label="В ГОД" value={formatAmount(totalYearly)} icon={<CalendarClock className="h-4 w-4" />} />
+          <StatCard label="ВСЕГО" value={String(subscriptions.length)} icon={<Hash className="h-4 w-4" />} />
+          <StatCard label="СРЕДНЯЯ" value={formatAmount(avgPrice)} icon={<DollarSign className="h-4 w-4" />} />
+        </StatCarousel>
       )}
 
       {/* Sort control */}
@@ -311,7 +273,7 @@ export default function SubscriptionsTrackerPage() {
       {isLoading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <Card key={i}><CardContent className="p-4">
+            <div key={i} className="glass-card rounded-2xl p-4">
               <div className="flex items-center justify-between gap-4">
                 <div className="flex items-center gap-3 flex-1">
                   <Skeleton className="h-10 w-10 rounded-xl" />
@@ -322,12 +284,12 @@ export default function SubscriptionsTrackerPage() {
                 </div>
                 <Skeleton className="h-6 w-20" />
               </div>
-            </CardContent></Card>
+            </div>
           ))}
         </div>
       ) : subscriptions.length === 0 && pausedSubs.length === 0 ? (
         /* Empty state */
-        <Card className="flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
+        <div className="glass-card rounded-2xl flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
           <CalendarClock className="mb-3 h-10 w-10" />
           <p className="mb-1 font-medium text-foreground">Нет активных подписок</p>
           <p className="mb-4 text-sm">Добавьте подписку из каталога или вручную</p>
@@ -335,14 +297,14 @@ export default function SubscriptionsTrackerPage() {
             <Plus className="mr-1.5 h-4 w-4" />
             Добавить
           </Button>
-        </Card>
+        </div>
       ) : (
         /* Grouped subscriptions */
-        <div className="space-y-6">
+        <StaggerList className="space-y-6">
           {Array.from(grouped.entries()).map(([catKey, { subs, subtotal }]) => {
             const cat = SUBSCRIPTION_CATEGORIES[catKey]
             return (
-              <div key={catKey} className="space-y-3">
+              <StaggerItem key={catKey} className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                     {cat.icon} {cat.label} ({subs.length})
@@ -352,59 +314,122 @@ export default function SubscriptionsTrackerPage() {
                   </span>
                 </div>
 
-                {subs.map((sub) => {
-                  const days = daysUntil(sub.nextRunAt)
-                  const isUrgent = days >= 0 && days < 3
+                <StaggerList className="space-y-3">
+                  {subs.map((sub) => {
+                    const days = daysUntil(sub.nextRunAt)
+                    const isUrgent = days >= 0 && days < 3
+                    const currency = sub.transactions[0]?.account.currency ?? 'RUB'
+                    const info = getServiceInfo(sub.name)
+
+                    return (
+                      <StaggerItem key={sub.id}>
+                        <div className={`glass-card card-interactive rounded-2xl flex items-center gap-4 p-4${isUrgent ? ' border border-expense/30' : ''}`}>
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
+                            {info.icon}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium truncate block">{sub.name}</span>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                              <span>{scheduleLabel(sub.schedule)}</span>
+                              <span>·</span>
+                              <span>след. {formatDate(sub.nextRunAt)}</span>
+                              {isUrgent && days >= 0 && (
+                                <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
+                                  через {days} {days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right font-semibold text-expense">
+                            -{formatAmount(sub.amount, currency)}
+                          </div>
+                          <div className="flex shrink-0 items-center gap-1.5">
+                            <Switch
+                              checked={sub.isActive}
+                              onCheckedChange={(checked) => toggleMutation.mutate({ id: sub.id, isActive: checked })}
+                            />
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditRule(sub)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7 text-expense hover:text-expense">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>Удалить подписку?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Прошлые транзакции останутся. Новые создаваться не будут.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Отмена</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    className="bg-destructive hover:bg-destructive/90"
+                                    onClick={() => deleteMutation.mutate({ id: sub.id })}
+                                  >
+                                    Удалить
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          </div>
+                        </div>
+                      </StaggerItem>
+                    )
+                  })}
+                </StaggerList>
+              </StaggerItem>
+            )
+          })}
+
+          {/* Paused */}
+          {pausedSubs.length > 0 && (
+            <StaggerItem className="space-y-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                На паузе ({pausedSubs.length})
+              </p>
+              <StaggerList className="space-y-3">
+                {pausedSubs.map((sub) => {
                   const currency = sub.transactions[0]?.account.currency ?? 'RUB'
                   const info = getServiceInfo(sub.name)
-
                   return (
-                    <Card key={sub.id} className={isUrgent ? 'border-red-200 dark:border-red-900/50' : ''}>
-                      <CardContent className="flex items-center gap-4 p-4">
+                    <StaggerItem key={sub.id}>
+                      <div className="glass-card rounded-2xl opacity-60 flex items-center gap-4 p-4">
                         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
                           {info.icon}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <span className="font-medium truncate block">{sub.name}</span>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                            <span>{scheduleLabel(sub.schedule)}</span>
-                            <span>·</span>
-                            <span>след. {formatDate(sub.nextRunAt)}</span>
-                            {isUrgent && days >= 0 && (
-                              <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
-                                через {days} {days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'}
-                              </Badge>
-                            )}
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{sub.name}</span>
+                            <Badge variant="secondary" className="text-xs">Пауза</Badge>
                           </div>
                         </div>
-                        <div className="shrink-0 text-right font-semibold text-red-600">
-                          -{formatAmount(sub.amount, currency)}
+                        <div className="shrink-0 text-right font-semibold text-muted-foreground">
+                          {formatAmount(sub.amount, currency)}
                         </div>
                         <div className="flex shrink-0 items-center gap-1.5">
                           <Switch
-                            checked={sub.isActive}
-                            onCheckedChange={(checked) => toggleMutation.mutate({ id: sub.id, isActive: checked })}
+                            checked={false}
+                            onCheckedChange={() => toggleMutation.mutate({ id: sub.id, isActive: true })}
                           />
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditRule(sub)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600">
+                              <Button variant="ghost" size="icon" className="h-7 w-7 text-expense hover:text-expense">
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
                                 <AlertDialogTitle>Удалить подписку?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Прошлые транзакции останутся. Новые создаваться не будут.
-                                </AlertDialogDescription>
+                                <AlertDialogDescription>Прошлые транзакции останутся.</AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
                                 <AlertDialogCancel>Отмена</AlertDialogCancel>
                                 <AlertDialogAction
-                                  className="bg-red-600 hover:bg-red-700"
+                                  className="bg-destructive hover:bg-destructive/90"
                                   onClick={() => deleteMutation.mutate({ id: sub.id })}
                                 >
                                   Удалить
@@ -413,73 +438,14 @@ export default function SubscriptionsTrackerPage() {
                             </AlertDialogContent>
                           </AlertDialog>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </StaggerItem>
                   )
                 })}
-              </div>
-            )
-          })}
-
-          {/* Paused */}
-          {pausedSubs.length > 0 && (
-            <div className="space-y-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                На паузе ({pausedSubs.length})
-              </p>
-              {pausedSubs.map((sub) => {
-                const currency = sub.transactions[0]?.account.currency ?? 'RUB'
-                const info = getServiceInfo(sub.name)
-                return (
-                  <Card key={sub.id} className="opacity-60">
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted text-xl">
-                        {info.icon}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">{sub.name}</span>
-                          <Badge variant="secondary" className="text-xs">Пауза</Badge>
-                        </div>
-                      </div>
-                      <div className="shrink-0 text-right font-semibold text-muted-foreground">
-                        {formatAmount(sub.amount, currency)}
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1.5">
-                        <Switch
-                          checked={false}
-                          onCheckedChange={() => toggleMutation.mutate({ id: sub.id, isActive: true })}
-                        />
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600">
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Удалить подписку?</AlertDialogTitle>
-                              <AlertDialogDescription>Прошлые транзакции останутся.</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Отмена</AlertDialogCancel>
-                              <AlertDialogAction
-                                className="bg-red-600 hover:bg-red-700"
-                                onClick={() => deleteMutation.mutate({ id: sub.id })}
-                              >
-                                Удалить
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+              </StaggerList>
+            </StaggerItem>
           )}
-        </div>
+        </StaggerList>
       )}
 
       {/* Dialogs */}

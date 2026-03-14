@@ -1,20 +1,22 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/ui/page-header'
+import { StatCarousel, StatCard } from '@/components/ui/stat-carousel'
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 import { Trash2, Plus, HandCoins } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
@@ -73,32 +75,28 @@ export default function DebtsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Долги и займы</h1>
-          <p className="text-sm text-muted-foreground">Учёт кто кому и сколько должен</p>
-        </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Добавить
-        </Button>
-      </div>
+      <PageHeader
+        title="Долги и займы"
+        description="Учёт кто кому и сколько должен"
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Добавить
+          </Button>
+        }
+      />
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="border-green-100 bg-green-50/50 dark:border-green-900/30 dark:bg-green-950/20">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Мне должны</p>
-            <p className="text-xl font-semibold text-green-600">{formatAmount(totalLent)}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-red-100 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Я должен</p>
-            <p className="text-xl font-semibold text-red-600">{formatAmount(totalBorrowed)}</p>
-          </CardContent>
-        </Card>
-      </div>
+      <StatCarousel columns={2}>
+        <StatCard
+          label="Мне должны"
+          value={<span className="text-income">{formatAmount(totalLent)}</span>}
+        />
+        <StatCard
+          label="Я должен"
+          value={<span className="text-expense">{formatAmount(totalBorrowed)}</span>}
+        />
+      </StatCarousel>
 
       {/* Tabs */}
       <Tabs value={tab} onValueChange={(v) => setTab(v as 'LENT' | 'BORROWED')}>
@@ -111,7 +109,7 @@ export default function DebtsPage() {
           {isLoading ? (
             <div className="space-y-3">
               {[1, 2, 3].map((i) => (
-                <Card key={i}><CardContent className="p-4">
+                <div key={i} className="glass-card rounded-2xl p-4 space-y-3">
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-4 w-40" />
@@ -119,12 +117,12 @@ export default function DebtsPage() {
                     </div>
                     <Skeleton className="h-6 w-24" />
                   </div>
-                  <Skeleton className="mt-3 h-2 w-full rounded-full" />
-                </CardContent></Card>
+                  <Skeleton className="h-2 w-full rounded-full" />
+                </div>
               ))}
             </div>
           ) : activeList.length === 0 ? (
-            <Card className="flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
+            <div className="glass-card rounded-2xl flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
               <HandCoins className="mb-3 h-10 w-10" />
               <p className="mb-1 font-medium text-foreground">
                 {tab === 'LENT' ? 'Никто вам не должен' : 'Вы никому не должны'}
@@ -134,60 +132,62 @@ export default function DebtsPage() {
                 <Plus className="mr-1.5 h-4 w-4" />
                 Добавить
               </Button>
-            </Card>
+            </div>
           ) : (
-            activeList.map((debt) => {
-              const total = Number(debt.amount)
-              const paid = Number(debt.paidAmount)
-              const pct = total > 0 ? Math.round((paid / total) * 100) : 0
-              const statusInfo = STATUS_LABELS[debt.status] ?? STATUS_LABELS.ACTIVE
+            <StaggerList className="space-y-3">
+              {activeList.map((debt) => {
+                const total = Number(debt.amount)
+                const paid = Number(debt.paidAmount)
+                const pct = total > 0 ? Math.round((paid / total) * 100) : 0
+                const statusInfo = STATUS_LABELS[debt.status] ?? STATUS_LABELS.ACTIVE
 
-              return (
-                <Card key={debt.id}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium truncate">{debt.counterparty}</span>
-                          <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                return (
+                  <StaggerItem key={debt.id}>
+                    <div className="glass-card card-interactive rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium truncate">{debt.counterparty}</span>
+                            <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                          </div>
+                          {debt.description && (
+                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{debt.description}</p>
+                          )}
+                          {debt.dueDate && (
+                            <p className="text-xs text-muted-foreground mt-0.5">Срок: {formatDate(debt.dueDate)}</p>
+                          )}
                         </div>
-                        {debt.description && (
-                          <p className="text-xs text-muted-foreground mt-0.5 truncate">{debt.description}</p>
-                        )}
-                        {debt.dueDate && (
-                          <p className="text-xs text-muted-foreground mt-0.5">Срок: {formatDate(debt.dueDate)}</p>
-                        )}
+                        <div className="text-right shrink-0 ml-4">
+                          <p className="font-semibold">{formatAmount(total, debt.currency)}</p>
+                          {paid > 0 && <p className="text-xs text-muted-foreground">Погашено: {formatAmount(paid, debt.currency)}</p>}
+                        </div>
                       </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <p className="font-semibold">{formatAmount(total, debt.currency)}</p>
-                        {paid > 0 && <p className="text-xs text-muted-foreground">Погашено: {formatAmount(paid, debt.currency)}</p>}
-                      </div>
-                    </div>
 
-                    <Progress value={pct} className="h-2" />
+                      <Progress value={pct} className="h-2 [&>div]:transition-all" />
 
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{pct}% погашено</span>
-                      <div className="flex gap-2">
-                        {debt.status !== 'REPAID' && (
-                          <Button variant="outline" size="sm" onClick={() => setRepayDebtId(debt.id)}>
-                            Погасить
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">{pct}% погашено</span>
+                        <div className="flex gap-2">
+                          {debt.status !== 'REPAID' && (
+                            <Button variant="outline" size="sm" onClick={() => setRepayDebtId(debt.id)}>
+                              Погасить
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-expense hover:text-expense"
+                            onClick={() => deleteMutation.mutate({ id: debt.id })}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-7 w-7 text-red-500 hover:text-red-600"
-                          onClick={() => deleteMutation.mutate({ id: debt.id })}
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </div>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            })
+                  </StaggerItem>
+                )
+              })}
+            </StaggerList>
           )}
         </TabsContent>
       </Tabs>
@@ -196,11 +196,14 @@ export default function DebtsPage() {
       <CreateDebtDialog open={createOpen} onOpenChange={setCreateOpen} defaultType={tab} />
 
       {/* Repay Dialog */}
-      <Dialog open={!!repayDebtId} onOpenChange={(o) => { if (!o) { setRepayDebtId(null); setRepayAmount('') } }}>
-        <DialogContent className="max-w-xs">
-          <DialogHeader>
-            <DialogTitle>Погашение долга</DialogTitle>
-          </DialogHeader>
+      <ResponsiveModal
+        open={!!repayDebtId}
+        onOpenChange={(o) => { if (!o) { setRepayDebtId(null); setRepayAmount('') } }}
+      >
+        <ResponsiveModalContent className="max-w-xs">
+          <ResponsiveModalHeader>
+            <ResponsiveModalTitle>Погашение долга</ResponsiveModalTitle>
+          </ResponsiveModalHeader>
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -225,8 +228,8 @@ export default function DebtsPage() {
               {repayMutation.isPending ? 'Сохранение...' : 'Погасить'}
             </Button>
           </form>
-        </DialogContent>
-      </Dialog>
+        </ResponsiveModalContent>
+      </ResponsiveModal>
     </div>
   )
 }
@@ -256,11 +259,11 @@ function CreateDebtDialog({ open, onOpenChange, defaultType }: {
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>Новый долг</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+      <ResponsiveModalContent className="max-w-sm">
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>Новый долг</ResponsiveModalTitle>
+        </ResponsiveModalHeader>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -345,7 +348,7 @@ function CreateDebtDialog({ open, onOpenChange, defaultType }: {
             {createMutation.isPending ? 'Сохранение...' : 'Добавить'}
           </Button>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }

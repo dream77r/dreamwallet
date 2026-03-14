@@ -1,10 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { TrendingUp, TrendingDown, Wallet, Calendar, Plus } from 'lucide-react'
 import {
@@ -21,6 +19,9 @@ import { trpc } from '@/lib/trpc/client'
 import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
+import { PageHeader } from '@/components/ui/page-header'
+import { ChartContainer, PeriodPills } from '@/components/ui/chart-container'
+import { StatCarousel, StatCard } from '@/components/ui/stat-carousel'
 
 type DayRange = 30 | 60 | 90
 
@@ -45,13 +46,26 @@ function formatAmount(amount: number, compact = false) {
 function ForecastSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 md:grid md:grid-cols-4 md:overflow-visible md:mx-0 md:px-0 md:pb-0">
         {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}><CardHeader className="pb-2"><Skeleton className="h-4 w-24 mb-2" /><Skeleton className="h-7 w-32" /></CardHeader></Card>
+          <div key={i} className="glass-card card-default rounded-2xl p-4 min-w-[160px] flex-shrink-0">
+            <Skeleton className="h-4 w-24 mb-2" />
+            <Skeleton className="h-7 w-32" />
+          </div>
         ))}
       </div>
-      <Card><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent><Skeleton className="h-[260px] w-full" /></CardContent></Card>
-      <Card><CardHeader><Skeleton className="h-6 w-40" /></CardHeader><CardContent className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}</CardContent></Card>
+      <div className="glass-card card-default rounded-2xl p-4 md:p-6">
+        <Skeleton className="h-6 w-40 mb-4" />
+        <Skeleton className="h-[260px] w-full" />
+      </div>
+      <div className="glass-card card-default rounded-2xl p-4 md:p-6">
+        <Skeleton className="h-6 w-40 mb-4" />
+        <div className="space-y-3">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full" />
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
@@ -60,8 +74,8 @@ function ForecastSkeleton() {
 
 function EmptyState() {
   return (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-16 gap-4 text-center">
+    <div className="glass-card card-default rounded-2xl">
+      <div className="flex flex-col items-center justify-center py-16 gap-4 text-center">
         <Calendar className="h-12 w-12 text-muted-foreground" />
         <div>
           <p className="font-semibold text-lg">Нет регулярных платежей</p>
@@ -74,8 +88,8 @@ function EmptyState() {
             <Plus className="h-4 w-4 mr-2" /> Добавить регулярный платёж
           </Link>
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -104,19 +118,21 @@ export default function ForecastPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Прогноз денежного потока</h1>
-          <p className="text-muted-foreground text-sm mt-1">На основе ваших регулярных платежей</p>
-        </div>
-        <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as DayRange)}>
-          <TabsList>
-            <TabsTrigger value="30">30 дней</TabsTrigger>
-            <TabsTrigger value="60">60 дней</TabsTrigger>
-            <TabsTrigger value="90">90 дней</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
+      <PageHeader
+        title="Прогноз денежного потока"
+        description="На основе ваших регулярных платежей"
+        actions={
+          <PeriodPills
+            periods={[
+              { label: '30д', value: '30' },
+              { label: '60д', value: '60' },
+              { label: '90д', value: '90' },
+            ]}
+            active={String(days)}
+            onChange={(v) => setDays(Number(v) as DayRange)}
+          />
+        }
+      />
 
       {isLoading ? (
         <ForecastSkeleton />
@@ -125,170 +141,165 @@ export default function ForecastPage() {
       ) : (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-1.5">
-                  <Wallet className="h-4 w-4" /> Сейчас
-                </CardDescription>
-                <CardTitle className="text-xl">{formatAmount(data!.startBalance)}</CardTitle>
-              </CardHeader>
-            </Card>
+          <StatCarousel columns={4}>
+            <StatCard
+              label="Сейчас"
+              value={formatAmount(data!.startBalance)}
+              icon={<Wallet className="h-4 w-4" />}
+            />
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-1.5 text-green-600">
-                  <TrendingUp className="h-4 w-4" /> Поступит
-                </CardDescription>
-                <CardTitle className="text-xl text-green-600">
-                  +{formatAmount(data!.totalIncome)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+            <StatCard
+              label="Поступит"
+              value={
+                <span className="text-income">+{formatAmount(data!.totalIncome)}</span>
+              }
+              icon={<TrendingUp className="h-4 w-4 text-income" />}
+            />
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-1.5 text-red-500">
-                  <TrendingDown className="h-4 w-4" /> Уйдёт
-                </CardDescription>
-                <CardTitle className="text-xl text-red-500">
-                  -{formatAmount(data!.totalExpense)}
-                </CardTitle>
-              </CardHeader>
-            </Card>
+            <StatCard
+              label="Уйдёт"
+              value={
+                <span className="text-expense">-{formatAmount(data!.totalExpense)}</span>
+              }
+              icon={<TrendingDown className="h-4 w-4 text-expense" />}
+            />
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Через {days} дней</CardDescription>
-                <CardTitle className={`text-xl ${isNegativeEnd ? 'text-red-600' : 'text-green-600'}`}>
+            <StatCard
+              label={`Через ${days} дней`}
+              value={
+                <span className={isNegativeEnd ? 'text-expense' : 'text-income'}>
                   {formatAmount(data!.endBalance)}
                   {isNegativeEnd && (
-                    <span className="ml-2 text-xs font-normal bg-red-100 text-red-700 px-1.5 py-0.5 rounded">
+                    <span className="ml-2 text-xs font-normal bg-expense/10 text-expense px-1.5 py-0.5 rounded">
                       Дефицит
                     </span>
                   )}
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </div>
+                </span>
+              }
+            />
+          </StatCarousel>
 
           {/* Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Прогноз баланса</CardTitle>
-              <CardDescription>
-                Динамика баланса на {days} дней вперёд
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={280}>
-                <AreaChart data={chartData} margin={{ left: 0, right: 8 }}>
-                  <defs>
-                    <linearGradient id="balanceGradPos" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--chart-2))" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="hsl(var(--chart-2))" stopOpacity={0} />
-                    </linearGradient>
-                    <linearGradient id="balanceGradNeg" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0} />
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.25} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis
-                    dataKey="label"
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v: number) => formatAmount(v, true)}
-                    width={72}
-                  />
-                  <Tooltip
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    formatter={(value: any) => [formatAmount(value as number), 'Баланс'] as any}
-                    labelStyle={{ fontWeight: 600 }}
-                    contentStyle={{ borderRadius: 8, fontSize: 13 }}
-                  />
-                  {/* Zero reference line */}
-                  <ReferenceLine
-                    y={0}
-                    stroke="#ef4444"
-                    strokeDasharray="4 3"
-                    strokeWidth={1.5}
-                    label={{ value: '0', position: 'insideTopLeft', fontSize: 11, fill: '#ef4444' }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="balance"
-                    stroke="hsl(var(--chart-2))"
-                    strokeWidth={2}
-                    fill={isNegativeEnd ? 'url(#balanceGradNeg)' : 'url(#balanceGradPos)'}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <ChartContainer
+            title="Прогноз баланса"
+            subtitle={`Динамика на ${days} дней вперёд`}
+            height={{ mobile: 220, desktop: 280 }}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={{ left: 0, right: 8 }}>
+                <defs>
+                  <linearGradient id="balanceGradPos" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="oklch(0.585 0.232 265)" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="oklch(0.585 0.232 265)" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="balanceGradNeg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0} />
+                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0.3} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={{ fontSize: 11 }}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) => formatAmount(v, true)}
+                  width={72}
+                />
+                <Tooltip
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  formatter={(value: any) => [formatAmount(value as number), 'Баланс'] as any}
+                  labelStyle={{ fontWeight: 600 }}
+                  contentStyle={{
+                    borderRadius: 12,
+                    fontSize: 13,
+                    background: 'rgba(255,255,255,0.85)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(0,0,0,0.06)',
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.08)',
+                  }}
+                />
+                {/* Zero reference line */}
+                <ReferenceLine
+                  y={0}
+                  stroke="#ef4444"
+                  strokeDasharray="4 3"
+                  strokeWidth={1.5}
+                  label={{ value: '0', position: 'insideTopLeft', fontSize: 11, fill: '#ef4444' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="balance"
+                  stroke="oklch(0.585 0.232 265)"
+                  strokeWidth={2}
+                  fill={isNegativeEnd ? 'url(#balanceGradNeg)' : 'url(#balanceGradPos)'}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartContainer>
 
           {/* Events timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <div className="glass-card card-default rounded-2xl p-4 md:p-6">
+            <div className="mb-4">
+              <h3 className="font-semibold text-base flex items-center gap-2">
                 <Calendar className="h-5 w-5" /> Предстоящие платежи
-              </CardTitle>
-              <CardDescription>{allEvents.length} событий за {days} дней</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {/* Desktop: table rows | Mobile: cards */}
-              <div className="divide-y">
-                {allEvents.map((ev, i) => (
+              </h3>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {allEvents.length} событий за {days} дней
+              </p>
+            </div>
+
+            {/* Desktop: table rows | Mobile: cards */}
+            <div className="divide-y">
+              {allEvents.map((ev, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between py-3 gap-3"
+                >
+                  {/* Icon */}
                   <div
-                    key={i}
-                    className="flex items-center justify-between py-3 gap-3"
+                    className={`hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold ${
+                      ev.type === 'INCOME' ? 'bg-income' : 'bg-expense'
+                    }`}
                   >
-                    {/* Icon */}
-                    <div
-                      className={`hidden sm:flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white text-sm font-bold ${
-                        ev.type === 'INCOME' ? 'bg-green-500' : 'bg-red-400'
+                    {ev.type === 'INCOME' ? '↑' : '↓'}
+                  </div>
+
+                  {/* Name + date */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{ev.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(ev.dateLabel), 'd MMMM yyyy', { locale: ru })}
+                    </p>
+                  </div>
+
+                  {/* Badge + amount */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge
+                      variant={ev.type === 'INCOME' ? 'default' : 'destructive'}
+                      className="hidden sm:flex text-xs"
+                    >
+                      {ev.type === 'INCOME' ? 'Доход' : 'Расход'}
+                    </Badge>
+                    <span
+                      className={`text-sm font-semibold ${
+                        ev.type === 'INCOME' ? 'text-income' : 'text-expense'
                       }`}
                     >
-                      {ev.type === 'INCOME' ? '↑' : '↓'}
-                    </div>
-
-                    {/* Name + date */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{ev.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(ev.dateLabel), 'd MMMM yyyy', { locale: ru })}
-                      </p>
-                    </div>
-
-                    {/* Badge + amount */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <Badge
-                        variant={ev.type === 'INCOME' ? 'default' : 'destructive'}
-                        className="hidden sm:flex text-xs"
-                      >
-                        {ev.type === 'INCOME' ? 'Доход' : 'Расход'}
-                      </Badge>
-                      <span
-                        className={`text-sm font-semibold ${
-                          ev.type === 'INCOME' ? 'text-green-600' : 'text-red-500'
-                        }`}
-                      >
-                        {ev.type === 'INCOME' ? '+' : '-'}
-                        {formatAmount(ev.amount)}
-                      </span>
-                    </div>
+                      {ev.type === 'INCOME' ? '+' : '-'}
+                      {formatAmount(ev.amount)}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+              ))}
+            </div>
+          </div>
         </>
       )}
     </div>

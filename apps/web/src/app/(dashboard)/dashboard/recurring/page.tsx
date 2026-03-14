@@ -1,19 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +28,14 @@ import {
 import { Repeat2, Pencil, Trash2, Plus, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -142,11 +143,11 @@ function RecurringFormDialog({ open, onOpenChange, initialData }: RecurringFormD
   const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Редактировать платёж' : 'Новый регулярный платёж'}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+      <ResponsiveModalContent className="max-w-sm">
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>{isEdit ? 'Редактировать платёж' : 'Новый регулярный платёж'}</ResponsiveModalTitle>
+        </ResponsiveModalHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Название */}
@@ -262,8 +263,8 @@ function RecurringFormDialog({ open, onOpenChange, initialData }: RecurringFormD
             {isPending ? 'Сохранение...' : isEdit ? 'Сохранить' : 'Добавить'}
           </Button>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -311,12 +312,12 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
   const isExpense = rule.type === 'EXPENSE'
 
   return (
-    <Card className={`transition-opacity ${!rule.isActive ? 'opacity-60' : ''}`}>
-      <CardContent className="flex items-center gap-4 p-4">
+    <div className={`glass-card card-interactive rounded-2xl transition-opacity ${!rule.isActive ? 'opacity-60' : ''}`}>
+      <div className="flex items-center gap-4 p-4">
         {/* Иконка типа */}
         <div
           className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-            isExpense ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
+            isExpense ? 'bg-expense/10 text-expense' : 'bg-income/10 text-income'
           }`}
         >
           {isExpense
@@ -343,7 +344,7 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
         </div>
 
         {/* Сумма */}
-        <div className={`shrink-0 text-right font-semibold ${isExpense ? 'text-red-600' : 'text-green-600'}`}>
+        <div className={`shrink-0 text-right font-semibold ${isExpense ? 'text-expense' : 'text-income'}`}>
           {isExpense ? '-' : '+'}{formatAmount(rule.amount, currency)}
         </div>
 
@@ -360,7 +361,7 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-expense hover:text-expense">
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </AlertDialogTrigger>
@@ -374,7 +375,7 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
               <AlertDialogFooter>
                 <AlertDialogCancel>Отмена</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-destructive hover:bg-destructive/90"
                   onClick={() => deleteMutation.mutate({ id: rule.id })}
                 >
                   Удалить
@@ -383,8 +384,8 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -406,53 +407,49 @@ export default function RecurringPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Регулярные платежи</h1>
-          <p className="text-sm text-muted-foreground">
-            Подписки, кредиты, зарплата и другие повторяющиеся транзакции
-          </p>
-        </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="mr-1.5 h-4 w-4" />
-          Добавить
-        </Button>
-      </div>
+      <PageHeader
+        title="Регулярные платежи"
+        description="Подписки, кредиты, зарплата и другие повторяющиеся транзакции"
+        actions={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Добавить
+          </Button>
+        }
+      />
 
       {/* Stat: суммарный ежемесячный расход */}
       {!isLoading && totalMonthlyExpense > 0 && (
-        <Card className="border-red-100 bg-red-50/50 dark:border-red-900/30 dark:bg-red-950/20">
-          <CardContent className="flex items-center gap-3 p-4">
-            <Repeat2 className="h-5 w-5 text-red-500" />
-            <div>
-              <p className="text-sm font-medium">Ежемесячных подписок</p>
-              <p className="text-xs text-muted-foreground">{activeRules.filter(r => r.type === 'EXPENSE' && r.schedule === '0 9 1 * *').length} платежей</p>
-            </div>
-            <p className="ml-auto text-lg font-semibold text-red-600">
-              -{new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(totalMonthlyExpense)}
-            </p>
-          </CardContent>
-        </Card>
+        <div className="glass-card card-default rounded-2xl flex items-center gap-3 p-4">
+          <Repeat2 className="h-5 w-5 text-expense" />
+          <div>
+            <p className="text-sm font-medium">Ежемесячных подписок</p>
+            <p className="text-xs text-muted-foreground">{activeRules.filter(r => r.type === 'EXPENSE' && r.schedule === '0 9 1 * *').length} платежей</p>
+          </div>
+          <p className="ml-auto text-lg font-semibold text-expense">
+            -{new Intl.NumberFormat('ru-RU', { style: 'currency', currency: 'RUB', maximumFractionDigits: 0 }).format(totalMonthlyExpense)}
+          </p>
+        </div>
       )}
 
       {/* Список */}
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="flex items-center gap-4 p-4">
+            <div key={i} className="glass-card card-default rounded-2xl">
+              <div className="flex items-center gap-4 p-4">
                 <Skeleton className="h-10 w-10 rounded-xl" />
                 <div className="flex-1 space-y-1">
                   <Skeleton className="h-4 w-40" />
                   <Skeleton className="h-3 w-32" />
                 </div>
                 <Skeleton className="h-5 w-24" />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       ) : rules.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
+        <div className="glass-card rounded-2xl border-dashed flex flex-col items-center justify-center py-16 text-muted-foreground">
           <div className="mb-3 text-4xl">💳</div>
           <p className="mb-1 font-medium text-foreground">Нет регулярных платежей</p>
           <p className="mb-4 text-sm">Добавьте подписки, кредит или зарплату</p>
@@ -460,7 +457,7 @@ export default function RecurringPage() {
             <Plus className="mr-1.5 h-4 w-4" />
             Добавить первый
           </Button>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-6">
           {activeRules.length > 0 && (
@@ -468,9 +465,13 @@ export default function RecurringPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 Активные ({activeRules.length})
               </p>
-              {activeRules.map((rule) => (
-                <RuleCard key={rule.id} rule={rule} onEdit={() => setEditRule(rule)} />
-              ))}
+              <StaggerList className="space-y-3">
+                {activeRules.map((rule) => (
+                  <StaggerItem key={rule.id}>
+                    <RuleCard rule={rule} onEdit={() => setEditRule(rule)} />
+                  </StaggerItem>
+                ))}
+              </StaggerList>
             </div>
           )}
 
@@ -479,9 +480,13 @@ export default function RecurringPage() {
               <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 На паузе ({pausedRules.length})
               </p>
-              {pausedRules.map((rule) => (
-                <RuleCard key={rule.id} rule={rule} onEdit={() => setEditRule(rule)} />
-              ))}
+              <StaggerList className="space-y-3">
+                {pausedRules.map((rule) => (
+                  <StaggerItem key={rule.id}>
+                    <RuleCard rule={rule} onEdit={() => setEditRule(rule)} />
+                  </StaggerItem>
+                ))}
+              </StaggerList>
             </div>
           )}
         </div>
