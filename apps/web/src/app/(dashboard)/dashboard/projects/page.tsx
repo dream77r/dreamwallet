@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '@/components/ui/page-header'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 import {
   Plus,
   FolderKanban,
@@ -58,63 +58,58 @@ export default function ProjectsPage() {
           onOpenChange={(o) => { if (!o) setEditingId(null) }}
         />
       )}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Проекты</h1>
-          <p className="text-muted-foreground text-sm">
-            {isLoading ? 'Загрузка...' : `${projects?.length ?? 0} проектов`}
-          </p>
-        </div>
-        <ProjectForm />
-      </div>
+
+      <PageHeader
+        title="Проекты"
+        description={isLoading ? 'Загрузка...' : `${projects?.length ?? 0} проектов`}
+        actions={<ProjectForm />}
+      />
 
       {/* Project cards grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {isLoading ? (
-          Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-4 w-48 mt-1" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-16 w-full" />
-              </CardContent>
-            </Card>
-          ))
-        ) : projects?.length === 0 ? (
-          <Card className="col-span-full flex flex-col items-center justify-center py-16 border-dashed text-muted-foreground">
-            <FolderKanban className="h-10 w-10 mb-3" />
-            <p className="font-medium mb-1">Нет проектов</p>
-            <p className="text-sm">Создайте первый бизнес-проект для отслеживания финансов</p>
-            <div className="mt-4">
-              <ProjectForm />
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="glass-card rounded-2xl relative overflow-hidden p-5">
+              <Skeleton className="h-5 w-32 mb-2" />
+              <Skeleton className="h-4 w-48 mb-4" />
+              <Skeleton className="h-16 w-full" />
             </div>
-          </Card>
-        ) : (
-          <>
-            {projects?.map((project, index) => {
-              const color = getProjectColor(index, project.color)
-              const totalBalance = project.wallet?.accounts?.reduce(
-                (sum, acc) => sum + Number(acc.balance), 0
-              ) ?? 0
+          ))}
+        </div>
+      ) : projects?.length === 0 ? (
+        <div className="glass-card rounded-2xl col-span-full flex flex-col items-center justify-center py-16 border border-dashed text-muted-foreground">
+          <FolderKanban className="h-10 w-10 mb-3" />
+          <p className="font-medium mb-1">Нет проектов</p>
+          <p className="text-sm">Создайте первый бизнес-проект для отслеживания финансов</p>
+          <div className="mt-4">
+            <ProjectForm />
+          </div>
+        </div>
+      ) : (
+        <StaggerList className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {projects?.map((project, index) => {
+            const color = getProjectColor(index, project.color)
+            const totalBalance = project.wallet?.accounts?.reduce(
+              (sum, acc) => sum + Number(acc.balance), 0
+            ) ?? 0
 
-              return (
-                <Card key={project.id} className="relative overflow-hidden">
+            return (
+              <StaggerItem key={project.id}>
+                <div className="glass-card card-interactive rounded-2xl relative overflow-hidden">
                   <div className={`absolute top-0 left-0 right-0 h-1 ${color}`} />
 
-                  <CardHeader className="pb-3 pt-7">
+                  <div className="pb-3 pt-7 px-5">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
                         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${color} text-white`}>
                           <FolderKanban className="h-5 w-5" />
                         </div>
                         <div>
-                          <CardTitle className="text-base">{project.name}</CardTitle>
+                          <p className="text-base font-semibold leading-tight">{project.name}</p>
                           {project.description && (
-                            <CardDescription className="text-xs line-clamp-1">
+                            <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                               {project.description}
-                            </CardDescription>
+                            </p>
                           )}
                         </div>
                       </div>
@@ -127,21 +122,21 @@ export default function ProjectsPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>Открыть</DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setEditingId(project.id)}>Редактировать</DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">Архивировать</DropdownMenuItem>
+                          <DropdownMenuItem className="text-expense">Архивировать</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
-                  </CardHeader>
+                  </div>
 
-                  <CardContent>
-                    <Separator className="mb-4" />
+                  <div className="px-5 pb-5">
+                    <div className="h-px bg-border my-4" />
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
                           <Wallet className="h-3.5 w-3.5" />
                           <span>Баланс</span>
                         </div>
-                        <span className={`text-sm font-semibold ${totalBalance < 0 ? 'text-red-600' : ''}`}>
+                        <span className={`text-sm font-semibold ${totalBalance < 0 ? 'text-expense' : ''}`}>
                           {formatAmount(totalBalance, project.wallet?.currency)}
                         </span>
                       </div>
@@ -161,18 +156,20 @@ export default function ProjectsPage() {
                         </span>
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+                  </div>
+                </div>
+              </StaggerItem>
+            )
+          })}
 
-            {/* Add project card */}
-            <Card className="flex items-center justify-center border-dashed hover:bg-muted/50 transition-colors min-h-[200px]">
+          {/* Add project card */}
+          <StaggerItem>
+            <div className="glass-card card-hover rounded-2xl border-dashed border-2 flex items-center justify-center min-h-[200px]">
               <ProjectForm />
-            </Card>
-          </>
-        )}
-      </div>
+            </div>
+          </StaggerItem>
+        </StaggerList>
+      )}
     </div>
   )
 }

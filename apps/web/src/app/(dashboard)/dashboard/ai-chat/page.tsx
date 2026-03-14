@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { PageHeader } from '@/components/ui/page-header'
 import { BrainCircuit, Send, Loader2, User } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { ChatBlockRenderer } from '@/components/ai/ChatBlockRenderer'
@@ -53,20 +53,18 @@ export default function AiChatPage() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-120px)] max-w-2xl">
-      <div className="mb-4">
-        <h1 className="text-2xl font-semibold">AI Советник</h1>
-        <p className="text-muted-foreground text-sm">
-          Спросите о расходах, категориях или финансовых привычках
-        </p>
-      </div>
+      <PageHeader
+        title="AI Советник"
+        description="Спросите о расходах, категориях или финансовых привычках"
+      />
 
-      <Card className="flex-1 flex flex-col min-h-0">
+      <div className="glass-card card-default rounded-2xl flex-1 flex flex-col min-h-0">
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
             {messages.length === 0 && (
               <div className="flex flex-col items-center gap-3 py-12 text-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                  <BrainCircuit className="h-6 w-6 text-primary" />
+                <div className="flex h-12 w-12 items-center justify-center rounded-full gradient-hero animate-pulse-glow">
+                  <BrainCircuit className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="font-medium">Привет! Я ваш финансовый советник.</p>
@@ -83,15 +81,15 @@ export default function AiChatPage() {
                 className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {msg.role === 'assistant' && (
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <BrainCircuit className="h-3.5 w-3.5 text-primary" />
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full gradient-hero">
+                    <BrainCircuit className="h-3.5 w-3.5 text-white" />
                   </div>
                 )}
                 <div
                   className={`max-w-[80%] rounded-xl px-4 py-2.5 text-sm ${
                     msg.role === 'user'
-                      ? 'bg-primary text-primary-foreground whitespace-pre-wrap'
-                      : 'bg-muted'
+                      ? 'gradient-hero text-white whitespace-pre-wrap'
+                      : 'glass-card'
                   }`}
                 >
                   {msg.role === 'user' && msg.content}
@@ -109,10 +107,10 @@ export default function AiChatPage() {
 
             {chatMutation.isPending && (
               <div className="flex gap-3 justify-start">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                  <BrainCircuit className="h-3.5 w-3.5 text-primary" />
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full gradient-hero">
+                  <BrainCircuit className="h-3.5 w-3.5 text-white" />
                 </div>
-                <div className="bg-muted rounded-xl px-4 py-2.5 flex items-center gap-2">
+                <div className="glass-card rounded-xl px-4 py-2.5 flex items-center gap-2">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   <span className="text-sm text-muted-foreground">Думаю...</span>
                 </div>
@@ -123,7 +121,7 @@ export default function AiChatPage() {
           </div>
         </ScrollArea>
 
-        <CardContent className="border-t pt-4 pb-4">
+        <div className="border-t border-border/50 p-4">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <Input
               value={input}
@@ -131,15 +129,20 @@ export default function AiChatPage() {
               placeholder="Напишите вопрос..."
               maxLength={500}
               disabled={chatMutation.isPending}
-              className="flex-1"
+              className="flex-1 rounded-xl"
             />
             <VoiceInput onResult={(text) => sendMessage(text)} />
-            <Button type="submit" size="icon" disabled={!input.trim() || chatMutation.isPending}>
+            <Button
+              type="submit"
+              size="icon"
+              disabled={!input.trim() || chatMutation.isPending}
+              className="rounded-xl tap-target"
+            >
               <Send className="h-4 w-4" />
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

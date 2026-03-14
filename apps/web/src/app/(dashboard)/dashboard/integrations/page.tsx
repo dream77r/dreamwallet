@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -12,14 +11,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -45,6 +36,14 @@ import {
 } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 
 const NETWORK_OPTIONS = [
   { value: 'ethereum', label: 'Ethereum (ETH)', symbol: 'ETH', icon: '⟠' },
@@ -210,17 +209,15 @@ export default function IntegrationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Интеграции</h1>
-        <p className="text-muted-foreground mt-1">
-          Подключение криптокошельков и импорт из платёжных систем
-        </p>
-      </div>
+      <PageHeader
+        title="Интеграции"
+        description="Подключение криптокошельков и импорт из платёжных систем"
+      />
 
       {/* ─── Crypto Wallets ─── */}
       <section className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-medium">Криптокошельки</h2>
+          <h2 className="text-title text-lg">Криптокошельки</h2>
           <Button onClick={() => setAddDialogOpen(true)} size="sm">
             <Plus className="w-4 h-4 mr-1.5" />
             Добавить кошелёк
@@ -230,26 +227,26 @@ export default function IntegrationsPage() {
         {cryptoLoading ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {[1, 2, 3].map((i) => (
-              <Card key={i}><CardContent className="p-4"><Skeleton className="h-20" /></CardContent></Card>
+              <div key={i} className="glass-card rounded-2xl p-4 space-y-3">
+                <Skeleton className="h-20" />
+              </div>
             ))}
           </div>
         ) : !cryptoAccounts?.length ? (
-          <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-              <Bitcoin className="w-10 h-10 mx-auto mb-2 opacity-30" />
-              <p>Нет подключённых кошельков</p>
-              <p className="text-sm mt-1">Добавьте адрес для автоматической загрузки транзакций</p>
-            </CardContent>
-          </Card>
+          <div className="glass-card rounded-2xl p-6 text-center text-muted-foreground">
+            <Bitcoin className="w-10 h-10 mx-auto mb-2 opacity-30" />
+            <p>Нет подключённых кошельков</p>
+            <p className="text-sm mt-1">Добавьте адрес для автоматической загрузки транзакций</p>
+          </div>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <StaggerList className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {cryptoAccounts.map((acc) => {
               const isSyncing = syncingIds.has(acc.id)
               const networkInfo = NETWORK_OPTIONS.find((n) => n.value === acc.cryptoNetwork)
 
               return (
-                <Card key={acc.id}>
-                  <CardContent className="p-4 space-y-3">
+                <StaggerItem key={acc.id}>
+                  <div className="glass-card card-interactive rounded-2xl p-4 space-y-3">
                     <div className="flex items-start justify-between">
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -327,11 +324,11 @@ export default function IntegrationsPage() {
                         )}
                       </Button>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </StaggerItem>
               )
             })}
-          </div>
+          </StaggerList>
         )}
 
         <p className="text-xs text-muted-foreground">
@@ -341,80 +338,76 @@ export default function IntegrationsPage() {
 
       {/* ─── Payment Systems (CSV Import) ─── */}
       <section className="space-y-4">
-        <h2 className="text-lg font-medium">Платёжные системы</h2>
+        <h2 className="text-title text-lg">Платёжные системы</h2>
         <p className="text-sm text-muted-foreground">
           Импорт выписок через CSV. Скачайте выписку в личном кабинете и загрузите на странице импорта.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {PAYMENT_SYSTEMS.map((ps) => (
-            <Card key={ps.key}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-medium">{ps.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{ps.desc}</p>
-                  </div>
-                  <Badge variant="secondary" className="text-xs shrink-0">{ps.format}</Badge>
+            <div key={ps.key} className="glass-card card-interactive rounded-2xl p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h3 className="font-medium">{ps.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{ps.desc}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-2"
-                  onClick={() => router.push(`/dashboard/import?template=${ps.key}`)}
-                >
-                  <Upload className="w-4 h-4 mr-1.5" />
-                  Импорт CSV
-                </Button>
-              </CardContent>
-            </Card>
+                <Badge variant="secondary" className="text-xs shrink-0">{ps.format}</Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => router.push(`/dashboard/import?template=${ps.key}`)}
+              >
+                <Upload className="w-4 h-4 mr-1.5" />
+                Импорт CSV
+              </Button>
+            </div>
           ))}
         </div>
       </section>
 
       {/* ─── Crypto Exchanges (CSV Import) ─── */}
       <section className="space-y-4">
-        <h2 className="text-lg font-medium">Криптобиржи</h2>
+        <h2 className="text-title text-lg">Криптобиржи</h2>
         <p className="text-sm text-muted-foreground">
           Импорт истории операций через CSV-выгрузку.
         </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {CRYPTO_EXCHANGES.map((ex) => (
-            <Card key={ex.key}>
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <div>
-                    <h3 className="font-medium">{ex.name}</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">{ex.desc}</p>
-                  </div>
-                  <Badge variant="secondary" className="text-xs shrink-0">{ex.format}</Badge>
+            <div key={ex.key} className="glass-card card-interactive rounded-2xl p-4">
+              <div className="flex items-start justify-between mb-2">
+                <div>
+                  <h3 className="font-medium">{ex.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{ex.desc}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-2"
-                  onClick={() => router.push(`/dashboard/import?template=${ex.key}`)}
-                >
-                  <Upload className="w-4 h-4 mr-1.5" />
-                  Импорт CSV
-                </Button>
-              </CardContent>
-            </Card>
+                <Badge variant="secondary" className="text-xs shrink-0">{ex.format}</Badge>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full mt-2"
+                onClick={() => router.push(`/dashboard/import?template=${ex.key}`)}
+              >
+                <Upload className="w-4 h-4 mr-1.5" />
+                Импорт CSV
+              </Button>
+            </div>
           ))}
         </div>
       </section>
 
       {/* ─── Add Wallet Dialog ─── */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Добавить криптокошелёк</DialogTitle>
-            <DialogDescription>
-              Вставьте адрес кошелька — сеть определится автоматически.
-              Для EVM-адресов (0x...) выберите сеть вручную.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+        <ResponsiveModalContent>
+          <ResponsiveModalHeader>
+            <ResponsiveModalTitle>Добавить криптокошелёк</ResponsiveModalTitle>
+          </ResponsiveModalHeader>
+          <p className="text-sm text-muted-foreground">
+            Вставьте адрес кошелька — сеть определится автоматически.
+            Для EVM-адресов (0x...) выберите сеть вручную.
+          </p>
 
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
             <div className="space-y-2">
               <Label>Адрес кошелька</Label>
               <Input
@@ -451,33 +444,34 @@ export default function IntegrationsPage() {
             )}
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" onClick={() => setAddDialogOpen(false)} className="flex-1">
               Отмена
             </Button>
             <Button
               onClick={handleAddWallet}
               disabled={!address.trim() || addWalletMut.isPending}
+              className="flex-1"
             >
               {addWalletMut.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
               Добавить
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </ResponsiveModalContent>
+      </ResponsiveModal>
 
       {/* ─── Edit Wallet Dialog ─── */}
-      <Dialog open={!!editState} onOpenChange={(open) => { if (!open) setEditState(null) }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Редактировать кошелёк</DialogTitle>
-            <DialogDescription>
-              Измените название или исправьте сеть, если она определилась неверно.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal open={!!editState} onOpenChange={(open) => { if (!open) setEditState(null) }}>
+        <ResponsiveModalContent>
+          <ResponsiveModalHeader>
+            <ResponsiveModalTitle>Редактировать кошелёк</ResponsiveModalTitle>
+          </ResponsiveModalHeader>
+          <p className="text-sm text-muted-foreground">
+            Измените название или исправьте сеть, если она определилась неверно.
+          </p>
 
           {editState && (
-            <div className="space-y-4">
+            <div className="space-y-4 mt-4">
               <div className="space-y-2">
                 <Label>Название</Label>
                 <Input
@@ -514,20 +508,21 @@ export default function IntegrationsPage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditState(null)}>
+          <div className="flex gap-2 mt-4">
+            <Button variant="outline" onClick={() => setEditState(null)} className="flex-1">
               Отмена
             </Button>
             <Button
               onClick={handleSaveEdit}
               disabled={!editState?.name.trim() || updateWalletMut.isPending}
+              className="flex-1"
             >
               {updateWalletMut.isPending && <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />}
               Сохранить
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </ResponsiveModalContent>
+      </ResponsiveModal>
 
       {/* ─── Delete Confirmation ─── */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => { if (!open) setDeleteId(null) }}>

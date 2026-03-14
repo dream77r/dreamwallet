@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
@@ -49,7 +48,7 @@ export default function PricingPage() {
   return (
     <div className="space-y-8 max-w-4xl">
       <div className="text-center">
-        <h1 className="text-3xl font-bold">Тарифы</h1>
+        <h1 className="text-headline">Тарифы</h1>
         <p className="text-muted-foreground mt-2">Выберите подходящий план для ваших финансов</p>
 
         <div className="flex items-center justify-center gap-3 mt-6">
@@ -70,24 +69,26 @@ export default function PricingPage() {
           const isPopular = plan.key === 'PRO'
 
           return (
-            <Card
+            <div
               key={plan.key}
-              className={`relative ${isPopular ? 'border-primary shadow-lg' : ''}`}
+              className={`glass-card card-interactive rounded-2xl relative ${
+                isPopular ? 'border-2 border-primary gradient-border-hover shadow-lg' : ''
+              }`}
             >
               {isPopular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-primary">Популярный</Badge>
+                  <Badge className="gradient-hero text-white">Популярный</Badge>
                 </div>
               )}
-              <CardHeader className="text-center pb-2">
+              <div className="text-center pb-2 p-6">
                 <div className="flex justify-center mb-2">
                   <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${
-                    isPopular ? 'bg-primary text-primary-foreground' : 'bg-muted'
+                    isPopular ? 'gradient-hero text-white' : 'bg-muted'
                   }`}>
                     <Icon className="h-6 w-6" />
                   </div>
                 </div>
-                <CardTitle className="text-lg">{plan.name}</CardTitle>
+                <div className="text-lg font-semibold">{plan.name}</div>
                 <div className="mt-2">
                   {price === 0 ? (
                     <span className="text-3xl font-bold">Бесплатно</span>
@@ -103,29 +104,33 @@ export default function PricingPage() {
                     </p>
                   )}
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
+              </div>
+              <div className="space-y-4 px-6 pb-6">
                 <ul className="space-y-2">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
+                      <CheckCircle2 className="h-4 w-4 text-income mt-0.5 flex-shrink-0" />
                       {feature}
                     </li>
                   ))}
                 </ul>
 
                 {isCurrent ? (
-                  <Button variant="outline" className="w-full" disabled>
+                  <Button variant="outline" className="w-full rounded-xl" disabled>
                     Текущий план
                   </Button>
                 ) : plan.key === 'FREE' ? (
-                  <Button variant="outline" className="w-full" disabled>
+                  <Button variant="outline" className="w-full rounded-xl" disabled>
                     Базовый
                   </Button>
                 ) : (
                   <Button
-                    className="w-full"
-                    variant={isPopular ? 'default' : 'outline'}
+                    className={`w-full rounded-xl ${
+                      isPopular
+                        ? 'gradient-hero text-white hover:opacity-90'
+                        : ''
+                    }`}
+                    variant={isPopular ? undefined : 'outline'}
                     onClick={() => handleUpgrade(plan.key)}
                     disabled={loading !== null}
                   >
@@ -139,8 +144,8 @@ export default function PricingPage() {
                     )}
                   </Button>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )
         })}
       </div>

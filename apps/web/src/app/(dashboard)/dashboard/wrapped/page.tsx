@@ -121,7 +121,7 @@ export default function WrappedPage() {
   const slides = data
     ? [
         {
-          gradient: 'from-blue-600 to-blue-400',
+          gradient: 'from-[#667eea] to-[#764ba2]',
           title: 'Ваш финансовый итог',
           content: (
             <>
@@ -151,7 +151,7 @@ export default function WrappedPage() {
           ),
         },
         {
-          gradient: 'from-red-500 to-orange-400',
+          gradient: 'from-[#f093fb] to-[#f5576c]',
           title: 'Самый дорогой день',
           content: data.topSpendingDay ? (
             <>
@@ -167,7 +167,7 @@ export default function WrappedPage() {
           ),
         },
         {
-          gradient: 'from-purple-600 to-purple-400',
+          gradient: 'from-[#7b2ff7] to-[#4c3fa0]',
           title: 'Топ категория',
           content: data.topCategory ? (
             <>
@@ -186,7 +186,7 @@ export default function WrappedPage() {
           ),
         },
         {
-          gradient: 'from-green-600 to-green-400',
+          gradient: 'from-[#11998e] to-[#38ef7d]',
           title: 'Любимый магазин',
           content: data.favoriteMerchant ? (
             <>
@@ -203,7 +203,7 @@ export default function WrappedPage() {
           ),
         },
         {
-          gradient: 'from-orange-500 to-amber-400',
+          gradient: 'from-[#f2994a] to-[#f2c94c]',
           title: 'Бюджетная дисциплина',
           content: (
             <>
@@ -221,7 +221,7 @@ export default function WrappedPage() {
           ),
         },
         {
-          gradient: 'from-cyan-500 to-cyan-300',
+          gradient: 'from-[#4facfe] to-[#00f2fe]',
           title: 'Норма сбережений',
           content: (
             <>
@@ -258,7 +258,7 @@ export default function WrappedPage() {
           ),
         },
         {
-          gradient: 'from-pink-600 to-pink-400',
+          gradient: 'from-[#ff6b6b] to-[#ee5a24]',
           title: 'Серия дней',
           content: (
             <>
@@ -275,7 +275,7 @@ export default function WrappedPage() {
           ),
         },
         {
-          gradient: 'from-indigo-600 to-violet-500',
+          gradient: 'from-[#667eea] to-[#764ba2]',
           title: 'Финансовый скоринг',
           content: (
             <>
@@ -313,8 +313,8 @@ export default function WrappedPage() {
             }}
             className={`flex-1 py-2.5 rounded-2xl font-medium text-sm transition-colors ${
               period === 'monthly'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                ? 'gradient-hero text-white'
+                : 'bg-muted text-muted-foreground'
             }`}
           >
             Месяц
@@ -326,8 +326,8 @@ export default function WrappedPage() {
             }}
             className={`flex-1 py-2.5 rounded-2xl font-medium text-sm transition-colors ${
               period === 'yearly'
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+                ? 'gradient-hero text-white'
+                : 'bg-muted text-muted-foreground'
             }`}
           >
             Год
@@ -342,7 +342,7 @@ export default function WrappedPage() {
                 setMonth(Number(e.target.value))
                 setCurrentSlide(0)
               }}
-              className="flex-1 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm"
+              className="flex-1 rounded-2xl border border-border bg-card px-4 py-2.5 text-sm"
             >
               {MONTHS.map((m, i) => (
                 <option key={i} value={i + 1}>
@@ -357,7 +357,7 @@ export default function WrappedPage() {
               setYear(Number(e.target.value))
               setCurrentSlide(0)
             }}
-            className={`${period === 'monthly' ? 'w-28' : 'flex-1'} rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm`}
+            className={`${period === 'monthly' ? 'w-28' : 'flex-1'} rounded-2xl border border-border bg-card px-4 py-2.5 text-sm`}
           >
             {yearOptions.map((y) => (
               <option key={y} value={y}>
@@ -370,19 +370,19 @@ export default function WrappedPage() {
 
       {/* Loading state */}
       {isLoading && (
-        <div className="min-h-[400px] rounded-3xl bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 animate-pulse" />
+        <div className="min-h-[400px] rounded-3xl bg-gradient-to-br from-muted to-muted/50 animate-pulse" />
       )}
 
       {/* Empty state */}
       {!isLoading && isEmpty && (
-        <div className="min-h-[400px] rounded-3xl bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center text-center p-8">
+        <div className="min-h-[400px] rounded-3xl glass-card card-default flex flex-col items-center justify-center text-center p-8">
           <div className="text-6xl mb-4 opacity-30">
             {'\uD83D\uDCCA'}
           </div>
-          <p className="text-lg font-medium text-gray-500">
+          <p className="text-lg font-medium text-muted-foreground">
             Нет данных за выбранный период
           </p>
-          <p className="text-sm text-gray-400 mt-2">
+          <p className="text-sm text-muted-foreground/70 mt-2">
             Добавьте транзакции, чтобы увидеть свой финансовый итог
           </p>
         </div>
@@ -436,14 +436,14 @@ export default function WrappedPage() {
                 key={i}
                 onClick={() => setCurrentSlide(i)}
                 className={`w-2.5 h-2.5 rounded-full transition-colors ${
-                  i === currentSlide ? 'bg-blue-500' : 'bg-gray-300 dark:bg-gray-600'
+                  i === currentSlide ? 'bg-primary' : 'bg-muted-foreground/30'
                 }`}
               />
             ))}
           </div>
 
           {/* Slide counter */}
-          <p className="text-center text-xs text-gray-400 mt-2">
+          <p className="text-center text-xs text-muted-foreground mt-2">
             {currentSlide + 1} / {SLIDE_COUNT}
           </p>
         </>
@@ -465,7 +465,7 @@ export default function WrappedPage() {
             style={{
               width: 400,
               height: 600,
-              background: 'linear-gradient(135deg, #1e1b4b, #312e81, #4c1d95)',
+              background: 'linear-gradient(135deg, #667eea, #764ba2)',
               color: '#ffffff',
               fontFamily: 'system-ui, -apple-system, sans-serif',
               padding: 32,
