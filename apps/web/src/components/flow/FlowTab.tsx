@@ -10,6 +10,13 @@ import { AiDailySummary } from './AiDailySummary'
 import { TransactionFeed } from '@/components/transactions/TransactionFeed'
 import { BudgetsWidget } from '@/components/dashboard/BudgetsWidget'
 import { GoalsWidget } from '@/components/dashboard/GoalsWidget'
+import { FinancialScoreWidget } from '@/components/dashboard/FinancialScoreWidget'
+import { ForecastWidget } from '@/components/dashboard/ForecastWidget'
+import { MonthComparisonWidget } from '@/components/dashboard/MonthComparisonWidget'
+import { RunwayWidget } from '@/components/dashboard/RunwayWidget'
+import { GamificationWidget } from '@/components/dashboard/GamificationWidget'
+import { AiInsights } from '@/components/dashboard/ai-insights'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 
 const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
 
@@ -48,11 +55,11 @@ export function FlowTab() {
   const now = new Date()
   const monthLabel = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`
 
-  // Compute today's expenses from dashboardData
-  const todayExpense = (dash as Record<string, unknown> | undefined)?.todayExpense as number | undefined
-
-  // Top category from dashboardData
-  const topCategory = (dash as Record<string, unknown> | undefined)?.topCategory as string | undefined
+  // Extract data from dashboardData blob
+  const dashAny = dash as Record<string, unknown> | undefined
+  const todayExpense = (dashAny?.todayExpense as number) ?? 0
+  const topCategory = dashAny?.topCategory as string | undefined
+  const anomaly = dashAny?.anomaly as string | null | undefined
 
   if (isMobile) {
     return (
@@ -89,14 +96,43 @@ export function FlowTab() {
 
         {/* AI Daily Summary */}
         <AiDailySummary
-          todayExpense={todayExpense ?? 0}
+          todayExpense={todayExpense}
           topCategory={topCategory}
+          anomaly={anomaly}
           currency={wallet?.currency}
           isLoading={dashLoading}
         />
 
+        {/* Compact widgets row: Score + Forecast */}
+        <div className="grid grid-cols-2 gap-3">
+          <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
+          <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
+        </div>
+
         {/* Transaction Feed — infinite scroll */}
         <TransactionFeed variant="compact" />
+
+        {/* Secondary widgets */}
+        <StaggerList className="space-y-4">
+          <StaggerItem>
+            <BudgetsWidget budgets={dash?.budgets} isLoading={dashLoading} monthLabel={monthLabel} />
+          </StaggerItem>
+          <StaggerItem>
+            <GoalsWidget goals={dash?.goals} />
+          </StaggerItem>
+          <StaggerItem>
+            <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
+          </StaggerItem>
+          <StaggerItem>
+            <RunwayWidget data={dash?.runway} isLoading={dashLoading} />
+          </StaggerItem>
+          <StaggerItem>
+            <GamificationWidget data={dash?.gamification} isLoading={dashLoading} />
+          </StaggerItem>
+          <StaggerItem>
+            <AiInsights />
+          </StaggerItem>
+        </StaggerList>
       </div>
     )
   }
@@ -112,17 +148,25 @@ export function FlowTab() {
         isLoading={isLoading}
       />
 
+      {/* KPI Row: Score + Forecast + Month Comparison */}
+      <div className="grid grid-cols-3 gap-4">
+        <FinancialScoreWidget data={dash?.score} isLoading={dashLoading} />
+        <ForecastWidget data={dash?.forecast} isLoading={dashLoading} />
+        <MonthComparisonWidget data={dash?.comparison} isLoading={dashLoading} />
+      </div>
+
       <div className="grid grid-cols-[1fr_320px] gap-6">
         {/* Left column — Transaction Feed */}
-        <div>
+        <div className="space-y-4">
           <TransactionFeed variant="full" showColumnHeaders showDateHeaders />
         </div>
 
         {/* Right column — Widgets */}
         <div className="space-y-4">
           <AiDailySummary
-            todayExpense={todayExpense ?? 0}
+            todayExpense={todayExpense}
             topCategory={topCategory}
+            anomaly={anomaly}
             currency={wallet?.currency}
             isLoading={dashLoading}
           />
@@ -134,6 +178,12 @@ export function FlowTab() {
           />
 
           <GoalsWidget goals={dash?.goals} />
+
+          <RunwayWidget data={dash?.runway} isLoading={dashLoading} />
+
+          <GamificationWidget data={dash?.gamification} isLoading={dashLoading} />
+
+          <AiInsights />
         </div>
       </div>
     </div>

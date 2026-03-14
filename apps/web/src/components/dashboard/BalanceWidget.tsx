@@ -3,14 +3,7 @@
 import { TrendingUp, TrendingDown, Wallet, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { AnimatedNumber } from '@/components/ui/animated-number'
-
-function formatAmount(amount: number, currency = 'RUB') {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Math.abs(amount))
-}
+import { formatAmount } from '@/lib/format'
 
 interface BalanceWidgetProps {
   stats: { totalBalance: number; monthIncome: number; monthExpense: number; monthNet: number } | undefined

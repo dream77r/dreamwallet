@@ -5,6 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
+import { formatAmount } from '@/lib/format'
 
 const CHART_COLORS = [
   '#667eea', '#22c55e', '#f59e0b', '#ec4899', '#14b8a6',
@@ -17,14 +18,6 @@ const TOOLTIP_STYLE = {
   backgroundColor: 'var(--glass-bg)',
   backdropFilter: 'blur(20px)',
   boxShadow: 'var(--glass-shadow)',
-}
-
-function formatAmount(amount: number) {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    maximumFractionDigits: 0,
-  }).format(Math.abs(amount))
 }
 
 interface CashflowWidgetProps {

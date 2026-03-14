@@ -3,10 +3,7 @@
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-function formatAmount(n: number) {
-  return new Intl.NumberFormat("ru-RU", { style: "currency", currency: "RUB", maximumFractionDigits: 0 }).format(n)
-}
+import { formatAmount } from "@/lib/format"
 
 interface ComparisonData {
   expenseDiff: number
