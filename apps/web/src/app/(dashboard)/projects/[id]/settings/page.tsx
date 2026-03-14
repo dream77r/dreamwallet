@@ -3,7 +3,6 @@
 import { use, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { trpc } from '@/lib/trpc/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -94,11 +93,11 @@ export default function ProjectSettingsPage({ params }: PageProps) {
       </div>
 
       {/* General settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Общие</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <div className="glass-card card-default rounded-2xl">
+        <div className="p-5 pb-3">
+          <h2 className="font-semibold text-base">Общие</h2>
+        </div>
+        <div className="px-5 pb-5">
           <form
             onSubmit={(e) => {
               e.preventDefault()
@@ -131,22 +130,22 @@ export default function ProjectSettingsPage({ params }: PageProps) {
               {updateMutation.isPending ? 'Сохранение...' : 'Сохранить'}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Income rules */}
-      <Card>
-        <CardHeader>
+      <div className="glass-card card-default rounded-2xl">
+        <div className="p-5 pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Правила дохода</CardTitle>
+            <h2 className="font-semibold text-base">Правила дохода</h2>
             {totalPct > 0 && (
               <Badge variant={totalPct > 100 ? 'destructive' : 'secondary'}>
                 {totalPct}% распределено
               </Badge>
             )}
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="px-5 pb-5">
           <div className="space-y-4">
             {project.members.map((member) => {
               const rule = (rules ?? []).find(r => r.memberId === member.id)
@@ -154,7 +153,7 @@ export default function ProjectSettingsPage({ params }: PageProps) {
 
               if (isOwnerMember) {
                 return (
-                  <div key={member.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div key={member.id} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold">
                         {member.user.name?.charAt(0).toUpperCase() ?? '?'}
@@ -197,8 +196,8 @@ export default function ProjectSettingsPage({ params }: PageProps) {
           {upsertRuleMutation.error && (
             <p className="text-sm text-destructive mt-2">{upsertRuleMutation.error.message}</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }
@@ -230,7 +229,7 @@ function IncomeRuleRow({
   const [value, setValue] = useState(currentValue?.toString() ?? '')
 
   return (
-    <div className="flex items-center gap-3 py-2 border-b last:border-0">
+    <div className="flex items-center gap-3 py-2 border-b border-border/50 last:border-0">
       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold shrink-0">
         {memberName.charAt(0).toUpperCase()}
       </div>

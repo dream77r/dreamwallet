@@ -3,9 +3,8 @@
 import { trpc } from '@/lib/trpc/client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Users, UserPlus, Copy, Trash2 } from 'lucide-react'
+import { Users, UserPlus, Trash2 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'
 import { toast } from 'sonner'
@@ -36,18 +35,16 @@ function FamilyContent() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Семейный кошелёк</h1>
-        <Card className="rounded-3xl">
-          <CardContent className="p-8 text-center space-y-4">
-            <Users className="h-12 w-12 mx-auto text-gray-300" />
-            <p className="text-gray-500">Создайте семейный кошелёк для совместного управления финансами</p>
-            <div className="flex gap-2 max-w-sm mx-auto">
-              <Input placeholder="Название (напр. Семья Поповых)" value={name} onChange={e => setName(e.target.value)} />
-              <Button onClick={() => createMutation.mutate({ name })} disabled={!name || createMutation.isPending}>
-                Создать
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="glass-card card-default rounded-2xl p-8 text-center space-y-4">
+          <Users className="h-12 w-12 mx-auto text-muted-foreground/30" />
+          <p className="text-muted-foreground">Создайте семейный кошелёк для совместного управления финансами</p>
+          <div className="flex gap-2 max-w-sm mx-auto">
+            <Input placeholder="Название (напр. Семья Поповых)" value={name} onChange={e => setName(e.target.value)} />
+            <Button onClick={() => createMutation.mutate({ name })} disabled={!name || createMutation.isPending}>
+              Создать
+            </Button>
+          </div>
+        </div>
       </div>
     )
   }
@@ -70,34 +67,32 @@ function FamilyContent() {
         {family.members.map(member => {
           const memberSpending = spending?.find(s => s.userId === member.userId)
           return (
-            <Card key={member.id} className="rounded-3xl">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-lg font-bold text-blue-600">
-                      {(member.user.name ?? 'U')[0].toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-sm">{member.user.name ?? member.user.email}</p>
-                      <p className="text-xs text-gray-500">{member.role === 'OWNER' ? 'Владелец' : member.role === 'ADMIN' ? 'Админ' : 'Участник'}</p>
-                    </div>
+            <div key={member.id} className="glass-card card-default rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-lg font-bold text-primary">
+                    {(member.user.name ?? 'U')[0].toUpperCase()}
                   </div>
-                  {member.role !== 'OWNER' && (
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeMutation.mutate({ memberId: member.id })}>
-                      <Trash2 className="h-4 w-4 text-gray-400" />
-                    </Button>
+                  <div>
+                    <p className="font-semibold text-sm">{member.user.name ?? member.user.email}</p>
+                    <p className="text-xs text-muted-foreground">{member.role === 'OWNER' ? 'Владелец' : member.role === 'ADMIN' ? 'Админ' : 'Участник'}</p>
+                  </div>
+                </div>
+                {member.role !== 'OWNER' && (
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeMutation.mutate({ memberId: member.id })}>
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                )}
+              </div>
+              {memberSpending && (
+                <div className="text-sm">
+                  <p>Расходы: <span className="font-semibold">{memberSpending.spent.toLocaleString('ru-RU')} ₽</span></p>
+                  {memberSpending.limit && (
+                    <p className="text-muted-foreground">Лимит: {memberSpending.limit.toLocaleString('ru-RU')} ₽</p>
                   )}
                 </div>
-                {memberSpending && (
-                  <div className="text-sm">
-                    <p>Расходы: <span className="font-semibold">{memberSpending.spent.toLocaleString('ru-RU')} ₽</span></p>
-                    {memberSpending.limit && (
-                      <p className="text-gray-500">Лимит: {memberSpending.limit.toLocaleString('ru-RU')} ₽</p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+              )}
+            </div>
           )
         })}
       </div>

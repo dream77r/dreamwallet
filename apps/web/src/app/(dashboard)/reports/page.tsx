@@ -2,10 +2,10 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PageHeader } from '@/components/ui/page-header'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { FileText, Download, Trash2, Plus, Loader2, BarChart3, PieChart, TrendingUp, CalendarDays } from 'lucide-react'
@@ -115,26 +115,23 @@ export default function ReportsPage() {
     URL.revokeObjectURL(url)
   }
 
-  const selectedTypeMeta = REPORT_TYPES.find(t => t.value === selectedType)
-
   return (
     <div className="space-y-6 pb-24">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">Отчёты</h1>
-        <p className="text-muted-foreground text-sm mt-1">Генерация PDF отчётов по вашим финансам</p>
-      </div>
+      <PageHeader
+        title="Отчёты"
+        description="Генерация PDF отчётов по вашим финансам"
+      />
 
       {/* Generator */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-indigo-500" />
+      <div className="glass-card card-default rounded-2xl">
+        <div className="p-6 pb-4">
+          <h2 className="flex items-center gap-2 text-base font-semibold">
+            <FileText className="h-5 w-5 text-primary" />
             Новый отчёт
-          </CardTitle>
-          <CardDescription>Выберите тип и период — скачайте готовый PDF</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-5">
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">Выберите тип и период — скачайте готовый PDF</p>
+        </div>
+        <div className="p-6 pt-2 space-y-5">
           {/* Report type */}
           <div className="space-y-2">
             <Label>Тип отчёта</Label>
@@ -148,13 +145,13 @@ export default function ReportsPage() {
                     className={cn(
                       'flex items-start gap-3 rounded-xl border p-3 text-left transition-all',
                       selectedType === t.value
-                        ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10'
-                        : 'border-border hover:border-indigo-300 bg-card'
+                        ? 'border-primary bg-primary/5 dark:bg-primary/10'
+                        : 'border-border hover:border-primary/30 bg-card'
                     )}
                   >
-                    <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', selectedType === t.value ? 'text-indigo-500' : 'text-muted-foreground')} />
+                    <Icon className={cn('h-4 w-4 mt-0.5 shrink-0', selectedType === t.value ? 'text-primary' : 'text-muted-foreground')} />
                     <div>
-                      <p className={cn('text-sm font-medium', selectedType === t.value ? 'text-indigo-700 dark:text-indigo-300' : '')}>{t.label}</p>
+                      <p className={cn('text-sm font-medium', selectedType === t.value ? 'text-primary' : '')}>{t.label}</p>
                       <p className="text-xs text-muted-foreground leading-tight mt-0.5">{t.desc}</p>
                     </div>
                   </button>
@@ -188,7 +185,11 @@ export default function ReportsPage() {
           )}
 
           <div className="flex gap-2">
-            <Button className="flex-1 bg-indigo-500 hover:bg-indigo-600" onClick={handleGenerate} disabled={generating}>
+            <Button
+              className="flex-1 gradient-hero text-white hover:opacity-90"
+              onClick={handleGenerate}
+              disabled={generating}
+            >
               {generating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Download className="h-4 w-4 mr-2" />}
               Скачать PDF
             </Button>
@@ -196,17 +197,17 @@ export default function ReportsPage() {
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Saved reports */}
       {(reportsQuery.data?.length ?? 0) > 0 && (
         <div className="space-y-3">
           <h2 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Сохранённые</h2>
           {reportsQuery.data?.map(report => (
-            <Card key={report.id} className="flex items-center gap-3 p-4">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-500/10 shrink-0">
-                <FileText className="h-4 w-4 text-indigo-500" />
+            <div key={report.id} className="glass-card card-interactive rounded-2xl flex items-center gap-3 p-4">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
+                <FileText className="h-4 w-4 text-primary" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{report.name}</p>
@@ -220,7 +221,7 @@ export default function ReportsPage() {
               <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteReport.mutate({ id: report.id })}>
                 <Trash2 className="h-4 w-4" />
               </Button>
-            </Card>
+            </div>
           ))}
         </div>
       )}

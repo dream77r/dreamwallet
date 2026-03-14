@@ -3,11 +3,11 @@
 import { trpc } from '@/lib/trpc/client'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Scissors, Plus, Users, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/page-header'
 
 export const dynamic = 'force-dynamic'
 
@@ -22,53 +22,51 @@ export default function SplitsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Деление расходов</h1>
-        <Button onClick={() => setShowCreate(!showCreate)} size="sm">
-          <Plus className="h-4 w-4 mr-2" />
-          Новая группа
-        </Button>
-      </div>
+      <PageHeader
+        title="Деление расходов"
+        actions={
+          <Button onClick={() => setShowCreate(!showCreate)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            Новая группа
+          </Button>
+        }
+      />
 
       {showCreate && (
-        <Card className="rounded-3xl">
-          <CardContent className="p-5">
-            <div className="flex gap-2">
-              <Input placeholder="Название группы" value={name} onChange={e => setName(e.target.value)} />
-              <Button onClick={() => createMutation.mutate({ name })} disabled={!name}>Создать</Button>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="glass-card card-default rounded-2xl p-5">
+          <div className="flex gap-2">
+            <Input placeholder="Название группы" value={name} onChange={e => setName(e.target.value)} />
+            <Button onClick={() => createMutation.mutate({ name })} disabled={!name}>Создать</Button>
+          </div>
+        </div>
       )}
 
       {!groups?.length && !showCreate && (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <span className="text-5xl mb-4">✂️</span>
-          <p className="text-lg font-semibold text-[#1C1C1E] mb-1">Нет групп</p>
-          <p className="text-sm text-[#8E8E93] mb-4">Создайте группу, чтобы делить расходы с друзьями</p>
-          <button onClick={() => setShowCreate(true)} className="text-sm font-semibold text-[#007AFF]">Создать группу →</button>
+          <p className="text-lg font-semibold mb-1">Нет групп</p>
+          <p className="text-sm text-muted-foreground mb-4">Создайте группу, чтобы делить расходы с друзьями</p>
+          <button onClick={() => setShowCreate(true)} className="text-sm font-semibold text-primary">Создать группу →</button>
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {groups?.map(group => (
           <Link key={group.id} href={`/dashboard/splits/${group.id}`}>
-            <Card className="rounded-3xl hover:shadow-md transition-shadow cursor-pointer">
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold">{group.name}</h3>
-                    <div className="flex items-center gap-1 text-sm text-gray-500 mt-1">
-                      <Users className="h-3.5 w-3.5" />
-                      <span>{group.participants.length} участников</span>
-                      <span className="mx-1">·</span>
-                      <span>{group._count.expenses} расходов</span>
-                    </div>
+            <div className="glass-card card-interactive rounded-2xl p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-semibold">{group.name}</h3>
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                    <Users className="h-3.5 w-3.5" />
+                    <span>{group.participants.length} участников</span>
+                    <span className="mx-1">·</span>
+                    <span>{group._count.expenses} расходов</span>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400" />
                 </div>
-              </CardContent>
-            </Card>
+                <ArrowRight className="h-5 w-5 text-muted-foreground/70" />
+              </div>
+            </div>
           </Link>
         ))}
       </div>

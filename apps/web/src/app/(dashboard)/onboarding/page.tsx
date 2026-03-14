@@ -84,7 +84,7 @@ export default function OnboardingPage() {
 
         {/* Avatar + greeting */}
         <div className="flex flex-col items-center gap-3 mb-8 text-center">
-          <div className="h-16 w-16 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-2xl font-bold select-none">
+          <div className="h-16 w-16 rounded-full gradient-hero flex items-center justify-center text-white text-2xl font-bold select-none">
             {initials}
           </div>
           <h1 className="text-2xl font-bold tracking-tight">
@@ -105,9 +105,9 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => setSelected(profile.value)}
                 className={cn(
-                  'rounded-2xl border-2 p-5 cursor-pointer transition-all text-left flex flex-col gap-2',
+                  'glass-card rounded-2xl border-2 p-5 cursor-pointer transition-all text-left flex flex-col gap-2',
                   isSelected
-                    ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                    ? 'gradient-card border-primary ring-2 ring-primary/20'
                     : 'border-border hover:border-primary/40',
                 )}
               >
@@ -126,7 +126,7 @@ export default function OnboardingPage() {
         {/* Actions */}
         <div className="flex flex-col items-center gap-4">
           <Button
-            className="w-full"
+            className="w-full rounded-xl"
             size="lg"
             disabled={!selected || setUserProfile.isPending}
             onClick={handleContinue}

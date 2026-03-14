@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -81,18 +80,18 @@ export default function CsvTemplatesPage() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Сохранённые шаблоны</CardTitle>
-          <CardDescription>
+      <div className="glass-card card-default rounded-2xl">
+        <div className="p-5 border-b border-border">
+          <h2 className="text-base font-semibold">Сохранённые шаблоны</h2>
+          <p className="text-sm text-muted-foreground mt-1">
             Шаблоны создаются на странице{' '}
             <Link href="/dashboard/import" className="underline underline-offset-2">
               импорта CSV
             </Link>
             . Здесь вы можете переименовать или удалить их.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </p>
+        </div>
+        <div className="p-5">
           {isLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -140,7 +139,7 @@ export default function CsvTemplatesPage() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-8 w-8 text-green-600"
+                            className="h-8 w-8 text-income"
                             onClick={submitRename}
                             disabled={renameMutation.isPending}
                           >
@@ -191,8 +190,8 @@ export default function CsvTemplatesPage() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>

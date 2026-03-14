@@ -3,7 +3,6 @@
 import { trpc } from '@/lib/trpc/client'
 import { useParams } from 'next/navigation'
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -26,8 +25,8 @@ export default function SplitGroupDetailPage() {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
-        <Skeleton className="h-40 w-full rounded-3xl" />
-        <Skeleton className="h-40 w-full rounded-3xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
+        <Skeleton className="h-40 w-full rounded-2xl" />
       </div>
     )
   }
@@ -35,15 +34,13 @@ export default function SplitGroupDetailPage() {
   if (!group) {
     return (
       <div className="space-y-6">
-        <Link href="/dashboard/splits" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700">
+        <Link href="/dashboard/splits" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" />
           Назад
         </Link>
-        <Card className="rounded-3xl">
-          <CardContent className="p-8 text-center">
-            <p className="text-gray-500">Группа не найдена</p>
-          </CardContent>
-        </Card>
+        <div className="glass-card card-default rounded-2xl p-8 text-center">
+          <p className="text-muted-foreground">Группа не найдена</p>
+        </div>
       </div>
     )
   }
@@ -52,7 +49,7 @@ export default function SplitGroupDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link href="/dashboard/splits" className="text-gray-400 hover:text-gray-600">
+          <Link href="/dashboard/splits" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Link>
           <h1 className="text-2xl font-bold">{group.name}</h1>
@@ -64,62 +61,56 @@ export default function SplitGroupDetailPage() {
       </div>
 
       {/* Participants */}
-      <Card className="rounded-3xl">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4 text-gray-500" />
-            <h2 className="font-semibold text-sm">Участники</h2>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {group.participants.map((p) => (
-              <Badge key={p.id} variant="secondary">
-                {participantName(p)}
-              </Badge>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      <div className="glass-card card-default rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-sm">Участники</h2>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {group.participants.map((p) => (
+            <Badge key={p.id} variant="secondary">
+              {participantName(p)}
+            </Badge>
+          ))}
+        </div>
+      </div>
 
       {/* Expenses */}
       <div>
         <div className="flex items-center gap-2 mb-3">
-          <Receipt className="h-4 w-4 text-gray-500" />
+          <Receipt className="h-4 w-4 text-muted-foreground" />
           <h2 className="font-semibold">Расходы</h2>
         </div>
 
         {!group.expenses?.length ? (
-          <Card className="rounded-3xl">
-            <CardContent className="p-8 text-center">
-              <p className="text-gray-500">Пока нет расходов</p>
-            </CardContent>
-          </Card>
+          <div className="glass-card card-default rounded-2xl p-8 text-center">
+            <p className="text-muted-foreground">Пока нет расходов</p>
+          </div>
         ) : (
           <div className="space-y-3">
             {group.expenses.map((expense) => (
-              <Card key={expense.id} className="rounded-3xl">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{expense.description}</p>
-                      <p className="text-sm text-gray-500">
-                        Оплатил: {participantName(expense.paidBy)}
-                      </p>
-                    </div>
-                    <p className="font-semibold tabular-nums">
-                      {Number(expense.amount).toLocaleString('ru-RU')} ₽
+              <div key={expense.id} className="glass-card card-default rounded-2xl p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">{expense.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Оплатил: {participantName(expense.paidBy)}
                     </p>
                   </div>
-                  {expense.shares && expense.shares.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {expense.shares.map((share) => (
-                        <span key={share.participantId} className="text-xs text-gray-400">
-                          {Number(share.amount).toLocaleString('ru-RU')} ₽
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+                  <p className="font-semibold tabular-nums">
+                    {Number(expense.amount).toLocaleString('ru-RU')} ₽
+                  </p>
+                </div>
+                {expense.shares && expense.shares.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {expense.shares.map((share) => (
+                      <span key={share.participantId} className="text-xs text-muted-foreground">
+                        {Number(share.amount).toLocaleString('ru-RU')} ₽
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         )}

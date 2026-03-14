@@ -1,8 +1,8 @@
 'use client'
 
 import { trpc } from '@/lib/trpc/client'
-import { Card, CardContent } from '@/components/ui/card'
 import { Banknote } from 'lucide-react'
+import { PageHeader } from '@/components/ui/page-header'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,35 +11,31 @@ export default function BankConnectionsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Банковские подключения</h1>
+      <PageHeader title="Банковские подключения" />
 
       {!connections?.length && (
-        <Card className="rounded-3xl">
-          <CardContent className="p-8 text-center space-y-3">
-            <Banknote className="h-12 w-12 mx-auto text-gray-300" />
-            <p className="text-gray-500">Подключите банк для автоматического импорта транзакций</p>
-            <p className="text-sm text-gray-400">Поддерживаются: Точка, Сбер, Тинькофф, Альфа, Salt Edge</p>
-          </CardContent>
-        </Card>
+        <div className="glass-card card-default rounded-2xl p-8 text-center space-y-3">
+          <Banknote className="h-12 w-12 mx-auto text-muted-foreground/70" />
+          <p className="text-muted-foreground">Подключите банк для автоматического импорта транзакций</p>
+          <p className="text-sm text-muted-foreground/70">Поддерживаются: Точка, Сбер, Тинькофф, Альфа, Salt Edge</p>
+        </div>
       )}
 
       <div className="space-y-3">
         {connections?.map(conn => (
-          <Card key={conn.id} className="rounded-3xl">
-            <CardContent className="p-4 flex items-center justify-between">
-              <div>
-                <p className="font-semibold text-sm">{conn.account.name}</p>
-                <p className="text-xs text-gray-500">
-                  {conn.provider} · {conn.status === 'ACTIVE' ? '🟢 Активно' : conn.status === 'ERROR' ? '🔴 Ошибка' : '⚪ Отключено'}
-                </p>
-              </div>
-              {conn.lastSyncAt && (
-                <span className="text-xs text-gray-400">
-                  Синхр.: {new Date(conn.lastSyncAt).toLocaleDateString('ru-RU')}
-                </span>
-              )}
-            </CardContent>
-          </Card>
+          <div key={conn.id} className="glass-card card-default rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <p className="font-semibold text-sm">{conn.account.name}</p>
+              <p className="text-xs text-muted-foreground">
+                {conn.provider} · {conn.status === 'ACTIVE' ? '🟢 Активно' : conn.status === 'ERROR' ? '🔴 Ошибка' : '⚪ Отключено'}
+              </p>
+            </div>
+            {conn.lastSyncAt && (
+              <span className="text-xs text-muted-foreground/70">
+                Синхр.: {new Date(conn.lastSyncAt).toLocaleDateString('ru-RU')}
+              </span>
+            )}
+          </div>
         ))}
       </div>
     </div>

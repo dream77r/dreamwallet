@@ -4,7 +4,6 @@ import { use, useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { trpc } from '@/lib/trpc/client'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -221,44 +220,44 @@ export default function ProjectPage({ params }: PageProps) {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Доходы</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
+              <div className="glass-card card-default rounded-2xl">
+                <div className="flex flex-row items-center justify-between p-5 pb-2">
+                  <p className="text-sm font-medium text-muted-foreground">Доходы</p>
+                  <TrendingUp className="h-4 w-4 text-income" />
+                </div>
+                <div className="px-5 pb-5">
+                  <div className="text-2xl font-bold text-income">
                     {formatAmount(dashboard.revenue, currency)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">За текущий месяц</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Расходы</CardTitle>
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
+                </div>
+              </div>
+              <div className="glass-card card-default rounded-2xl">
+                <div className="flex flex-row items-center justify-between p-5 pb-2">
+                  <p className="text-sm font-medium text-muted-foreground">Расходы</p>
+                  <TrendingDown className="h-4 w-4 text-expense" />
+                </div>
+                <div className="px-5 pb-5">
+                  <div className="text-2xl font-bold text-expense">
                     {formatAmount(dashboard.expenses, currency)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">За текущий месяц</p>
-                </CardContent>
-              </Card>
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">Прибыль</CardTitle>
-                  <DollarSign className="h-4 w-4 text-blue-500" />
-                </CardHeader>
-                <CardContent>
-                  <div className={`text-2xl font-bold ${dashboard.profit >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                </div>
+              </div>
+              <div className="glass-card card-default rounded-2xl">
+                <div className="flex flex-row items-center justify-between p-5 pb-2">
+                  <p className="text-sm font-medium text-muted-foreground">Прибыль</p>
+                  <DollarSign className="h-4 w-4 text-primary" />
+                </div>
+                <div className="px-5 pb-5">
+                  <div className={`text-2xl font-bold ${dashboard.profit >= 0 ? 'text-primary' : 'text-expense'}`}>
                     {formatAmount(dashboard.profit, currency)}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     Маржа: {dashboard.profitMargin}%
                   </p>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           )}
         </TabsContent>
@@ -268,24 +267,24 @@ export default function ProjectPage({ params }: PageProps) {
           {!accounts ? (
             <Skeleton className="h-40 w-full" />
           ) : accounts.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border border-dashed rounded-lg">
+            <div className="glass-card card-default rounded-2xl flex flex-col items-center justify-center py-12 text-muted-foreground border border-dashed">
               <CreditCard className="h-8 w-8 mb-2" />
               <p className="font-medium">Нет счетов</p>
             </div>
           ) : (
             <div className="space-y-3">
               {accounts.map((account) => (
-                <Card key={account.id}>
-                  <CardContent className="flex items-center justify-between py-4">
+                <div key={account.id} className="glass-card card-default rounded-2xl">
+                  <div className="flex items-center justify-between px-5 py-4">
                     <div>
                       <p className="font-medium">{account.name}</p>
                       <p className="text-xs text-muted-foreground">{account.type}</p>
                     </div>
-                    <span className={`font-semibold ${Number(account.balance) < 0 ? 'text-destructive' : ''}`}>
+                    <span className={`font-semibold ${Number(account.balance) < 0 ? 'text-expense' : ''}`}>
                       {formatAmount(Number(account.balance), currency)}
                     </span>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           )}
@@ -367,7 +366,7 @@ export default function ProjectPage({ params }: PageProps) {
           {!transactions ? (
             <Skeleton className="h-40 w-full" />
           ) : transactions.items.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground border border-dashed rounded-lg">
+            <div className="glass-card card-default rounded-2xl flex flex-col items-center justify-center py-12 text-muted-foreground border border-dashed">
               <ArrowLeftRight className="h-8 w-8 mb-2" />
               <p className="font-medium">Нет транзакций</p>
             </div>
@@ -384,16 +383,16 @@ export default function ProjectPage({ params }: PageProps) {
                 const createdByName = txWith.createdBy?.name ?? ''
 
                 return (
-                  <Card
+                  <div
                     key={tx.id}
-                    className={isNewFromOther ? 'bg-blue-50 dark:bg-blue-950/30' : ''}
+                    className={`glass-card rounded-2xl ${isNewFromOther ? 'bg-blue-50/60 dark:bg-blue-950/30' : 'card-default'}`}
                   >
-                    <CardContent className="flex items-center justify-between py-3">
+                    <div className="flex items-center justify-between px-5 py-3">
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-medium">{tx.description ?? '—'}</p>
                           {isNewFromOther && createdByName && (
-                            <span className="text-xs text-blue-600 dark:text-blue-400">
+                            <span className="text-xs text-primary">
                               {createdByName}
                             </span>
                           )}
@@ -402,14 +401,14 @@ export default function ProjectPage({ params }: PageProps) {
                       </div>
                       <span
                         className={`text-sm font-semibold ${
-                          tx.type === 'INCOME' ? 'text-green-600' : tx.type === 'EXPENSE' ? 'text-destructive' : ''
+                          tx.type === 'INCOME' ? 'text-income' : tx.type === 'EXPENSE' ? 'text-expense' : ''
                         }`}
                       >
                         {tx.type === 'INCOME' ? '+' : tx.type === 'EXPENSE' ? '-' : ''}
                         {formatAmount(Number(tx.amount), currency)}
                       </span>
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
             </div>
@@ -480,8 +479,8 @@ export default function ProjectPage({ params }: PageProps) {
 
             <div className="space-y-2">
               {project.members.map((member) => (
-                <Card key={member.id}>
-                  <CardContent className="flex items-center justify-between py-3">
+                <div key={member.id} className="glass-card card-default rounded-2xl">
+                  <div className="flex items-center justify-between px-5 py-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold">
                         {member.user.name?.charAt(0).toUpperCase() ?? '?'}
@@ -506,8 +505,8 @@ export default function ProjectPage({ params }: PageProps) {
                         </Button>
                       )}
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -534,59 +533,59 @@ export default function ProjectPage({ params }: PageProps) {
             <>
               {/* Summary cards */}
               <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Выручка</CardTitle>
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold text-green-600">
+                <div className="glass-card card-default rounded-2xl">
+                  <div className="flex flex-row items-center justify-between p-5 pb-2">
+                    <p className="text-sm font-medium text-muted-foreground">Выручка</p>
+                    <TrendingUp className="h-4 w-4 text-income" />
+                  </div>
+                  <div className="px-5 pb-5">
+                    <div className="text-2xl font-bold text-income">
                       {formatAmount(distribution.revenue, currency)}
                     </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">К распределению</CardTitle>
-                    <Wallet className="h-4 w-4 text-blue-500" />
-                  </CardHeader>
-                  <CardContent>
+                  </div>
+                </div>
+                <div className="glass-card card-default rounded-2xl">
+                  <div className="flex flex-row items-center justify-between p-5 pb-2">
+                    <p className="text-sm font-medium text-muted-foreground">К распределению</p>
+                    <Wallet className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="px-5 pb-5">
                     <div className="text-2xl font-bold">
                       {formatAmount(distribution.revenue - distribution.totalFixed, currency)}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       После фикс. выплат ({formatAmount(distribution.totalFixed, currency)})
                     </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground">Остаток владельца</CardTitle>
-                    <DollarSign className="h-4 w-4 text-blue-500" />
-                  </CardHeader>
-                  <CardContent>
+                  </div>
+                </div>
+                <div className="glass-card card-default rounded-2xl">
+                  <div className="flex flex-row items-center justify-between p-5 pb-2">
+                    <p className="text-sm font-medium text-muted-foreground">Остаток владельца</p>
+                    <DollarSign className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="px-5 pb-5">
                     {(() => {
                       const ownerDist = distribution.distribution.find(d => d.role === 'OWNER')
                       const ownerEarned = ownerDist?.earned ?? 0
                       return (
-                        <div className={`text-2xl font-bold ${ownerEarned >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                        <div className={`text-2xl font-bold ${ownerEarned >= 0 ? 'text-primary' : 'text-expense'}`}>
                           {formatAmount(ownerEarned, currency)}
                         </div>
                       )
                     })()}
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </div>
 
               {/* Distribution table */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Распределение</CardTitle>
-                </CardHeader>
-                <CardContent>
+              <div className="glass-card card-default rounded-2xl">
+                <div className="p-5 pb-3">
+                  <h3 className="font-semibold text-base">Распределение</h3>
+                </div>
+                <div className="px-5 pb-5">
                   <div className="space-y-3">
                     {distribution.distribution.map((d) => (
-                      <div key={d.memberId} className="flex items-center justify-between py-2 border-b last:border-0">
+                      <div key={d.memberId} className="flex items-center justify-between py-2 border-b border-border/50 last:border-0">
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold">
                             {d.name.charAt(0).toUpperCase()}
@@ -616,7 +615,7 @@ export default function ProjectPage({ params }: PageProps) {
                             </p>
                           </div>
                           <div className="text-right min-w-[80px]">
-                            <p className={`font-semibold ${d.balance > 0 ? 'text-orange-600' : d.balance < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            <p className={`font-semibold ${d.balance > 0 ? 'text-orange-600' : d.balance < 0 ? 'text-expense' : 'text-income'}`}>
                               {d.balance > 0 ? formatAmount(d.balance, currency) : d.balance < 0 ? formatAmount(d.balance, currency) : 'Оплачено'}
                             </p>
                           </div>
@@ -637,8 +636,8 @@ export default function ProjectPage({ params }: PageProps) {
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </>
           )}
         </TabsContent>
