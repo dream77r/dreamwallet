@@ -6,7 +6,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { TrendingUp, TrendingDown, Wallet, Calendar, Plus } from 'lucide-react'
+import { TrendingUp, TrendingDown, Wallet, Calendar, Plus, AlertTriangle } from 'lucide-react'
 import {
   AreaChart,
   Area,
@@ -22,7 +22,7 @@ import { format } from 'date-fns'
 import { ru } from 'date-fns/locale'
 import Link from 'next/link'
 
-type DayRange = 30 | 60 | 90
+type DayRange = 7 | 30 | 60 | 90 | 180
 
 function formatAmount(amount: number, compact = false) {
   if (compact && Math.abs(amount) >= 1000) {
@@ -89,7 +89,7 @@ export default function ForecastPage() {
   })
 
   // Chart: sample every N days for readability
-  const step = days === 30 ? 3 : days === 60 ? 5 : 7
+  const step = days === 7 ? 1 : days === 30 ? 3 : days === 60 ? 5 : days === 90 ? 7 : 14
   const chartData = data?.daily
     .filter((_, i, arr) => i % step === 0 || i === arr.length - 1)
     .map((d) => ({
@@ -100,6 +100,7 @@ export default function ForecastPage() {
   const hasEvents = (data?.daily.some((d) => d.events.length > 0)) ?? false
   const allEvents = data?.daily.flatMap((d) => d.events.map((e) => ({ ...e, dateLabel: d.date }))) ?? []
   const isNegativeEnd = (data?.endBalance ?? 0) < 0
+  const deficitDay = data?.minBalanceDay ?? null
 
   return (
     <div className="space-y-6">
@@ -111,9 +112,11 @@ export default function ForecastPage() {
         </div>
         <Tabs value={String(days)} onValueChange={(v) => setDays(Number(v) as DayRange)}>
           <TabsList>
+            <TabsTrigger value="7">7 дней</TabsTrigger>
             <TabsTrigger value="30">30 дней</TabsTrigger>
             <TabsTrigger value="60">60 дней</TabsTrigger>
             <TabsTrigger value="90">90 дней</TabsTrigger>
+            <TabsTrigger value="180">180 дней</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -125,7 +128,7 @@ export default function ForecastPage() {
       ) : (
         <>
           {/* Summary cards */}
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-1.5">
@@ -170,7 +173,41 @@ export default function ForecastPage() {
                 </CardTitle>
               </CardHeader>
             </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardDescription>Средний остаток</CardDescription>
+                <CardTitle className="text-xl">{formatAmount(data!.avgBalance)}</CardTitle>
+              </CardHeader>
+            </Card>
+
+            {data!.minBalanceDay && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Минимальный баланс</CardDescription>
+                  <CardTitle className={`text-xl ${data!.minBalanceDay.balance < 0 ? 'text-red-600' : ''}`}>
+                    {formatAmount(data!.minBalanceDay.balance)}
+                    <p className="text-xs font-normal text-muted-foreground mt-0.5">
+                      {format(new Date(data!.minBalanceDay.date), 'd MMM yyyy', { locale: ru })}
+                    </p>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            )}
           </div>
+
+          {/* Deficit banner */}
+          {deficitDay && (
+            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300">
+              <AlertTriangle className="h-5 w-5 mt-0.5 shrink-0 text-red-500" />
+              <div className="text-sm">
+                <span className="font-semibold">⚠️ Возможный дефицит:&nbsp;</span>
+                {format(new Date(deficitDay.date), 'd MMMM yyyy', { locale: ru })}
+                &nbsp;— ожидаемый баланс&nbsp;
+                <span className="font-semibold">{formatAmount(deficitDay.balance)}</span>
+              </div>
+            </div>
+          )}
 
           {/* Chart */}
           <Card>
