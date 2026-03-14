@@ -2,10 +2,8 @@
 
 import { useState, useRef, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,6 +53,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/page-header'
 
 type Step = 1 | 2 | 3 | 4
 
@@ -386,72 +385,70 @@ function ImportPageInner() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Импорт данных</h1>
-          <p className="text-muted-foreground text-sm">Загрузите выписку из банка в формате CSV или Excel</p>
-        </div>
-        <Button variant="outline" size="sm" disabled>
-          <Download className="h-4 w-4" />
-          Скачать шаблон
-        </Button>
-      </div>
+      <PageHeader
+        title="Импорт данных"
+        description="Загрузите выписку из банка в формате CSV или Excel"
+        actions={
+          <Button variant="outline" size="sm" disabled>
+            <Download className="h-4 w-4" />
+            Скачать шаблон
+          </Button>
+        }
+      />
 
       {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-4 pb-4 flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-red-600 flex-shrink-0" />
-            <p className="text-sm text-red-700">{error}</p>
+        <div className="glass-card card-default rounded-2xl border-expense/30 bg-expense/5">
+          <div className="px-4 py-3 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-expense flex-shrink-0" />
+            <p className="text-sm text-expense">{error}</p>
             <Button variant="ghost" size="icon" className="ml-auto h-6 w-6" onClick={() => setError(null)}>
               <X className="h-3 w-3" />
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Step indicator */}
-      <Card>
-        <CardContent className="pt-5 pb-4">
-          <div className="flex items-center">
-            {steps.map((s, i) => (
-              <div key={s.id} className="flex items-center flex-1 last:flex-none">
-                <div className="flex items-center gap-2">
-                  <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
-                    step > s.id
-                      ? 'bg-green-500 text-white'
-                      : step === s.id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-muted-foreground'
-                  }`}>
-                    {step > s.id ? <CheckCircle2 className="h-4 w-4" /> : s.id}
-                  </div>
-                  <span className={`text-sm font-medium ${step === s.id ? 'text-foreground' : 'text-muted-foreground'}`}>
-                    {s.label}
-                  </span>
+      <div className="glass-card card-default rounded-2xl p-5">
+        <div className="flex items-center">
+          {steps.map((s, i) => (
+            <div key={s.id} className="flex items-center flex-1 last:flex-none">
+              <div className="flex items-center gap-2">
+                <div className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-semibold transition-colors ${
+                  step > s.id
+                    ? 'bg-income text-white'
+                    : step === s.id
+                      ? 'gradient-hero text-white'
+                      : 'bg-muted text-muted-foreground'
+                }`}>
+                  {step > s.id ? <CheckCircle2 className="h-4 w-4" /> : s.id}
                 </div>
-                {i < steps.length - 1 && (
-                  <div className={`flex-1 mx-3 h-px ${step > s.id ? 'bg-green-500' : 'bg-muted'}`} />
-                )}
+                <span className={`text-sm font-medium ${step === s.id ? 'text-foreground' : 'text-muted-foreground'}`}>
+                  {s.label}
+                </span>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              {i < steps.length - 1 && (
+                <div className={`flex-1 mx-3 h-px ${step > s.id ? 'bg-income' : 'bg-muted'}`} />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Step 1: Upload */}
       {step === 1 && (
         <div className="space-y-4">
           {/* CSV Template selector */}
           {csvTemplates && csvTemplates.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center gap-2">
+            <div className="glass-card card-default rounded-2xl">
+              <div className="px-5 pt-5 pb-3">
+                <div className="flex items-center gap-2 mb-0.5">
                   <Layers className="h-4 w-4 text-muted-foreground" />
-                  <CardTitle className="text-base">Шаблон маппинга</CardTitle>
+                  <p className="text-base font-semibold">Шаблон маппинга</p>
                 </div>
-                <CardDescription>Выберите сохранённый шаблон для автозаполнения маппинга колонок</CardDescription>
-              </CardHeader>
-              <CardContent>
+                <p className="text-sm text-muted-foreground">Выберите сохранённый шаблон для автозаполнения маппинга колонок</p>
+              </div>
+              <div className="px-5 pb-5">
                 <Select value={selectedCsvTemplateId} onValueChange={applyTemplate}>
                   <SelectTrigger className="w-full sm:w-[320px]">
                     <SelectValue placeholder="Без шаблона" />
@@ -467,20 +464,20 @@ function ImportPageInner() {
                 </Select>
                 {selectedCsvTemplate && (
                   <p className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
-                    <BookmarkCheck className="h-3.5 w-3.5 text-green-600" />
+                    <BookmarkCheck className="h-3.5 w-3.5 text-income" />
                     Маппинг из шаблона «{selectedCsvTemplate.name}» будет применён автоматически
                   </p>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Источник данных</CardTitle>
-              <CardDescription>Выберите банк, платёжную систему или биржу для автоопределения формата</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className="glass-card card-default rounded-2xl">
+            <div className="px-5 pt-5 pb-3">
+              <p className="text-base font-semibold">Источник данных</p>
+              <p className="text-sm text-muted-foreground">Выберите банк, платёжную систему или биржу для автоопределения формата</p>
+            </div>
+            <div className="px-5 pb-5">
               <Select value={template} onValueChange={setTemplate}>
                 <SelectTrigger className="w-full sm:w-[320px]">
                   <SelectValue />
@@ -512,15 +509,15 @@ function ImportPageInner() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Загрузка файла</CardTitle>
-              <CardDescription>Поддерживаемые форматы: CSV, XLSX, XLS</CardDescription>
-            </CardHeader>
-            <CardContent>
+          <div className="glass-card card-default rounded-2xl">
+            <div className="px-5 pt-5 pb-3">
+              <p className="text-base font-semibold">Загрузка файла</p>
+              <p className="text-sm text-muted-foreground">Поддерживаемые форматы: CSV, XLSX, XLS</p>
+            </div>
+            <div className="px-5 pb-5">
               {isUploading ? (
                 <div className="flex flex-col items-center gap-3 p-12">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -552,7 +549,7 @@ function ImportPageInner() {
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true) }}
                   onDragLeave={() => setIsDragging(false)}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-12 cursor-pointer transition-colors ${
+                  className={`glass-card flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-12 cursor-pointer transition-colors ${
                     isDragging ? 'border-primary bg-primary/5' : 'hover:border-primary/50 hover:bg-muted/50'
                   }`}
                 >
@@ -573,16 +570,16 @@ function ImportPageInner() {
                 className="hidden"
                 onChange={handleFileSelect}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {parseResult && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Целевой счёт</CardTitle>
-                <CardDescription>Выберите счёт, на который будут импортированы транзакции</CardDescription>
-              </CardHeader>
-              <CardContent>
+            <div className="glass-card card-default rounded-2xl">
+              <div className="px-5 pt-5 pb-3">
+                <p className="text-base font-semibold">Целевой счёт</p>
+                <p className="text-sm text-muted-foreground">Выберите счёт, на который будут импортированы транзакции</p>
+              </div>
+              <div className="px-5 pb-5">
                 <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
                   <SelectTrigger className="w-full sm:w-[320px]">
                     <SelectValue placeholder="Выберите счёт" />
@@ -595,25 +592,23 @@ function ImportPageInner() {
                     ))}
                   </SelectContent>
                 </Select>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       )}
 
       {/* Step 2: Preview */}
       {step === 2 && parseResult && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Предпросмотр данных</CardTitle>
-                <CardDescription>{parseResult.totalRows} строк · файл: {parseResult.fileName}</CardDescription>
-              </div>
-              <Badge variant="secondary">{bankTemplates.find(t => t.value === template)?.label}</Badge>
+        <div className="glass-card card-default rounded-2xl">
+          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+            <div>
+              <p className="text-base font-semibold">Предпросмотр данных</p>
+              <p className="text-sm text-muted-foreground">{parseResult.totalRows} строк · файл: {parseResult.fileName}</p>
             </div>
-          </CardHeader>
-          <CardContent className="p-0">
+            <Badge variant="secondary">{bankTemplates.find(t => t.value === template)?.label}</Badge>
+          </div>
+          <div className="p-0">
             <ScrollArea className="h-[360px]">
               <Table>
                 <TableHeader>
@@ -638,31 +633,29 @@ function ImportPageInner() {
                 </TableBody>
               </Table>
             </ScrollArea>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Step 3: Column mapping */}
       {step === 3 && parseResult && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-base">Колонки</CardTitle>
-                <CardDescription>Укажите, какие колонки файла соответствуют полям системы</CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSaveModal(true)}
-                className="gap-1.5"
-              >
-                <BookmarkPlus className="h-4 w-4" />
-                Сохранить шаблон
-              </Button>
+        <div className="glass-card card-default rounded-2xl">
+          <div className="px-5 pt-5 pb-3 flex items-center justify-between">
+            <div>
+              <p className="text-base font-semibold">Колонки</p>
+              <p className="text-sm text-muted-foreground">Укажите, какие колонки файла соответствуют полям системы</p>
             </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSaveModal(true)}
+              className="gap-1.5"
+            >
+              <BookmarkPlus className="h-4 w-4" />
+              Сохранить шаблон
+            </Button>
+          </div>
+          <div className="px-5 pb-5 space-y-3">
             {/* Template quick-apply on mapping step */}
             {csvTemplates && csvTemplates.length > 0 && (
               <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
@@ -715,24 +708,24 @@ function ImportPageInner() {
               </div>
             ))}
 
-            <div className="mt-4 p-3 rounded-lg bg-blue-50 border border-blue-200 flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-blue-600 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-blue-700">
+            <div className="mt-4 p-3 rounded-lg gradient-card border border-primary/20 flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-foreground">
                 Обязательные поля: <strong>Дата</strong> и <strong>Сумма</strong>. Остальные поля опциональны.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Step 4: Confirm */}
       {step === 4 && (
         <div className="space-y-4">
           {importResult ? (
-            <Card>
-              <CardContent className="pt-10 pb-10 flex flex-col items-center text-center gap-4">
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+            <div className="glass-card card-default rounded-2xl">
+              <div className="px-5 py-10 flex flex-col items-center text-center gap-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-income/10">
+                  <CheckCircle2 className="h-8 w-8 text-income" />
                 </div>
                 <div>
                   <p className="text-lg font-semibold">Импорт завершён</p>
@@ -790,15 +783,15 @@ function ImportPageInner() {
                     Перейти к транзакциям
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ) : (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Подтверждение импорта</CardTitle>
-                <CardDescription>Проверьте параметры перед загрузкой</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+            <div className="glass-card card-default rounded-2xl">
+              <div className="px-5 pt-5 pb-3">
+                <p className="text-base font-semibold">Подтверждение импорта</p>
+                <p className="text-sm text-muted-foreground">Проверьте параметры перед загрузкой</p>
+              </div>
+              <div className="px-5 pb-5 space-y-4">
                 <div className="space-y-2">
                   {[
                     { label: 'Файл', value: parseResult?.fileName },
@@ -836,8 +829,8 @@ function ImportPageInner() {
                     Импортировать {parseResult?.totalRows} транзакций
                   </Button>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       )}
@@ -877,15 +870,15 @@ function ImportPageInner() {
       )}
 
       {/* Import History */}
-      <Card>
-        <CardHeader>
+      <div className="glass-card card-default rounded-2xl">
+        <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
             <History className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">История импортов</CardTitle>
+            <p className="text-base font-semibold">История импортов</p>
           </div>
-          <CardDescription>Последние 20 импортов</CardDescription>
-        </CardHeader>
-        <CardContent>
+          <p className="text-sm text-muted-foreground">Последние 20 импортов</p>
+        </div>
+        <div className="px-5 pb-5">
           {historyLoading ? (
             <div className="space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -920,7 +913,7 @@ function ImportPageInner() {
                     <TableRow key={entry.id}>
                       <TableCell className="text-sm text-muted-foreground">{dateLabel}</TableCell>
                       <TableCell className="text-sm font-medium truncate max-w-[200px]">{fileName}</TableCell>
-                      <TableCell className="text-right text-sm text-green-600 font-medium">{imported}</TableCell>
+                      <TableCell className="text-right text-sm text-income font-medium">{imported}</TableCell>
                       <TableCell className="text-right text-sm text-muted-foreground">{skipped}</TableCell>
                     </TableRow>
                   )
@@ -928,8 +921,8 @@ function ImportPageInner() {
               </TableBody>
             </Table>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Save Template Modal */}
       {showSaveModal && (

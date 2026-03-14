@@ -1,19 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +29,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Zap, Pencil, Trash2, Plus, ArrowRight, Sparkles, Loader2, Check } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -135,11 +136,11 @@ function RuleFormDialog({ open, onOpenChange, initialData }: RuleFormDialogProps
   const isPending = createMutation.isPending || updateMutation.isPending
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? 'Редактировать правило' : 'Новое правило'}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+      <ResponsiveModalContent className="max-w-sm">
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>{isEdit ? 'Редактировать правило' : 'Новое правило'}</ResponsiveModalTitle>
+        </ResponsiveModalHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Ключевое слово */}
@@ -223,8 +224,8 @@ function RuleFormDialog({ open, onOpenChange, initialData }: RuleFormDialogProps
             {isPending ? 'Сохранение...' : isEdit ? 'Сохранить' : 'Создать'}
           </Button>
         </form>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -252,8 +253,8 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
   })
 
   return (
-    <Card className={`transition-opacity ${!rule.isActive ? 'opacity-60' : ''}`}>
-      <CardContent className="flex items-center gap-4 p-4">
+    <div className={`glass-card card-interactive rounded-2xl transition-opacity ${!rule.isActive ? 'opacity-60' : ''}`}>
+      <div className="flex items-center gap-4 p-4">
         {/* Визуальная схема правила */}
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-muted/60 px-3 py-2 text-sm">
@@ -295,7 +296,7 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-600">
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-expense hover:text-expense">
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </AlertDialogTrigger>
@@ -309,7 +310,7 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
               <AlertDialogFooter>
                 <AlertDialogCancel>Отмена</AlertDialogCancel>
                 <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-destructive hover:bg-destructive/90"
                   onClick={() => deleteMutation.mutate({ id: rule.id })}
                 >
                   Удалить
@@ -318,8 +319,8 @@ function RuleCard({ rule, onEdit }: RuleCardProps) {
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -385,14 +386,14 @@ function AiSuggestDialog({ open, onOpenChange }: AiSuggestDialogProps) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+    <ResponsiveModal open={open} onOpenChange={handleClose}>
+      <ResponsiveModalContent className="max-w-sm">
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
             Создать правило через AI
-          </DialogTitle>
-        </DialogHeader>
+          </ResponsiveModalTitle>
+        </ResponsiveModalHeader>
 
         <div className="space-y-4 pt-1">
           <div className="space-y-1.5">
@@ -427,8 +428,8 @@ function AiSuggestDialog({ open, onOpenChange }: AiSuggestDialogProps) {
           )}
 
           {suggestion && (
-            <Card className="border-green-200 bg-green-50/50">
-              <CardContent className="p-4 space-y-2">
+            <div className="glass-card card-default rounded-2xl border-income/20">
+              <div className="p-4 space-y-2">
                 <p className="text-sm">
                   <span className="text-muted-foreground">Паттерн:</span>{' '}
                   <code className="font-mono font-medium">{suggestion.pattern}</code>
@@ -441,8 +442,8 @@ function AiSuggestDialog({ open, onOpenChange }: AiSuggestDialogProps) {
                   <span className="text-muted-foreground">Уверенность:</span>{' '}
                   <span className="font-medium">{suggestion.confidence}%</span>
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
 
           {suggestion && (
@@ -469,8 +470,8 @@ function AiSuggestDialog({ open, onOpenChange }: AiSuggestDialogProps) {
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -507,8 +508,8 @@ function SmartSuggestions() {
         <h2 className="text-sm font-medium">Умные предложения ({pending.length})</h2>
       </div>
       {pending.map((s: any) => (
-        <Card key={s.id} className="border-amber-200 bg-amber-50/50 dark:border-amber-900/30 dark:bg-amber-950/20">
-          <CardContent className="flex items-center gap-4 p-4">
+        <div key={s.id} className="glass-card card-default rounded-2xl border-amber-200/50 dark:border-amber-800/30">
+          <div className="flex items-center gap-4 p-4">
             <div className="flex min-w-0 flex-1 items-center gap-3">
               <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg bg-white/60 px-3 py-2 text-sm dark:bg-black/20">
                 <span className="text-xs text-muted-foreground shrink-0">
@@ -529,7 +530,7 @@ function SmartSuggestions() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-green-600 hover:text-green-700"
+                className="h-7 w-7 text-income hover:text-income"
                 onClick={() => acceptMutation.mutate({ id: s.id })}
                 disabled={acceptMutation.isPending}
               >
@@ -538,15 +539,15 @@ function SmartSuggestions() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-red-500 hover:text-red-600"
+                className="h-7 w-7 text-expense hover:text-expense"
                 onClick={() => rejectMutation.mutate({ id: s.id })}
                 disabled={rejectMutation.isPending}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ))}
     </div>
   )
@@ -567,32 +568,30 @@ export default function AutoRulesPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Авто-категоризация</h1>
-          <p className="text-sm text-muted-foreground">
-            Правила автоматически назначают категории новым транзакциям
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setAiSuggestOpen(true)}>
-            <Sparkles className="mr-1.5 h-4 w-4" />
-            Создать через AI
-          </Button>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-1.5 h-4 w-4" />
-            Добавить правило
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Авто-категоризация"
+        description="Правила автоматически назначают категории новым транзакциям"
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setAiSuggestOpen(true)}>
+              <Sparkles className="mr-1.5 h-4 w-4" />
+              Создать через AI
+            </Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              Добавить правило
+            </Button>
+          </>
+        }
+      />
 
       {/* Умные предложения от AI */}
       <SmartSuggestions />
 
       {/* Подсказка как это работает */}
       {rules.length === 0 && !isLoading && (
-        <Card className="border-blue-200 bg-blue-50/50 dark:border-blue-900/30 dark:bg-blue-950/20">
-          <CardContent className="flex gap-3 p-4">
+        <div className="glass-card card-default rounded-2xl">
+          <div className="flex gap-3 p-4">
             <Zap className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
             <div className="text-sm">
               <p className="font-medium text-blue-900 dark:text-blue-100">Как это работает?</p>
@@ -601,8 +600,8 @@ export default function AutoRulesPage() {
                 При импорте или добавлении транзакции система автоматически проставит категорию.
               </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Активных правил */}
@@ -616,17 +615,17 @@ export default function AutoRulesPage() {
       {isLoading ? (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="flex items-center gap-4 p-4">
+            <div key={i} className="glass-card card-default rounded-2xl">
+              <div className="flex items-center gap-4 p-4">
                 <Skeleton className="h-9 flex-1" />
                 <Skeleton className="h-4 w-4" />
                 <Skeleton className="h-6 w-28" />
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           ))}
         </div>
       ) : rules.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
+        <div className="glass-card card-default rounded-2xl flex flex-col items-center justify-center border-dashed py-16 text-muted-foreground">
           <div className="mb-3 text-4xl">⚡</div>
           <p className="mb-1 font-medium text-foreground">Нет правил</p>
           <p className="mb-4 text-sm">Добавьте первое правило авто-категоризации</p>
@@ -634,15 +633,17 @@ export default function AutoRulesPage() {
             <Plus className="mr-1.5 h-4 w-4" />
             Создать правило
           </Button>
-        </Card>
+        </div>
       ) : (
         <div className="space-y-6">
           {/* Активные */}
-          <div className="space-y-3">
+          <StaggerList className="space-y-3">
             {rules.filter((r) => r.isActive).map((rule) => (
-              <RuleCard key={rule.id} rule={rule} onEdit={() => setEditRule(rule)} />
+              <StaggerItem key={rule.id}>
+                <RuleCard rule={rule} onEdit={() => setEditRule(rule)} />
+              </StaggerItem>
             ))}
-          </div>
+          </StaggerList>
 
           {/* Отключённые */}
           {inactiveRules.length > 0 && (

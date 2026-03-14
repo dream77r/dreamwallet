@@ -17,7 +17,7 @@ const sections: ProfileSection[] = [
   {
     label: 'Учёт',
     items: [
-      { title: 'Счета', href: '/dashboard/accounts', icon: CreditCard, color: '#5856D6' },
+      { title: 'Счета', href: '/dashboard/accounts', icon: CreditCard, color: '#764ba2' },
       { title: 'Регулярные', href: '/dashboard/recurring', icon: Repeat2, color: '#FF9500' },
       { title: 'Долги', href: '/dashboard/debts', icon: HandCoins, color: '#FF3B30' },
       { title: 'Подписки', href: '/dashboard/subscriptions-tracker', icon: CalendarClock, color: '#FF2D55' },
@@ -29,22 +29,22 @@ const sections: ProfileSection[] = [
     label: 'Планирование',
     items: [
       { title: 'Бюджеты', href: '/dashboard/budgets', icon: Target, color: '#FF9500' },
-      { title: 'Цели', href: '/dashboard/goals', icon: Flag, color: '#5856D6' },
+      { title: 'Цели', href: '/dashboard/goals', icon: Flag, color: '#764ba2' },
       { title: 'Авто-правила', href: '/dashboard/auto-rules', icon: Zap, color: '#34C759' },
     ],
   },
   {
     label: 'Анализ',
     items: [
-      { title: 'Аналитика', href: '/dashboard/analytics', icon: PieChart, color: '#007AFF' },
+      { title: 'Аналитика', href: '/dashboard/analytics', icon: PieChart, color: '#667eea' },
       { title: 'Прогноз', href: '/dashboard/forecast', icon: TrendingUp, color: '#5AC8FA' },
       { title: 'Привычки', href: '/dashboard/habits', icon: Activity, color: '#FF2D55' },
       { title: 'Что если', href: '/dashboard/whatif', icon: GitBranch, color: '#AF52DE' },
       { title: 'Активы', href: '/dashboard/net-worth', icon: Landmark, color: '#30D158' },
-      { title: 'Инвестиции', href: '/dashboard/investments', icon: LineChart, color: '#007AFF' },
+      { title: 'Инвестиции', href: '/dashboard/investments', icon: LineChart, color: '#667eea' },
       { title: 'Крипто', href: '/dashboard/crypto', icon: Bitcoin, color: '#FF9F0A' },
       { title: 'Отчёты', href: '/dashboard/reports', icon: FileText, color: '#30D158' },
-      { title: 'Санкей', href: '/dashboard/reports/sankey', icon: BarChart3, color: '#5856D6' },
+      { title: 'Санкей', href: '/dashboard/reports/sankey', icon: BarChart3, color: '#764ba2' },
       { title: 'Налоги', href: '/dashboard/reports/tax', icon: Receipt, color: '#64748B' },
       { title: 'Итоги', href: '/dashboard/wrapped', icon: Sparkles, color: '#AF52DE' },
     ],
@@ -52,7 +52,7 @@ const sections: ProfileSection[] = [
   {
     label: 'Инструменты',
     items: [
-      { title: 'AI Советник', href: '/dashboard/ai-chat', icon: BrainCircuit, color: '#5856D6' },
+      { title: 'AI Советник', href: '/dashboard/ai-chat', icon: BrainCircuit, color: '#764ba2' },
       { title: 'Импорт', href: '/dashboard/import', icon: Upload, color: '#636366' },
       { title: 'Категории', href: '/dashboard/categories', icon: Tag, color: '#FF6B35' },
       { title: 'Теги', href: '/dashboard/tags', icon: Hash, color: '#32ADE6' },
@@ -64,13 +64,13 @@ const sections: ProfileSection[] = [
     items: [
       { title: 'Семья', href: '/dashboard/family', icon: Users, color: '#FF2D55' },
       { title: 'Банки', href: '/dashboard/bank-connections', icon: Banknote, color: '#34C759' },
-      { title: 'Интеграции', href: '/dashboard/integrations', icon: Link2, color: '#5856D6' },
+      { title: 'Интеграции', href: '/dashboard/integrations', icon: Link2, color: '#764ba2' },
     ],
   },
   {
     label: 'Бизнес',
     items: [
-      { title: 'Проекты', href: '/dashboard/projects', icon: FolderKanban, color: '#007AFF' },
+      { title: 'Проекты', href: '/dashboard/projects', icon: FolderKanban, color: '#667eea' },
     ],
   },
   {
@@ -89,10 +89,10 @@ export default function ProfilePage() {
   return (
     <div className="space-y-4 animate-fade-up max-w-lg mx-auto">
       {/* User card */}
-      <div className="bg-card rounded-3xl shadow-card p-5">
+      <div className="glass-card card-default rounded-3xl p-5">
         <div className="flex items-center gap-4">
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10">
-            <User className="h-7 w-7 text-primary" />
+          <div className="flex h-14 w-14 items-center justify-center rounded-full gradient-hero">
+            <User className="h-7 w-7 text-white" />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-lg font-bold truncate">{user?.name ?? 'Пользователь'}</p>
@@ -105,12 +105,12 @@ export default function ProfilePage() {
       {sections.map((section) => (
         <div key={section.label}>
           <p className="text-caption text-muted-foreground px-4 mb-1.5">{section.label}</p>
-          <div className="bg-card rounded-2xl shadow-card overflow-hidden divide-y divide-border">
+          <div className="glass-card card-default rounded-2xl overflow-hidden divide-y divide-border">
             {section.items.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
-                className="flex items-center gap-3 px-4 py-3 active:bg-muted/50 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 active:scale-[0.98] transition-transform"
               >
                 <div
                   className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] text-white"

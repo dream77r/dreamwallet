@@ -1,12 +1,10 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
   Select,
@@ -24,12 +22,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { PageHeader } from '@/components/ui/page-header'
 import {
   User,
   Shield,
   Sparkles,
   Save,
-  CheckCircle2,
   Lock,
   Globe,
   Clock,
@@ -132,19 +130,19 @@ function PushNotificationsSection() {
   const isSubscribed = subscribedData?.subscribed || status === 'subscribed'
 
   return (
-    <Card>
-      <CardHeader>
+    <div className="glass-card card-default rounded-2xl overflow-hidden">
+      <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-base">Push-уведомления</CardTitle>
+          <h3 className="text-base font-semibold">Push-уведомления</h3>
         </div>
-        <CardDescription>Получайте уведомления о важных событиях прямо в браузере</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground mt-0.5">Получайте уведомления о важных событиях прямо в браузере</p>
+      </div>
+      <div className="px-5 pb-5 space-y-4">
         <div className="flex items-center gap-3">
-          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${isSubscribed ? 'bg-green-100' : 'bg-muted'}`}>
+          <div className={`flex h-9 w-9 items-center justify-center rounded-full ${isSubscribed ? 'bg-income/10' : 'bg-muted'}`}>
             {isSubscribed
-              ? <Bell className="h-4 w-4 text-green-600" />
+              ? <Bell className="h-4 w-4 text-income" />
               : <BellOff className="h-4 w-4 text-muted-foreground" />
             }
           </div>
@@ -176,7 +174,7 @@ function PushNotificationsSection() {
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-600 hover:text-red-600"
+                className="text-expense hover:text-expense"
                 onClick={handleUnsubscribe}
                 disabled={unsubscribeMutation.isPending}
               >
@@ -186,8 +184,8 @@ function PushNotificationsSection() {
             </>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -230,12 +228,12 @@ function TelegramSection() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Telegram-бот</CardTitle>
-        <CardDescription>Добавляй транзакции текстом или голосом прямо из Telegram</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="glass-card card-default rounded-2xl overflow-hidden">
+      <div className="px-5 pt-5 pb-3">
+        <h3 className="text-base font-semibold">Telegram-бот</h3>
+        <p className="text-sm text-muted-foreground mt-0.5">Добавляй транзакции текстом или голосом прямо из Telegram</p>
+      </div>
+      <div className="px-5 pb-5 space-y-4">
         {isLoading ? (
           <Skeleton className="h-10 w-48" />
         ) : conn ? (
@@ -257,7 +255,7 @@ function TelegramSection() {
               <Button
                 variant="outline"
                 size="sm"
-                className="text-red-600"
+                className="text-expense"
                 onClick={() => disconnect.mutate()}
                 disabled={disconnect.isPending}
               >
@@ -267,7 +265,7 @@ function TelegramSection() {
 
             {alertSettings && (
               <>
-                <Separator />
+                <div className="h-px bg-border mx-0" />
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Уведомления</p>
                   <div className="space-y-2">
@@ -322,8 +320,8 @@ function TelegramSection() {
             )}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -337,15 +335,15 @@ function AiModelSection() {
   if (!config?.hasApiKey) return null
 
   return (
-    <Card>
-      <CardHeader>
+    <div className="glass-card card-default rounded-2xl overflow-hidden">
+      <div className="px-5 pt-5 pb-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-500" />
-          <CardTitle className="text-base">AI-модель</CardTitle>
+          <h3 className="text-base font-semibold">AI-модель</h3>
         </div>
-        <CardDescription>Выберите модель для персональных инсайтов и анализа</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground mt-0.5">Выберите модель для персональных инсайтов и анализа</p>
+      </div>
+      <div className="px-5 pb-5 space-y-4">
         <div className="flex items-center gap-3">
           <Select
             value={config.activeModel}
@@ -360,7 +358,7 @@ function AiModelSection() {
                 <SelectItem key={m.id} value={m.id}>
                   <span>{m.name}</span>
                   <span className="text-muted-foreground ml-2 text-xs">({m.provider})</span>
-                  {m.costPer1k === 0 && <span className="ml-1 text-xs text-green-600">FREE</span>}
+                  {m.costPer1k === 0 && <span className="ml-1 text-xs text-income">FREE</span>}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -378,8 +376,8 @@ function AiModelSection() {
         <p className="text-xs text-muted-foreground">
           Модель по умолчанию: {config.available.find(m => m.id === config.defaultModel)?.name ?? config.defaultModel}
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -432,23 +430,23 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <div>
-        <h1 className="text-2xl font-semibold">Настройки</h1>
-        <p className="text-muted-foreground text-sm">Управление аккаунтом и предпочтениями</p>
-      </div>
+      <PageHeader
+        title="Настройки"
+        description="Управление аккаунтом и предпочтениями"
+      />
 
       {/* Profile */}
-      <Card>
-        <CardHeader>
+      <div className="glass-card card-default rounded-2xl overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Профиль</CardTitle>
+            <h3 className="text-base font-semibold">Профиль</h3>
           </div>
-          <CardDescription>Ваши личные данные</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground mt-0.5">Ваши личные данные</p>
+        </div>
+        <div className="px-5 pb-5 space-y-4">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground text-xl font-semibold flex-shrink-0">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full gradient-hero text-white text-xl font-semibold flex-shrink-0">
               {isLoading ? '?' : initials}
             </div>
             <div>
@@ -466,7 +464,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <Separator />
+          <div className="h-px bg-border mx-0" />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
@@ -499,19 +497,19 @@ export default function SettingsPage() {
               <><Save className="h-4 w-4" /> Сохранить</>
             )}
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Preferences */}
-      <Card>
-        <CardHeader>
+      <div className="glass-card card-default rounded-2xl overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
             <Globe className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Региональные настройки</CardTitle>
+            <h3 className="text-base font-semibold">Региональные настройки</h3>
           </div>
-          <CardDescription>Валюта и часовой пояс</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground mt-0.5">Валюта и часовой пояс</p>
+        </div>
+        <div className="px-5 pb-5 space-y-4">
           <div className="space-y-1.5">
             <Label>Основная валюта</Label>
             {isLoading ? <Skeleton className="h-9 w-full" /> : (
@@ -549,41 +547,41 @@ export default function SettingsPage() {
             <Save className="h-4 w-4" />
             Сохранить настройки
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Security */}
-      <Card>
-        <CardHeader>
+      <div className="glass-card card-default rounded-2xl overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
             <Shield className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Безопасность</CardTitle>
+            <h3 className="text-base font-semibold">Безопасность</h3>
           </div>
-          <CardDescription>Управление паролем и доступом</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Button variant="outline" className="w-full justify-start gap-2">
+          <p className="text-sm text-muted-foreground mt-0.5">Управление паролем и доступом</p>
+        </div>
+        <div className="px-5 pb-5 space-y-3">
+          <Button variant="outline" className="w-full justify-start gap-2 rounded-xl tap-target">
             <Lock className="h-4 w-4" />
             Изменить пароль
           </Button>
-          <Button variant="outline" className="w-full justify-start gap-2">
+          <Button variant="outline" className="w-full justify-start gap-2 rounded-xl tap-target">
             <Shield className="h-4 w-4" />
             Двухфакторная аутентификация
             <Badge variant="secondary" className="ml-auto">Не настроена</Badge>
           </Button>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Subscription */}
-      <Card>
-        <CardHeader>
+      <div className="glass-card card-default rounded-2xl overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base">Подписка</CardTitle>
+            <h3 className="text-base font-semibold">Подписка</h3>
           </div>
-          <CardDescription>Ваш текущий тариф</CardDescription>
-        </CardHeader>
-        <CardContent>
+          <p className="text-sm text-muted-foreground mt-0.5">Ваш текущий тариф</p>
+        </div>
+        <div className="px-5 pb-5">
           {subLoading ? (
             <Skeleton className="h-16 w-full" />
           ) : (
@@ -606,7 +604,7 @@ export default function SettingsPage() {
                 )}
               </div>
 
-              <Separator className="my-4" />
+              <div className="h-px bg-border mx-0 my-4" />
 
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
@@ -632,26 +630,26 @@ export default function SettingsPage() {
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Push Notifications */}
       <PushNotificationsSection />
 
       {/* CSV Templates */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Шаблоны импорта CSV</CardTitle>
-          <CardDescription>Управление сохранёнными маппингами колонок для импорта выписок</CardDescription>
-        </CardHeader>
-        <CardContent>
+      <div className="glass-card card-default rounded-2xl overflow-hidden">
+        <div className="px-5 pt-5 pb-3">
+          <h3 className="text-base font-semibold">Шаблоны импорта CSV</h3>
+          <p className="text-sm text-muted-foreground mt-0.5">Управление сохранёнными маппингами колонок для импорта выписок</p>
+        </div>
+        <div className="px-5 pb-5">
           <a href="/dashboard/settings/csv-templates">
-            <button className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 transition-colors">
+            <button className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-4 py-2 transition-colors tap-target">
               Управление шаблонами
             </button>
           </a>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Telegram */}
       <TelegramSection />
@@ -660,17 +658,17 @@ export default function SettingsPage() {
       <AiModelSection />
 
       {/* Danger zone */}
-      <Card className="border-red-200">
-        <CardHeader>
+      <div className="glass-card card-default rounded-2xl overflow-hidden border border-expense/30">
+        <div className="px-5 pt-5 pb-3">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-red-500" />
-            <CardTitle className="text-base text-red-600">Опасная зона</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-expense" />
+            <h3 className="text-base font-semibold text-expense">Опасная зона</h3>
           </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="px-5 pb-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-red-600">Удалить аккаунт</p>
+              <p className="text-sm font-medium text-expense">Удалить аккаунт</p>
               <p className="text-xs text-muted-foreground">Все данные будут безвозвратно удалены</p>
             </div>
             <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
@@ -707,8 +705,8 @@ export default function SettingsPage() {
               </DialogContent>
             </Dialog>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

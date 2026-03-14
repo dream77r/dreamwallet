@@ -2,17 +2,9 @@
 
 import { useState } from 'react'
 import { trpc } from '@/lib/trpc/client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,6 +18,14 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Plus, Trash2, Tag, Hash } from 'lucide-react'
 import { toast } from 'sonner'
+import { PageHeader } from '@/components/ui/page-header'
+import {
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 
 const PRESET_COLORS = [
   '#6366f1', '#8b5cf6', '#ec4899', '#ef4444',
@@ -85,88 +85,91 @@ export default function TagsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Теги</h1>
-          <p className="text-muted-foreground">Управление тегами для транзакций</p>
-        </div>
-        <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) setEditingTag(null) }}>
-          <DialogTrigger asChild>
-            <Button onClick={openCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              Создать тег
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>{editingTag ? 'Редактировать тег' : 'Новый тег'}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 pt-2">
-              {/* Preview */}
-              <div className="flex justify-center py-2">
-                <Badge
-                  style={{ backgroundColor: form.color + '20', color: form.color, borderColor: form.color + '40' }}
-                  className="text-sm px-3 py-1 border"
-                >
-                  <Hash className="mr-1 h-3 w-3" />
-                  {form.name || 'Предпросмотр'}
-                </Badge>
-              </div>
+      <PageHeader
+        title="Теги"
+        description="Управление тегами для транзакций"
+        actions={
+          <Button onClick={openCreate}>
+            <Plus className="mr-2 h-4 w-4" />
+            Создать тег
+          </Button>
+        }
+      />
 
-              <div className="space-y-1.5">
-                <Label>Название</Label>
-                <Input
-                  placeholder="например: кофе, транспорт..."
-                  value={form.name}
-                  maxLength={32}
-                  onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+      {/* Tag form modal */}
+      <ResponsiveModal
+        open={open}
+        onOpenChange={(v) => { setOpen(v); if (!v) setEditingTag(null) }}
+      >
+        <ResponsiveModalContent className="max-w-sm">
+          <ResponsiveModalHeader>
+            <ResponsiveModalTitle>{editingTag ? 'Редактировать тег' : 'Новый тег'}</ResponsiveModalTitle>
+          </ResponsiveModalHeader>
+          <div className="space-y-4 pt-2">
+            {/* Preview */}
+            <div className="flex justify-center py-2">
+              <Badge
+                style={{ backgroundColor: form.color + '20', color: form.color, borderColor: form.color + '40' }}
+                className="text-sm px-3 py-1 border"
+              >
+                <Hash className="mr-1 h-3 w-3" />
+                {form.name || 'Предпросмотр'}
+              </Badge>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Название</Label>
+              <Input
+                placeholder="например: кофе, транспорт..."
+                value={form.name}
+                maxLength={32}
+                onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))}
+                onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Цвет</Label>
+              <div className="flex flex-wrap gap-2">
+                {PRESET_COLORS.map((c) => (
+                  <button
+                    key={c}
+                    onClick={() => setForm(f => ({ ...f, color: c }))}
+                    className="tap-target h-7 w-7 rounded-full transition-all hover:scale-110 focus:outline-none"
+                    style={{
+                      backgroundColor: c,
+                      outline: form.color === c ? `3px solid ${c}` : `2px solid transparent`,
+                      outlineOffset: '2px',
+                    }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
+                  className="h-7 w-7 rounded-full cursor-pointer border border-border overflow-hidden p-0"
+                  title="Выбрать произвольный цвет"
                 />
               </div>
-
-              <div className="space-y-1.5">
-                <Label>Цвет</Label>
-                <div className="flex flex-wrap gap-2">
-                  {PRESET_COLORS.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setForm(f => ({ ...f, color: c }))}
-                      className="h-7 w-7 rounded-full transition-all hover:scale-110 focus:outline-none"
-                      style={{
-                        backgroundColor: c,
-                        outline: form.color === c ? `3px solid ${c}` : `2px solid transparent`,
-                        outlineOffset: '2px',
-                      }}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={form.color}
-                    onChange={(e) => setForm(f => ({ ...f, color: e.target.value }))}
-                    className="h-7 w-7 rounded-full cursor-pointer border border-border overflow-hidden p-0"
-                    title="Выбрать произвольный цвет"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={() => setOpen(false)}>Отмена</Button>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                >
-                  {editingTag ? 'Сохранить' : 'Создать'}
-                </Button>
-              </div>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setOpen(false)}>Отмена</Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={createMutation.isPending || updateMutation.isPending}
+              >
+                {editingTag ? 'Сохранить' : 'Создать'}
+              </Button>
+            </div>
+          </div>
+        </ResponsiveModalContent>
+      </ResponsiveModal>
 
       {/* Tags grid */}
       {!tags?.length ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+        <div className="glass-card card-default rounded-2xl">
+          <div className="flex flex-col items-center justify-center py-16 text-center px-4">
             <Tag className="h-12 w-12 text-muted-foreground/30 mb-4" />
             <h3 className="text-lg font-medium mb-1">Нет тегов</h3>
             <p className="text-muted-foreground text-sm mb-4">
@@ -176,17 +179,16 @@ export default function TagsPage() {
               <Plus className="mr-2 h-4 w-4" />
               Создать первый тег
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+        <StaggerList className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {tags.map((tag) => (
-            <Card
-              key={tag.id}
-              className="cursor-pointer hover:shadow-md transition-shadow group"
-              onClick={() => openEdit(tag)}
-            >
-              <CardContent className="p-4">
+            <StaggerItem key={tag.id}>
+              <div
+                className="glass-card card-interactive rounded-2xl cursor-pointer group p-4"
+                onClick={() => openEdit(tag)}
+              >
                 <div className="flex items-start justify-between mb-3">
                   <div
                     className="h-10 w-10 rounded-full flex items-center justify-center text-white text-sm font-bold"
@@ -205,33 +207,29 @@ export default function TagsPage() {
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {tag._count.transactions} {tag._count.transactions === 1 ? 'транзакция' : 'транзакций'}
                 </p>
-              </CardContent>
-            </Card>
+              </div>
+            </StaggerItem>
           ))}
-        </div>
+        </StaggerList>
       )}
 
       {/* Stats */}
       {tags && tags.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-muted-foreground">Статистика</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex gap-6 text-sm">
-              <div>
-                <span className="font-semibold text-lg">{tags.length}</span>
-                <p className="text-muted-foreground">тегов создано</p>
-              </div>
-              <div>
-                <span className="font-semibold text-lg">
-                  {tags.reduce((sum, t) => sum + t._count.transactions, 0)}
-                </span>
-                <p className="text-muted-foreground">транзакций помечено</p>
-              </div>
+        <div className="glass-card card-default rounded-2xl p-4">
+          <p className="text-sm font-medium text-muted-foreground mb-3">Статистика</p>
+          <div className="flex gap-6 text-sm">
+            <div>
+              <span className="font-semibold text-lg">{tags.length}</span>
+              <p className="text-muted-foreground">тегов создано</p>
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <span className="font-semibold text-lg">
+                {tags.reduce((sum, t) => sum + t._count.transactions, 0)}
+              </span>
+              <p className="text-muted-foreground">транзакций помечено</p>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Delete confirm */}

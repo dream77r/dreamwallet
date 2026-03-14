@@ -5,26 +5,25 @@ import { trpc } from '@/lib/trpc/client'
 import { detectCryptoNetwork, shortenAddress } from '@/lib/crypto-detect'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
+import { RefreshCw, Plus, Wallet2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { ru } from 'date-fns/locale'
+import { PageHeader } from '@/components/ui/page-header'
+import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
+  ResponsiveModal,
+  ResponsiveModalContent,
+  ResponsiveModalHeader,
+  ResponsiveModalTitle,
+} from '@/components/ui/responsive-modal'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { toast } from 'sonner'
-import { RefreshCw, Plus, Wallet2, MoreVertical, Pencil, Trash2 } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { ru } from 'date-fns/locale'
 
 const NETWORK_COLORS: Record<string, string> = {
   ethereum: 'bg-purple-100 text-purple-800',
@@ -35,6 +34,17 @@ const NETWORK_COLORS: Record<string, string> = {
   arbitrum: 'bg-blue-100 text-blue-800',
   ton: 'bg-sky-100 text-sky-800',
   tron: 'bg-red-100 text-red-800',
+}
+
+const NETWORK_GRADIENTS: Record<string, string> = {
+  ethereum: 'from-purple-500/20 to-purple-600/5',
+  bitcoin: 'from-orange-500/20 to-orange-600/5',
+  solana: 'from-green-500/20 to-green-600/5',
+  bsc: 'from-yellow-500/20 to-yellow-600/5',
+  polygon: 'from-violet-500/20 to-violet-600/5',
+  arbitrum: 'from-blue-500/20 to-blue-600/5',
+  ton: 'from-sky-500/20 to-sky-600/5',
+  tron: 'from-red-500/20 to-red-600/5',
 }
 
 const NETWORK_LABELS: Record<string, string> = {
@@ -75,17 +85,20 @@ function AddWalletDialog({ walletId, onAdded }: { walletId: string; onAdded: () 
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+    <ResponsiveModal
+      open={open}
+      onOpenChange={setOpen}
+      trigger={
         <Button>
           <Plus className="mr-2 h-4 w-4" />
           Добавить кошелёк
         </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Добавить крипто-кошелёк</DialogTitle>
-        </DialogHeader>
+      }
+    >
+      <ResponsiveModalContent>
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>Добавить крипто-кошелёк</ResponsiveModalTitle>
+        </ResponsiveModalHeader>
         <div className="space-y-4 pt-2">
           <div>
             <label className="text-sm font-medium mb-1 block">Адрес кошелька</label>
@@ -122,8 +135,8 @@ function AddWalletDialog({ walletId, onAdded }: { walletId: string; onAdded: () 
             {addMutation.isPending ? 'Добавляю...' : 'Добавить'}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -160,14 +173,16 @@ function EditWalletDialog({
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Редактировать кошелёк</DialogTitle>
-          <DialogDescription>
-            {account.cryptoAddress ? shortenAddress(account.cryptoAddress) : ''}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+      <ResponsiveModalContent>
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>Редактировать кошелёк</ResponsiveModalTitle>
+          {account.cryptoAddress && (
+            <p className="text-sm text-muted-foreground">
+              {shortenAddress(account.cryptoAddress)}
+            </p>
+          )}
+        </ResponsiveModalHeader>
         <div className="space-y-4 pt-2">
           <div>
             <label className="text-sm font-medium mb-1 block">Название</label>
@@ -184,8 +199,8 @@ function EditWalletDialog({
             {updateMutation.isPending ? 'Сохраняю...' : 'Сохранить'}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -210,16 +225,16 @@ function DeleteWalletDialog({
   })
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Удалить кошелёк?</DialogTitle>
-          <DialogDescription>
+    <ResponsiveModal open={open} onOpenChange={onOpenChange}>
+      <ResponsiveModalContent>
+        <ResponsiveModalHeader>
+          <ResponsiveModalTitle>Удалить кошелёк?</ResponsiveModalTitle>
+          <p className="text-sm text-muted-foreground">
             Будут удалены все транзакции этого счёта. Это действие нельзя отменить.
-          </DialogDescription>
-        </DialogHeader>
+          </p>
+        </ResponsiveModalHeader>
         <div className="space-y-3 pt-2">
-          <div className="rounded-lg border p-3">
+          <div className="rounded-xl border p-3 glass-card">
             <p className="font-medium">{account.name}</p>
             {account.cryptoAddress && (
               <p className="text-sm text-muted-foreground font-mono">
@@ -245,8 +260,8 @@ function DeleteWalletDialog({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </ResponsiveModalContent>
+    </ResponsiveModal>
   )
 }
 
@@ -296,114 +311,123 @@ export default function CryptoPage() {
 
   if (!personalWallet) {
     return (
-      <div className="p-6">
+      <div>
         <p className="text-muted-foreground">Загрузка кошелька...</p>
       </div>
     )
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Крипто</h1>
-          <p className="text-muted-foreground text-sm">Крипто-счета с автосинком</p>
-        </div>
-        <AddWalletDialog
-          walletId={personalWallet.id}
-          onAdded={() => void utils.crypto.list.invalidate()}
-        />
-      </div>
+    <div className="space-y-6">
+      <PageHeader
+        title="Крипто"
+        description="Крипто-счета с автосинком"
+        actions={
+          <AddWalletDialog
+            walletId={personalWallet.id}
+            onAdded={() => void utils.crypto.list.invalidate()}
+          />
+        }
+      />
 
       {isLoading && (
         <div className="text-muted-foreground">Загрузка счетов...</div>
       )}
 
       {!isLoading && (!accounts || accounts.length === 0) && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 gap-3">
-            <Wallet2 className="h-10 w-10 text-muted-foreground" />
-            <p className="text-muted-foreground">Нет крипто-счетов. Добавьте первый кошелёк.</p>
-          </CardContent>
-        </Card>
+        <div className="glass-card rounded-2xl flex flex-col items-center justify-center py-12 gap-3">
+          <Wallet2 className="h-10 w-10 text-muted-foreground" />
+          <p className="text-muted-foreground">Нет крипто-счетов. Добавьте первый кошелёк.</p>
+        </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <StaggerList className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {accounts?.map((account) => {
           const isSyncing = syncMutation.isPending && syncMutation.variables?.accountId === account.id
           const network = account.cryptoNetwork ?? 'ethereum'
           const lastSync = account.lastSyncAt
             ? formatDistanceToNow(new Date(account.lastSyncAt), { addSuffix: true, locale: ru })
             : 'никогда'
+          const gradient = NETWORK_GRADIENTS[network] ?? 'from-gray-500/20 to-gray-600/5'
 
           return (
-            <Card key={account.id} className="relative">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base font-semibold leading-tight">
-                    {account.name}
-                  </CardTitle>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Badge className={`text-xs ${NETWORK_COLORS[network] ?? ''}`}>
-                      {NETWORK_LABELS[network] ?? network}
-                    </Badge>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setEditAccount(account as unknown as CryptoAccount)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Редактировать
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => setDeleteAccount(account as unknown as CryptoAccount)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Удалить
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+            <StaggerItem key={account.id}>
+              <div className="glass-card card-interactive rounded-2xl relative overflow-hidden">
+                {/* Network gradient top strip */}
+                <div className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${gradient.replace('/20', '').replace('/5', '')} opacity-80`} />
+                {/* Subtle gradient wash */}
+                <div className={`absolute inset-0 bg-gradient-to-b ${gradient} pointer-events-none`} />
+
+                {/* Card header */}
+                <div className="relative px-4 pt-5 pb-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="text-base font-semibold leading-tight">
+                      {account.name}
+                    </p>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Badge className={`text-xs ${NETWORK_COLORS[network] ?? ''}`}>
+                        {NETWORK_LABELS[network] ?? network}
+                      </Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setEditAccount(account as unknown as CryptoAccount)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Редактировать
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => setDeleteAccount(account as unknown as CryptoAccount)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Удалить
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                </div>
-                {account.cryptoAddress && (
-                  <p className="text-xs text-muted-foreground font-mono mt-1">
-                    {shortenAddress(account.cryptoAddress)}
-                  </p>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div>
-                  <p className="text-2xl font-bold">
-                    {formatRub(Number(account.balance))}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    в рублях по текущему курсу
-                  </p>
+                  {account.cryptoAddress && (
+                    <p className="text-xs text-muted-foreground font-mono mt-1">
+                      {shortenAddress(account.cryptoAddress)}
+                    </p>
+                  )}
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    Синхр. {lastSync}
-                  </p>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={isSyncing}
-                    onClick={() => syncMutation.mutate({ accountId: account.id })}
-                  >
-                    <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
-                    {isSyncing ? 'Синхр...' : 'Синхронизировать'}
-                  </Button>
+                {/* Card content */}
+                <div className="relative px-4 pb-4 space-y-3">
+                  <div>
+                    <p className="text-2xl font-bold">
+                      {formatRub(Number(account.balance))}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      в рублях по текущему курсу
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      Синхр. {lastSync}
+                    </p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isSyncing}
+                      onClick={() => syncMutation.mutate({ accountId: account.id })}
+                    >
+                      <RefreshCw className={`h-3 w-3 mr-1 ${isSyncing ? 'animate-spin' : ''}`} />
+                      {isSyncing ? 'Синхр...' : 'Синхронизировать'}
+                    </Button>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </StaggerItem>
           )
         })}
-      </div>
+      </StaggerList>
 
       {editAccount && (
         <EditWalletDialog
