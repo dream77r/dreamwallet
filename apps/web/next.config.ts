@@ -19,7 +19,6 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  distDir: '.next-build',
   transpilePackages: ['@dreamwallet/db', '@dreamwallet/shared'],
   experimental: {
     serverActions: {

@@ -79,7 +79,7 @@ export default function OnboardingPage() {
   const initials = name.trim().charAt(0).toUpperCase() || '?'
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
+    <div className="min-h-[60vh] flex items-center justify-center px-4 pb-8">
       <div className="w-full max-w-lg">
 
         {/* Avatar + greeting */}
