@@ -3,14 +3,7 @@
 import { ArrowUpRight, ArrowDownRight, ArrowRight } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import Link from 'next/link'
-
-function formatAmount(amount: number, currency = 'RUB') {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Math.abs(amount))
-}
+import { formatAmount } from '@/lib/format'
 
 interface RecentTransactionsWidgetProps {
   transactions: Array<{

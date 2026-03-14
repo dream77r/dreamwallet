@@ -3,9 +3,9 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
-  Home,
-  ArrowLeftRight,
+  Activity,
   BarChart3,
+  FolderOpen,
   User,
   Plus,
 } from 'lucide-react'
@@ -13,10 +13,10 @@ import { useState } from 'react'
 import { QuickAddModal } from '@/components/transactions/QuickAddModal'
 
 const tabs = [
-  { href: '/dashboard', icon: Home, label: 'Home' },
-  { href: '/dashboard/transactions', icon: ArrowLeftRight, label: 'Записи' },
-  // FAB placeholder
+  { href: '/dashboard', icon: Activity, label: 'Поток' },
   { href: '/dashboard/analytics', icon: BarChart3, label: 'Обзор' },
+  // FAB placeholder
+  { href: '/dashboard/spaces', icon: FolderOpen, label: 'Места' },
   { href: '/dashboard/profile', icon: User, label: 'Профиль' },
 ]
 

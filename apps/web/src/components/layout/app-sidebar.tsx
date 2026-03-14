@@ -8,62 +8,40 @@ import {
   SidebarGroupLabel, SidebarHeader, SidebarMenu, SidebarMenuButton,
   SidebarMenuItem, SidebarFooter,
 } from '@/components/ui/sidebar'
-import { Bitcoin, FileText } from "lucide-react"
 import {
-  LayoutDashboard, ArrowLeftRight, CreditCard, PieChart,
-  FolderKanban, FolderOpen, Target, Upload, Settings, Wallet,
-  LogOut, Sparkles, Shield, Tag, Hash, Repeat2, Zap, Flag,
-  TrendingUp, BrainCircuit, HandCoins, CalendarClock, Landmark, Activity,
-  Users, Scissors, Trophy, PercentCircle, Receipt, GitBranch,
-  BarChart3, Banknote, LineChart, Link2, ChevronDown,
+  Activity, BarChart3, FolderOpen, Target, Flag, HandCoins,
+  CalendarClock, PercentCircle, BrainCircuit, Upload, Tag,
+  Zap, Trophy, Settings, Sparkles, Wallet, LogOut, Shield,
+  ChevronDown,
 } from 'lucide-react'
 import { signOut, useSession } from '@/lib/auth-client'
 import { useRouter } from 'next/navigation'
 
 type NavItem = { title: string; href: string; icon: React.ElementType; color: string }
 
-const primaryItems: NavItem[] = [
-  { title: 'Обзор',       href: '/dashboard',              icon: LayoutDashboard, color: '#667eea' },
-  { title: 'Транзакции',  href: '/dashboard/transactions',  icon: ArrowLeftRight,  color: '#34C759' },
-  { title: 'Счета',       href: '/dashboard/accounts',      icon: CreditCard,      color: '#764ba2' },
-  { title: 'Аналитика',   href: '/dashboard/analytics',     icon: PieChart,        color: '#4facfe' },
+// ── Main navigation (always visible, no collapse) ──
+const mainItems: NavItem[] = [
+  { title: 'Поток',        href: '/dashboard',              icon: Activity,    color: '#667eea' },
+  { title: 'Аналитика',    href: '/dashboard/analytics',    icon: BarChart3,   color: '#4facfe' },
+  { title: 'Пространства', href: '/dashboard/spaces',       icon: FolderOpen,  color: '#764ba2' },
 ]
 
+// ── Finance (collapsible) ──
 const financeItems: NavItem[] = [
-  { title: 'Бюджеты',     href: '/dashboard/budgets',             icon: Target,          color: '#FF9500' },
-  { title: 'Цели',        href: '/dashboard/goals',               icon: Flag,            color: '#764ba2' },
-  { title: 'Регулярные',  href: '/dashboard/recurring',           icon: Repeat2,         color: '#FF9500' },
-  { title: 'Долги',       href: '/dashboard/debts',               icon: HandCoins,       color: '#FF3B30' },
-  { title: 'Подписки',    href: '/dashboard/subscriptions-tracker', icon: CalendarClock, color: '#FF2D55' },
-  { title: 'Кэшбэк',     href: '/dashboard/cashback',            icon: PercentCircle,   color: '#30D158' },
-  { title: 'Деление',     href: '/dashboard/splits',              icon: Scissors,        color: '#FF6B35' },
-  { title: 'Авто-правила',href: '/dashboard/auto-rules',          icon: Zap,             color: '#34C759' },
+  { title: 'Бюджеты',      href: '/dashboard/budgets',              icon: Target,        color: '#FF9500' },
+  { title: 'Цели',         href: '/dashboard/goals',                icon: Flag,          color: '#764ba2' },
+  { title: 'Долги',        href: '/dashboard/debts',                icon: HandCoins,     color: '#FF3B30' },
+  { title: 'Подписки',     href: '/dashboard/subscriptions-tracker', icon: CalendarClock, color: '#FF2D55' },
+  { title: 'Кэшбэк',      href: '/dashboard/cashback',             icon: PercentCircle, color: '#30D158' },
 ]
 
-const insightsItems: NavItem[] = [
-  { title: 'Прогноз',     href: '/dashboard/forecast',            icon: TrendingUp,      color: '#5AC8FA' },
-  { title: 'Привычки',    href: '/dashboard/habits',              icon: Activity,        color: '#FF2D55' },
-  { title: 'Что если',    href: '/dashboard/whatif',              icon: GitBranch,       color: '#AF52DE' },
-  { title: 'Активы',      href: '/dashboard/net-worth',           icon: Landmark,        color: '#30D158' },
-  { title: 'Инвестиции',  href: '/dashboard/investments',         icon: LineChart,       color: '#667eea' },
-  { title: 'Крипто',      href: '/dashboard/crypto',              icon: Bitcoin,         color: '#FF9F0A' },
-  { title: 'Отчёты',     href: '/dashboard/reports',             icon: FileText,        color: '#30D158' },
-  { title: 'Санкей',      href: '/dashboard/reports/sankey',      icon: BarChart3,       color: '#764ba2' },
-  { title: 'Налоги',      href: '/dashboard/reports/tax',         icon: Receipt,         color: '#64748B' },
-  { title: 'Итоги',       href: '/dashboard/wrapped',             icon: Sparkles,        color: '#AF52DE' },
-]
-
+// ── Tools (collapsible) ──
 const toolsItems: NavItem[] = [
-  { title: 'AI Советник', href: '/dashboard/ai-chat',             icon: BrainCircuit,    color: '#764ba2' },
-  { title: 'Импорт',      href: '/dashboard/import',              icon: Upload,          color: '#636366' },
-  { title: 'Категории',   href: '/dashboard/categories',          icon: Tag,             color: '#FF6B35' },
-  { title: 'Теги',        href: '/dashboard/tags',                icon: Hash,            color: '#32ADE6' },
-  { title: 'Достижения',  href: '/dashboard/achievements',        icon: Trophy,          color: '#FFD60A' },
-  { title: 'Семья',       href: '/dashboard/family',              icon: Users,           color: '#FF2D55' },
-  { title: 'Банки',       href: '/dashboard/bank-connections',    icon: Banknote,        color: '#34C759' },
-  { title: 'Интеграции',  href: '/dashboard/integrations',        icon: Link2,           color: '#764ba2' },
-  { title: 'Проекты',     href: '/dashboard/projects',            icon: FolderKanban,    color: '#667eea' },
-  { title: 'Пространства',href: '/projects',                      icon: FolderOpen,      color: '#764ba2' },
+  { title: 'AI Советник',  href: '/dashboard/ai-chat',       icon: BrainCircuit, color: '#764ba2' },
+  { title: 'Импорт',       href: '/dashboard/import',        icon: Upload,       color: '#636366' },
+  { title: 'Категории',    href: '/dashboard/categories',    icon: Tag,          color: '#FF6B35' },
+  { title: 'Авто-правила', href: '/dashboard/auto-rules',    icon: Zap,          color: '#34C759' },
+  { title: 'Достижения',   href: '/dashboard/achievements',  icon: Trophy,       color: '#FFD60A' },
 ]
 
 function NavItemRow({ item, pathname }: { item: NavItem; pathname: string }) {
@@ -174,10 +152,11 @@ export function AppSidebar() {
 
       {/* Navigation */}
       <SidebarContent className="px-2 gap-0">
+        {/* Main — always visible, no collapsible header */}
         <SidebarGroup className="py-1">
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {primaryItems.map((item) => (
+              {mainItems.map((item) => (
                 <NavItemRow key={item.href} item={item} pathname={pathname} />
               ))}
             </SidebarMenu>
@@ -185,7 +164,6 @@ export function AppSidebar() {
         </SidebarGroup>
 
         <CollapsibleGroup label="Финансы" items={financeItems} pathname={pathname} defaultOpen />
-        <CollapsibleGroup label="Аналитика" items={insightsItems} pathname={pathname} />
         <CollapsibleGroup label="Инструменты" items={toolsItems} pathname={pathname} />
       </SidebarContent>
 

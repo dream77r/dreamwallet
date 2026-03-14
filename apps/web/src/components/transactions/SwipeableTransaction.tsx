@@ -17,12 +17,20 @@ export function SwipeableTransaction({ children, onEdit, onDelete }: SwipeableTr
   const editOpacity = useTransform(x, [0, 80], [0, 1])
   const deleteOpacity = useTransform(x, [-80, 0], [1, 0])
 
+  function triggerHaptic() {
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      navigator.vibrate(10)
+    }
+  }
+
   function handleDragEnd(_: unknown, info: PanInfo) {
     if (info.offset.x > 80 && onEdit) {
       setSwiped('right')
+      triggerHaptic()
       onEdit()
     } else if (info.offset.x < -80 && onDelete) {
       setSwiped('left')
+      triggerHaptic()
       onDelete()
     }
     setSwiped(null)

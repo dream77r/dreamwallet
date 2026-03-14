@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeftRight, Sparkles, Upload, Target, Flag, TrendingUp, TrendingDown } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
+import { formatAmount } from '@/lib/format'
 import type { ReactNode } from 'react'
 
 interface MobileHomeProps {
@@ -18,14 +19,6 @@ interface MobileHomeProps {
   insightsSlot: ReactNode
   gamificationData?: { streak?: number } | undefined
   scoreData?: { score?: number } | undefined
-}
-
-function formatAmount(amount: number, currency = 'RUB') {
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 0,
-  }).format(Math.abs(amount))
 }
 
 const quickActions = [

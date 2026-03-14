@@ -37,6 +37,89 @@ function setInCache(key: string, value: Omit<CacheEntry, 'expiresAt'>): void {
   suggestionCache.set(key, { ...value, expiresAt: Date.now() + CACHE_TTL_MS })
 }
 
+// ── Shared where-clause builder ──────────────────────────────────────────
+async function buildTransactionWhere(
+  ctx: { prisma: typeof import('@dreamwallet/db')['prisma']; user: { id: string } },
+  filters: {
+    accountId?: string
+    walletId?: string
+    type?: string
+    categoryId?: string
+    dateFrom?: Date
+    dateTo?: Date
+    amountMin?: number
+    amountMax?: number
+    search?: string
+    tags?: string[]
+    source?: string
+  },
+): Promise<Record<string, unknown>> {
+  const where: Record<string, unknown> = {}
+
+  if (filters.accountId) where.accountId = filters.accountId
+  if (filters.type) where.type = filters.type
+  if (filters.categoryId) where.categoryId = filters.categoryId
+  if (filters.source) where.source = filters.source
+
+  if (filters.dateFrom || filters.dateTo) {
+    where.date = {
+      ...(filters.dateFrom && { gte: filters.dateFrom }),
+      ...(filters.dateTo && { lte: filters.dateTo }),
+    }
+  }
+
+  if (filters.amountMin !== undefined || filters.amountMax !== undefined) {
+    where.amount = {
+      ...(filters.amountMin !== undefined && { gte: filters.amountMin }),
+      ...(filters.amountMax !== undefined && { lte: filters.amountMax }),
+    }
+  }
+
+  if (filters.search) {
+    where.OR = [
+      { description: { contains: filters.search, mode: 'insensitive' } },
+      { counterparty: { contains: filters.search, mode: 'insensitive' } },
+    ]
+  }
+
+  if (filters.tags && filters.tags.length > 0) {
+    where.tags = { some: { tag: { name: { in: filters.tags } } } }
+  }
+
+  // Ensure user can only see their own transactions
+  if (filters.walletId) {
+    const wallet = await ctx.prisma.wallet.findFirst({
+      where: {
+        id: filters.walletId,
+        OR: [
+          { userId: ctx.user.id },
+          { project: { members: { some: { userId: ctx.user.id } } } },
+        ],
+      },
+      include: { accounts: { select: { id: true } } },
+    })
+    if (!wallet) throw new TRPCError({ code: 'NOT_FOUND' })
+    where.accountId = { in: wallet.accounts.map(a => a.id) }
+  } else if (!filters.accountId) {
+    const personalWallet = await ctx.prisma.wallet.findUnique({
+      where: { userId: ctx.user.id },
+      include: { accounts: { select: { id: true } } },
+    })
+    if (personalWallet) {
+      where.accountId = { in: personalWallet.accounts.map(a => a.id) }
+    }
+  }
+
+  return where
+}
+
+const transactionInclude = {
+  category: true,
+  account: { select: { id: true, name: true, type: true, icon: true } },
+  tags: { include: { tag: true } },
+  createdBy: { select: { id: true, name: true } },
+} as const
+
 export const transactionRouter = router({
   // List transactions with filters and pagination
   list: protectedProcedure
@@ -44,73 +127,12 @@ export const transactionRouter = router({
     .query(async ({ ctx, input }) => {
       const { page, pageSize, sortBy, sortOrder, search, tags, ...filters } = input
 
-      // Build where clause
-      const where: Record<string, unknown> = {}
-
-      if (filters.accountId) where.accountId = filters.accountId
-      if (filters.type) where.type = filters.type
-      if (filters.categoryId) where.categoryId = filters.categoryId
-      if (filters.source) where.source = filters.source
-
-      if (filters.dateFrom || filters.dateTo) {
-        where.date = {
-          ...(filters.dateFrom && { gte: filters.dateFrom }),
-          ...(filters.dateTo && { lte: filters.dateTo }),
-        }
-      }
-
-      if (filters.amountMin !== undefined || filters.amountMax !== undefined) {
-        where.amount = {
-          ...(filters.amountMin !== undefined && { gte: filters.amountMin }),
-          ...(filters.amountMax !== undefined && { lte: filters.amountMax }),
-        }
-      }
-
-      if (search) {
-        where.OR = [
-          { description: { contains: search, mode: 'insensitive' } },
-          { counterparty: { contains: search, mode: 'insensitive' } },
-        ]
-      }
-
-      if (tags && tags.length > 0) {
-        where.tags = { some: { tag: { name: { in: tags } } } }
-      }
-
-      // Ensure user can only see their own transactions
-      if (filters.walletId) {
-        const wallet = await ctx.prisma.wallet.findFirst({
-          where: {
-            id: filters.walletId,
-            OR: [
-              { userId: ctx.user.id },
-              { project: { members: { some: { userId: ctx.user.id } } } },
-            ],
-          },
-          include: { accounts: { select: { id: true } } },
-        })
-        if (!wallet) throw new TRPCError({ code: 'NOT_FOUND' })
-        where.accountId = { in: wallet.accounts.map(a => a.id) }
-      } else if (!filters.accountId) {
-        // Default: show personal wallet transactions
-        const personalWallet = await ctx.prisma.wallet.findUnique({
-          where: { userId: ctx.user.id },
-          include: { accounts: { select: { id: true } } },
-        })
-        if (personalWallet) {
-          where.accountId = { in: personalWallet.accounts.map(a => a.id) }
-        }
-      }
+      const where = await buildTransactionWhere(ctx, { ...filters, search, tags })
 
       const [items, total] = await Promise.all([
         ctx.prisma.transaction.findMany({
           where: where as never,
-          include: {
-            category: true,
-            account: { select: { id: true, name: true, type: true, icon: true } },
-            tags: { include: { tag: true } },
-            createdBy: { select: { id: true, name: true } },
-          },
+          include: transactionInclude,
           orderBy: { [sortBy]: sortOrder },
           skip: (page - 1) * pageSize,
           take: pageSize,
@@ -125,6 +147,45 @@ export const transactionRouter = router({
         pageSize,
         totalPages: Math.ceil(total / pageSize),
       }
+    }),
+
+  // Cursor-based infinite list for TransactionFeed
+  infiniteList: protectedProcedure
+    .input(z.object({
+      cursor: z.string().cuid().optional(),
+      limit: z.number().int().min(1).max(100).default(20),
+      accountId: z.string().cuid().optional(),
+      walletId: z.string().cuid().optional(),
+      type: z.enum(['INCOME', 'EXPENSE', 'TRANSFER']).optional(),
+      categoryId: z.string().cuid().optional(),
+      dateFrom: z.coerce.date().optional(),
+      dateTo: z.coerce.date().optional(),
+      amountMin: z.number().optional(),
+      amountMax: z.number().optional(),
+      search: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      source: z.enum(['MANUAL', 'CSV_IMPORT', 'BANK_SYNC', 'API', 'RECURRING']).optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      const { cursor, limit, ...filters } = input
+
+      const where = await buildTransactionWhere(ctx, filters)
+
+      const items = await ctx.prisma.transaction.findMany({
+        where: where as never,
+        include: transactionInclude,
+        orderBy: { date: 'desc' },
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      })
+
+      let nextCursor: string | null = null
+      if (items.length > limit) {
+        const next = items.pop()
+        nextCursor = next!.id
+      }
+
+      return { items, nextCursor }
     }),
 
   // Get single transaction
