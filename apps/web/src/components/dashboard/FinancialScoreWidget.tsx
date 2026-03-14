@@ -1,8 +1,5 @@
 'use client'
 
-"use client"
-import { trpc } from "@/lib/trpc/client"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 
@@ -25,11 +22,11 @@ export function FinancialScoreWidget({ data, isLoading }: { data?: { score: numb
   const progress = (score / 100) * circumference
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Финансовое здоровье</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <div className="glass-card card-default rounded-2xl">
+      <div className="px-5 pt-5 pb-2">
+        <p className="text-base font-bold tracking-tight">Финансовое здоровье</p>
+      </div>
+      <div className="px-5 pb-5">
         {/* Gauge */}
         <div className="flex flex-col items-center mb-4">
           <svg width="140" height="80" viewBox="0 0 140 80">
@@ -60,9 +57,9 @@ export function FinancialScoreWidget({ data, isLoading }: { data?: { score: numb
           {/* Trend */}
           <div className="flex items-center gap-1 mt-1">
             {(data.trend ?? 0) > 0 ? (
-              <><TrendingUp className="h-3.5 w-3.5 text-green-500" /><span className="text-xs text-green-500">+{data.trend ?? 0}%</span></>
+              <><TrendingUp className="h-3.5 w-3.5 text-income" /><span className="text-xs text-income">+{data.trend ?? 0}%</span></>
             ) : (data.trend ?? 0) < 0 ? (
-              <><TrendingDown className="h-3.5 w-3.5 text-red-500" /><span className="text-xs text-red-500">{data.trend ?? 0}%</span></>
+              <><TrendingDown className="h-3.5 w-3.5 text-expense" /><span className="text-xs text-expense">{data.trend ?? 0}%</span></>
             ) : (
               <><Minus className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs text-muted-foreground">без изменений</span></>
             )}
@@ -89,7 +86,7 @@ export function FinancialScoreWidget({ data, isLoading }: { data?: { score: numb
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

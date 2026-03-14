@@ -29,7 +29,7 @@ interface RecentTransactionsWidgetProps {
 
 export function RecentTransactionsWidget({ transactions, isLoading }: RecentTransactionsWidgetProps) {
   return (
-    <div className="bg-card rounded-3xl shadow-card border-0 overflow-hidden">
+    <div className="glass-card card-default rounded-2xl overflow-hidden">
       <div className="px-5 pt-5 pb-3">
         <p className="text-base font-bold tracking-tight">Последние транзакции</p>
         <p className="text-xs font-medium text-muted-foreground">5 последних операций</p>
@@ -56,8 +56,8 @@ export function RecentTransactionsWidget({ transactions, isLoading }: RecentTran
               return (
                 <div key={tx.id} className="flex items-center justify-between px-5 py-3">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-[#34C759]/10' : 'bg-[#FF3B30]/10'}`}>
-                      {isIncome ? <ArrowUpRight className="h-5 w-5 text-[#34C759]" /> : <ArrowDownRight className="h-5 w-5 text-[#FF3B30]" />}
+                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${isIncome ? 'bg-income/10' : 'bg-expense/10'}`}>
+                      {isIncome ? <ArrowUpRight className="h-5 w-5 text-income" /> : <ArrowDownRight className="h-5 w-5 text-expense" />}
                     </div>
                     <div>
                       <p className="text-sm font-semibold leading-tight">
@@ -69,7 +69,7 @@ export function RecentTransactionsWidget({ transactions, isLoading }: RecentTran
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-[#34C759]' : 'text-[#FF3B30]'}`}>
+                    <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-income' : 'text-expense'}`}>
                       {isIncome ? '+' : '-'}{formatAmount(amount, tx.currency)}
                     </p>
                     <p className="text-xs text-muted-foreground font-medium">{tx.account.name}</p>

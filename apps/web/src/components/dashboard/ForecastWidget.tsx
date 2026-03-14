@@ -1,8 +1,5 @@
 'use client'
 
-"use client"
-import { trpc } from "@/lib/trpc/client"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown, Calendar } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -17,22 +14,22 @@ export function ForecastWidget({ data, isLoading }: { data?: any, isLoading?: bo
   if (!data) return null
 
   const statusColor = {
-    good: "text-green-600 bg-green-50 border-green-100 dark:bg-green-950/20 dark:border-green-900/30",
+    good: "text-income bg-income/5 border-income/20 dark:bg-income/10 dark:border-income/20",
     warning: "text-yellow-600 bg-yellow-50 border-yellow-100 dark:bg-yellow-950/20 dark:border-yellow-900/30",
-    danger: "text-red-600 bg-red-50 border-red-100 dark:bg-red-950/20 dark:border-red-900/30",
-  }[data.status as 'good' | 'warning' | 'danger'] ?? 'text-green-600 bg-green-50 border-green-100'
+    danger: "text-expense bg-expense/5 border-expense/20 dark:bg-expense/10 dark:border-expense/20",
+  }[data.status as 'good' | 'warning' | 'danger'] ?? 'text-income bg-income/5 border-income/20'
 
   const progressPct = Math.min(100, (data.dayOfMonth / data.daysInMonth) * 100)
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
+    <div className="glass-card card-default rounded-2xl">
+      <div className="px-5 pt-5 pb-2">
+        <p className="text-base font-bold tracking-tight flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
           Прогноз на месяц
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+        </p>
+      </div>
+      <div className="px-5 pb-5 space-y-3">
         {/* Progress bar месяца */}
         <div>
           <div className="flex justify-between text-xs text-muted-foreground mb-1">
@@ -62,12 +59,12 @@ export function ForecastWidget({ data, isLoading }: { data?: any, isLoading?: bo
         {data.projectedIncome > 0 && (
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Ожидаемый остаток</span>
-            <span className={cn("font-semibold", data.projectedBalance >= 0 ? "text-green-600" : "text-red-600")}>
+            <span className={cn("font-semibold", data.projectedBalance >= 0 ? "text-income" : "text-expense")}>
               {formatAmount(data.projectedBalance)}
             </span>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

@@ -26,10 +26,18 @@ interface CashflowWidgetProps {
   monthLabel: string
 }
 
+const glassTooltipStyle = {
+  borderRadius: 16,
+  border: 'none',
+  backgroundColor: 'var(--glass-bg)',
+  backdropFilter: 'blur(20px)',
+  boxShadow: 'var(--glass-shadow)',
+}
+
 export function CashflowWidget({ cashFlowData, categoryData, isLoading, monthLabel }: CashflowWidgetProps) {
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-      <div className="lg:col-span-2 bg-card rounded-3xl p-5 shadow-card border-0">
+      <div className="lg:col-span-2 glass-card card-default rounded-2xl p-5">
         <div className="pb-2">
           <p className="text-base font-bold tracking-tight">Денежный поток</p>
           <p className="text-xs font-medium text-muted-foreground">Доходы и расходы за 12 месяцев</p>
@@ -51,7 +59,7 @@ export function CashflowWidget({ cashFlowData, categoryData, isLoading, monthLab
                 <Tooltip
                   formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
                   labelStyle={{ fontWeight: 600 }}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+                  contentStyle={glassTooltipStyle}
                 />
                 <Bar dataKey="income" name="Доходы" fill="#34C759" radius={[6, 6, 0, 0]} />
                 <Bar dataKey="expense" name="Расходы" fill="#FF3B30" radius={[6, 6, 0, 0]} />
@@ -61,7 +69,7 @@ export function CashflowWidget({ cashFlowData, categoryData, isLoading, monthLab
         </div>
       </div>
 
-      <div className="bg-card rounded-3xl p-5 shadow-card border-0">
+      <div className="glass-card card-default rounded-2xl p-5">
         <div className="pb-2">
           <p className="text-base font-bold tracking-tight">Расходы по категориям</p>
           <p className="text-xs font-medium text-muted-foreground">{monthLabel}</p>
@@ -85,7 +93,7 @@ export function CashflowWidget({ cashFlowData, categoryData, isLoading, monthLab
                 <Legend iconType="circle" iconSize={8} formatter={(value) => <span style={{ fontSize: 11, fontWeight: 500 }}>{value}</span>} />
                 <Tooltip
                   formatter={(value: number | undefined) => value != null ? formatAmount(value) : ''}
-                  contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 24px rgba(0,0,0,0.1)', backgroundColor: 'var(--card)', color: 'var(--card-foreground)' }}
+                  contentStyle={glassTooltipStyle}
                 />
               </PieChart>
             </ResponsiveContainer>

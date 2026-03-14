@@ -29,7 +29,7 @@ function getXpProgress(level: number, totalPoints: number) {
 export function GamificationWidget({ data, isLoading }: GamificationWidgetProps) {
   if (isLoading) {
     return (
-      <div className="bg-card rounded-3xl shadow-card p-6 animate-fade-up">
+      <div className="glass-card card-default rounded-2xl p-6 animate-fade-up">
         <Skeleton className="h-3 w-28 mb-5" />
         <div className="flex gap-3 mb-5">
           <Skeleton className="h-14 w-32 rounded-2xl" />
@@ -51,7 +51,7 @@ export function GamificationWidget({ data, isLoading }: GamificationWidgetProps)
 
   if (!data) {
     return (
-      <div className="bg-card rounded-3xl shadow-card p-6 animate-fade-up">
+      <div className="glass-card card-default rounded-2xl p-6 animate-fade-up">
         <p className="text-caption text-muted-foreground mb-3">
           Достижения
         </p>
@@ -68,7 +68,7 @@ export function GamificationWidget({ data, isLoading }: GamificationWidgetProps)
   const achievementsToShow = data.recentAchievements.slice(0, 3)
 
   return (
-    <div className="bg-card rounded-3xl shadow-card p-6 animate-fade-up">
+    <div className="glass-card card-default rounded-2xl p-6 animate-fade-up">
       {/* Title */}
       <p className="text-caption text-muted-foreground mb-4">
         Достижения

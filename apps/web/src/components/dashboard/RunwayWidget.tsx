@@ -70,7 +70,7 @@ function TrendIcon({ trend, color }: { trend: 'safe' | 'warning' | 'danger'; col
 
 export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
   return (
-    <div className="bg-card rounded-3xl shadow-card p-6 animate-fade-up">
+    <div className="glass-card card-default rounded-2xl p-6 animate-fade-up">
       <p className="text-caption text-muted-foreground mb-4">
         Прогноз баланса
       </p>
@@ -85,9 +85,9 @@ export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
         <p className="text-sm text-muted-foreground">Недостаточно данных для прогноза</p>
       ) : data.currentBalance <= 0 ? (
         <div className="flex items-center gap-3">
-          <AlertCircle className="w-6 h-6" style={{ color: '#FF3B30' }} />
+          <AlertCircle className="w-6 h-6 text-expense" />
           <div>
-            <p className="text-lg font-semibold" style={{ color: '#FF3B30' }}>
+            <p className="text-lg font-semibold text-expense">
               Баланс отрицательный
             </p>
             <p className="text-sm text-muted-foreground">
@@ -97,9 +97,9 @@ export function RunwayWidget({ data, isLoading }: RunwayWidgetProps) {
         </div>
       ) : data.trend === 'safe' && data.daysUntilZero === null ? (
         <div className="flex items-center gap-3">
-          <CalendarCheck className="w-6 h-6" style={{ color: '#34C759' }} />
+          <CalendarCheck className="w-6 h-6 text-income" />
           <div>
-            <p className="text-lg font-semibold" style={{ color: '#34C759' }}>
+            <p className="text-lg font-semibold text-income">
               Безопасно
             </p>
             <p className="text-sm text-muted-foreground">Доходы покрывают расходы</p>

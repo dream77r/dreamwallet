@@ -21,7 +21,7 @@ interface BalanceWidgetProps {
 export function BalanceWidget({ stats, wallet, isLoading }: BalanceWidgetProps) {
   if (!isLoading && (!wallet?.accounts?.length)) {
     return (
-      <div className="bg-card rounded-3xl shadow-card p-8 animate-fade-up flex flex-col items-center justify-center gap-3 text-center">
+      <div className="glass-card card-default rounded-2xl p-8 animate-fade-up flex flex-col items-center justify-center gap-3 text-center">
         <span className="text-4xl">💳</span>
         <p className="text-sm font-medium text-foreground">Добавьте счёт, чтобы видеть баланс</p>
         <p className="text-xs text-muted-foreground">Банковская карта, наличные или накопительный</p>
@@ -32,7 +32,7 @@ export function BalanceWidget({ stats, wallet, isLoading }: BalanceWidgetProps) 
 
   return (
     <div className="space-y-3">
-      <div className="bg-card rounded-3xl shadow-card p-6 animate-fade-up">
+      <div className="glass-card card-default rounded-2xl p-6 animate-fade-up">
         <p className="text-caption text-muted-foreground mb-1">Общий баланс</p>
         {isLoading ? (
           <div className="h-12 w-48 animate-pulse bg-muted rounded-xl mb-4" />
@@ -43,24 +43,24 @@ export function BalanceWidget({ stats, wallet, isLoading }: BalanceWidgetProps) 
         )}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <div className="w-7 h-7 rounded-lg bg-[#34C759]/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-[#34C759]" />
+            <div className="w-7 h-7 rounded-lg bg-income/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-income" />
             </div>
             {isLoading ? <div className="h-4 w-20 animate-pulse bg-muted rounded" /> : (
               <div>
                 <p className="text-[11px] text-muted-foreground font-medium">Доходы</p>
-                <p className="text-sm font-bold text-[#34C759]">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
+                <p className="text-sm font-bold text-income">+{formatAmount(stats?.monthIncome ?? 0, wallet?.currency)}</p>
               </div>
             )}
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-7 h-7 rounded-lg bg-[#FF3B30]/10 flex items-center justify-center">
-              <TrendingDown className="h-4 w-4 text-[#FF3B30]" />
+            <div className="w-7 h-7 rounded-lg bg-expense/10 flex items-center justify-center">
+              <TrendingDown className="h-4 w-4 text-expense" />
             </div>
             {isLoading ? <div className="h-4 w-20 animate-pulse bg-muted rounded" /> : (
               <div>
                 <p className="text-[11px] text-muted-foreground font-medium">Расходы</p>
-                <p className="text-sm font-bold text-[#FF3B30]">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
+                <p className="text-sm font-bold text-expense">-{formatAmount(stats?.monthExpense ?? 0, wallet?.currency)}</p>
               </div>
             )}
           </div>
@@ -76,17 +76,17 @@ export function BalanceWidget({ stats, wallet, isLoading }: BalanceWidgetProps) 
       </div>
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
-          { label: 'Чистый доход', value: formatAmount(Math.abs(stats?.monthNet ?? 0), wallet?.currency), prefix: (stats?.monthNet ?? 0) >= 0 ? '+' : '-', color: (stats?.monthNet ?? 0) >= 0 ? '#34C759' : '#FF3B30', icon: ArrowLeftRight, bg: (stats?.monthNet ?? 0) >= 0 ? '#34C759' : '#FF3B30' },
-          { label: 'Счётов', value: String(wallet?.accounts.length ?? 0), prefix: '', color: '#007AFF', icon: Wallet, bg: '#007AFF' },
+          { label: 'Чистый доход', value: formatAmount(Math.abs(stats?.monthNet ?? 0), wallet?.currency), prefix: (stats?.monthNet ?? 0) >= 0 ? '+' : '-', colorClass: (stats?.monthNet ?? 0) >= 0 ? 'text-income' : 'text-expense', icon: ArrowLeftRight, bgColor: (stats?.monthNet ?? 0) >= 0 ? 'var(--income)' : 'var(--expense)' },
+          { label: 'Счётов', value: String(wallet?.accounts.length ?? 0), prefix: '', colorClass: 'text-primary', icon: Wallet, bgColor: 'var(--primary)' },
         ].map((stat, i) => (
-          <div key={i} className="bg-card rounded-2xl p-4 animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
-            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: stat.bg + '1A' }}>
-              <stat.icon className="h-5 w-5" style={{ color: stat.bg }} />
+          <div key={i} className="glass-card card-default rounded-2xl p-4 animate-fade-up" style={{ animationDelay: `${i * 50}ms` }}>
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2" style={{ backgroundColor: stat.bgColor + '1A' }}>
+              <stat.icon className={`h-5 w-5 ${stat.colorClass}`} />
             </div>
             {isLoading ? (
               <div className="h-6 w-16 animate-pulse bg-muted rounded mb-1" />
             ) : (
-              <p className="text-xl font-bold" style={{ color: stat.color }}>{stat.prefix}{stat.value}</p>
+              <p className={`text-xl font-bold ${stat.colorClass}`}>{stat.prefix}{stat.value}</p>
             )}
             <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
           </div>

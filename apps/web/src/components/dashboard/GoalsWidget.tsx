@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import Link from 'next/link'
 
 interface GoalsWidgetProps {
@@ -20,16 +19,16 @@ export function GoalsWidget({ goals }: GoalsWidgetProps) {
   if (!active.length) return null
 
   return (
-    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-      <CardHeader className="pb-3">
+    <div className="glass-card card-default rounded-2xl">
+      <div className="px-5 pt-5 pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-bold tracking-tight">Финансовые цели</CardTitle>
+          <p className="text-base font-bold tracking-tight">Финансовые цели</p>
           <Link href="/dashboard/goals" className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors">
             Все цели →
           </Link>
         </div>
-      </CardHeader>
-      <CardContent>
+      </div>
+      <div className="px-5 pb-5">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {active.slice(0, 3).map((goal) => {
             const current = Number(goal.currentAmount)
@@ -54,7 +53,7 @@ export function GoalsWidget({ goals }: GoalsWidgetProps) {
             )
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

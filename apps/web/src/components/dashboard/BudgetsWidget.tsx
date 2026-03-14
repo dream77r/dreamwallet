@@ -1,6 +1,5 @@
 'use client'
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { BudgetProgressRing } from '@/components/budgets/BudgetProgressRing'
 import Link from 'next/link'
@@ -21,12 +20,12 @@ interface BudgetsWidgetProps {
 
 export function BudgetsWidget({ budgets, isLoading, monthLabel }: BudgetsWidgetProps) {
   return (
-    <Card className="bg-card rounded-2xl shadow-sm border-0 dark:shadow-none">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base font-bold tracking-tight">Бюджеты</CardTitle>
-        <CardDescription className="text-xs font-medium text-muted-foreground">Прогресс на {monthLabel}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div className="glass-card card-default rounded-2xl">
+      <div className="px-5 pt-5 pb-2">
+        <p className="text-base font-bold tracking-tight">Бюджеты</p>
+        <p className="text-xs font-medium text-muted-foreground">Прогресс на {monthLabel}</p>
+      </div>
+      <div className="px-5 pb-5 space-y-3">
         {isLoading ? (
           Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="flex items-center gap-3">
@@ -54,13 +53,13 @@ export function BudgetsWidget({ budgets, isLoading, monthLabel }: BudgetsWidgetP
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold truncate">{budget.category.name}</span>
-                    <span className={`text-xs font-medium shrink-0 ml-2 ${over ? 'text-red-500' : 'text-muted-foreground'}`}>
+                    <span className={`text-xs font-medium shrink-0 ml-2 ${over ? 'text-expense' : 'text-muted-foreground'}`}>
                       {formatAmount(budget.spentAmount)} / {formatAmount(budgetAmount)}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground font-medium mt-0.5">
                     {over ? (
-                      <span className="text-red-500">Превышен на {formatAmount(budget.spentAmount - budgetAmount)}</span>
+                      <span className="text-expense">Превышен на {formatAmount(budget.spentAmount - budgetAmount)}</span>
                     ) : (
                       <span>Остаток {formatAmount(budgetAmount - budget.spentAmount)}</span>
                     )}
@@ -70,7 +69,7 @@ export function BudgetsWidget({ budgets, isLoading, monthLabel }: BudgetsWidgetP
             )
           })
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

@@ -66,7 +66,7 @@ function SortableWidgetItem({ widget, onToggle }: SortableWidgetItemProps) {
     <div
       ref={setNodeRef}
       style={style}
-      className="flex items-center gap-3 rounded-lg border bg-card px-3 py-2.5"
+      className="flex items-center gap-3 glass-card rounded-xl px-3 py-2.5"
     >
       <button
         {...listeners}

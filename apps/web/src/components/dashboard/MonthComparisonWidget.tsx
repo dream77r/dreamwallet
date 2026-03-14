@@ -1,5 +1,5 @@
 'use client'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+
 import { Skeleton } from "@/components/ui/skeleton"
 import { TrendingUp, TrendingDown } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -28,14 +28,14 @@ export function MonthComparisonWidget({ data, isLoading }: { data?: ComparisonDa
     : 0)
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Этот месяц vs прошлый</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <div className="glass-card card-default rounded-2xl">
+      <div className="px-5 pt-5 pb-2">
+        <p className="text-base font-bold tracking-tight">Этот месяц vs прошлый</p>
+      </div>
+      <div className="px-5 pb-5 space-y-3">
         {data.win && (
-          <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-900/30 dark:bg-green-950/20">
-            <p className="text-sm font-semibold text-green-700 dark:text-green-400">
+          <div className="rounded-lg border border-income/20 bg-income/5 p-3 dark:border-income/20 dark:bg-income/10">
+            <p className="text-sm font-semibold text-income">
               🎉 Тратишь на {Math.abs(data.expenseDiff)}% меньше чем в прошлом месяце
             </p>
           </div>
@@ -50,7 +50,7 @@ export function MonthComparisonWidget({ data, isLoading }: { data?: ComparisonDa
           </div>
           <div className={cn(
             "flex items-center gap-1 text-sm font-semibold",
-            data.expenseDiff > 0 ? "text-red-600" : "text-green-600"
+            data.expenseDiff > 0 ? "text-expense" : "text-income"
           )}>
             {data.expenseDiff > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
             {data.expenseDiff > 0 ? "+" : ""}{data.expenseDiff}%
@@ -66,13 +66,13 @@ export function MonthComparisonWidget({ data, isLoading }: { data?: ComparisonDa
           </div>
           <div className={cn(
             "flex items-center gap-1 text-sm font-semibold",
-            incomeDiff > 0 ? "text-green-600" : "text-red-600"
+            incomeDiff > 0 ? "text-income" : "text-expense"
           )}>
             {incomeDiff > 0 ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
             {incomeDiff > 0 ? "+" : ""}{incomeDiff}%
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
