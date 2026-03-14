@@ -7,6 +7,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,6 +27,7 @@ import { Mic, MicOff, ArrowUpRight, ArrowDownRight, Sparkles } from 'lucide-reac
 import { trpc } from '@/lib/trpc/client'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 // ─── Parser ────────────────────────────────────────────────────────────────
 
@@ -33,16 +40,13 @@ interface ParsedTransaction {
 function parseTransactionText(text: string): ParsedTransaction {
   const lower = text.toLowerCase().trim()
 
-  // Detect income keywords
   const incomeKeywords = ['получил', 'получила', 'пришло', 'пришел', 'доход', 'зарплата', 'заработал', 'заработала', 'начислили', 'перечислили']
   const isIncome = incomeKeywords.some(kw => lower.includes(kw))
 
-  // Extract number
   const numMatch = lower.match(/\d[\d\s.,]*/g)
   const rawNum = numMatch ? numMatch[0].replace(/[\s,]/g, '.').replace(/\.(?=.*\.)/g, '') : '0'
   const amount = parseFloat(rawNum) || 0
 
-  // Remove keywords and number to get description
   let desc = lower
   for (const kw of incomeKeywords) {
     desc = desc.replace(kw, '')
@@ -105,13 +109,14 @@ interface QuickAddModalProps {
 type Step = 'input' | 'confirm'
 
 export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
+  const isMobile = useIsMobile()
+
   const [step, setStep] = useState<Step>('input')
   const [text, setText] = useState('')
   const [isListening, setIsListening] = useState(false)
   const [speechSupported, setSpeechSupported] = useState(true)
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null)
 
-  // Confirm form state
   const [type, setType] = useState<'INCOME' | 'EXPENSE'>('EXPENSE')
   const [amount, setAmount] = useState('')
   const [description, setDescription] = useState('')
@@ -126,7 +131,6 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     { enabled: open && step === 'confirm' }
   )
 
-  // AI category suggestion
   const { data: aiSuggestion } = trpc.transaction.suggestCategory.useQuery(
     { description, type: type as 'INCOME' | 'EXPENSE', amount: parseFloat(amount) || undefined },
     {
@@ -135,7 +139,6 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     }
   )
 
-  // Auto-apply AI suggestion when confidence > 0.7 and no category set
   useEffect(() => {
     if (aiSuggestion && aiSuggestion.confidence > 0.7 && !categoryId) {
       setCategoryId(aiSuggestion.categoryId)
@@ -153,7 +156,6 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     onError: (err) => toast.error(`Ошибка: ${err.message}`),
   })
 
-  // Reset on close
   useEffect(() => {
     if (!open) {
       setStep('input')
@@ -163,14 +165,12 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     }
   }, [open])
 
-  // Set default account
   useEffect(() => {
     if (accounts && accounts.length > 0 && !accountId) {
       setAccountId(accounts[0].id)
     }
   }, [accounts, accountId])
 
-  // Check speech API
   useEffect(() => {
     const hasSpeech =
       typeof window !== 'undefined' &&
@@ -180,7 +180,6 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
 
   const startListening = useCallback(() => {
     if (!speechSupported) return
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const SpeechRecognitionCtor = ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition) as new () => SpeechRecognitionInstance
     const recognition = new SpeechRecognitionCtor()
@@ -196,13 +195,8 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
       setText(transcript)
     }
 
-    recognition.onerror = () => {
-      setIsListening(false)
-    }
-
-    recognition.onend = () => {
-      setIsListening(false)
-    }
+    recognition.onerror = () => { setIsListening(false) }
+    recognition.onend = () => { setIsListening(false) }
 
     recognitionRef.current = recognition
     recognition.start()
@@ -246,6 +240,169 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
     })
   }
 
+  const formContent = (
+    <>
+      {step === 'input' && (
+        <div className="space-y-4 pt-1 px-1">
+          <p className="text-sm text-muted-foreground">
+            Напишите или скажите: <span className="italic">&quot;Потратил 500 на кофе&quot;</span>
+          </p>
+
+          <div className="flex gap-2">
+            <Input
+              placeholder="Потратил 500 на кофе..."
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleParse()}
+              autoFocus
+              className="flex-1"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={isListening ? stopListening : startListening}
+              disabled={!speechSupported}
+              title={!speechSupported ? 'Браузер не поддерживает голосовой ввод' : undefined}
+              className={cn(isListening && 'border-red-400 text-red-500')}
+            >
+              {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+            </Button>
+          </div>
+
+          {isListening && (
+            <div className="flex items-center gap-2 text-sm text-red-500">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
+              </span>
+              Запись... Говорите
+            </div>
+          )}
+
+          {!speechSupported && (
+            <p className="text-xs text-muted-foreground">
+              Ваш браузер не поддерживает голосовой ввод. Используйте текстовое поле.
+            </p>
+          )}
+
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" onClick={() => onOpenChange(false)}>Отмена</Button>
+            <Button onClick={handleParse} disabled={!text.trim()}>Далее</Button>
+          </div>
+        </div>
+      )}
+
+      {step === 'confirm' && (
+        <div className="space-y-4 pt-1 px-1">
+          <div className="space-y-1.5">
+            <Label>Тип</Label>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setType('EXPENSE')}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
+                  type === 'EXPENSE' ? 'border-red-300 bg-red-50 text-red-700' : 'hover:bg-muted'
+                )}
+              >
+                <ArrowDownRight className="h-4 w-4" /> Расход
+              </button>
+              <button
+                onClick={() => setType('INCOME')}
+                className={cn(
+                  'flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
+                  type === 'INCOME' ? 'border-green-300 bg-green-50 text-green-700' : 'hover:bg-muted'
+                )}
+              >
+                <ArrowUpRight className="h-4 w-4" /> Доход
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="qa-amount">Сумма</Label>
+            <Input id="qa-amount" type="number" min="0" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="qa-desc">Описание</Label>
+            <Input id="qa-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Описание транзакции" />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Счёт</Label>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger><SelectValue placeholder="Выберите счёт" /></SelectTrigger>
+              <SelectContent>
+                {accounts?.map((acc) => (
+                  <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Категория</Label>
+            <Select value={categoryId} onValueChange={setCategoryId}>
+              <SelectTrigger><SelectValue placeholder="Выберите категорию (опционально)" /></SelectTrigger>
+              <SelectContent>
+                {categories?.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.id}>
+                    {cat.icon ? `${cat.icon} ` : ''}{cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {aiSuggestion && aiSuggestion.confidence >= 0.4 && (
+              aiSuggestion.confidence > 0.7 ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+                  <Sparkles className="h-3 w-3" /> AI {aiSuggestion.categoryName}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setCategoryId(aiSuggestion.categoryId)}
+                  className="inline-flex items-center gap-1 rounded-full border border-purple-300 px-2.5 py-0.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20 transition-colors"
+                >
+                  <Sparkles className="h-3 w-3" /> AI предлагает: {aiSuggestion.categoryName}
+                </button>
+              )
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="qa-date">Дата</Label>
+            <Input id="qa-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+
+          <div className="flex gap-2 justify-end pb-2">
+            <Button variant="ghost" onClick={() => setStep('input')}>Назад</Button>
+            <Button onClick={handleSave} disabled={createMutation.isPending}>
+              {createMutation.isPending ? 'Сохраняю...' : 'Сохранить'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  )
+
+  // Mobile → Drawer, Desktop → Dialog
+  if (isMobile) {
+    return (
+      <Drawer open={open} onOpenChange={onOpenChange}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>
+              {step === 'input' ? 'Быстрое добавление' : 'Подтверждение'}
+            </DrawerTitle>
+          </DrawerHeader>
+          <div className="px-4 pb-6">
+            {formContent}
+          </div>
+        </DrawerContent>
+      </Drawer>
+    )
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
@@ -254,200 +411,7 @@ export function QuickAddModal({ open, onOpenChange }: QuickAddModalProps) {
             {step === 'input' ? 'Быстрое добавление' : 'Подтверждение'}
           </DialogTitle>
         </DialogHeader>
-
-        {step === 'input' && (
-          <div className="space-y-4 pt-1">
-            <p className="text-sm text-muted-foreground">
-              Напишите или скажите: <span className="italic">"Потратил 500 на кофе"</span>
-            </p>
-
-            <div className="flex gap-2">
-              <Input
-                placeholder="Потратил 500 на кофе..."
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleParse()}
-                autoFocus
-                className="flex-1"
-              />
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={isListening ? stopListening : startListening}
-                disabled={!speechSupported}
-                title={!speechSupported ? 'Браузер не поддерживает голосовой ввод' : undefined}
-                className={cn(isListening && 'border-red-400 text-red-500')}
-              >
-                {isListening ? (
-                  <MicOff className="h-4 w-4" />
-                ) : (
-                  <Mic className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-
-            {/* Recording indicator */}
-            {isListening && (
-              <div className="flex items-center gap-2 text-sm text-red-500">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500" />
-                </span>
-                Запись... Говорите
-              </div>
-            )}
-
-            {!speechSupported && (
-              <p className="text-xs text-muted-foreground">
-                Ваш браузер не поддерживает голосовой ввод. Используйте текстовое поле.
-              </p>
-            )}
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="ghost" onClick={() => onOpenChange(false)}>
-                Отмена
-              </Button>
-              <Button onClick={handleParse} disabled={!text.trim()}>
-                Далее
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {step === 'confirm' && (
-          <div className="space-y-4 pt-1">
-            {/* Type toggle */}
-            <div className="space-y-1.5">
-              <Label>Тип</Label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setType('EXPENSE')}
-                  className={cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
-                    type === 'EXPENSE'
-                      ? 'border-red-300 bg-red-50 text-red-700'
-                      : 'hover:bg-muted'
-                  )}
-                >
-                  <ArrowDownRight className="h-4 w-4" />
-                  Расход
-                </button>
-                <button
-                  onClick={() => setType('INCOME')}
-                  className={cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors',
-                    type === 'INCOME'
-                      ? 'border-green-300 bg-green-50 text-green-700'
-                      : 'hover:bg-muted'
-                  )}
-                >
-                  <ArrowUpRight className="h-4 w-4" />
-                  Доход
-                </button>
-              </div>
-            </div>
-
-            {/* Amount */}
-            <div className="space-y-1.5">
-              <Label htmlFor="qa-amount">Сумма</Label>
-              <Input
-                id="qa-amount"
-                type="number"
-                min="0"
-                step="0.01"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="0"
-              />
-            </div>
-
-            {/* Description */}
-            <div className="space-y-1.5">
-              <Label htmlFor="qa-desc">Описание</Label>
-              <Input
-                id="qa-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Описание транзакции"
-              />
-            </div>
-
-            {/* Account */}
-            <div className="space-y-1.5">
-              <Label>Счёт</Label>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите счёт" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts?.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>
-                      {acc.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Category */}
-            <div className="space-y-1.5">
-              <Label>Категория</Label>
-              <Select value={categoryId} onValueChange={setCategoryId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Выберите категорию (опционально)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories?.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.icon ? `${cat.icon} ` : ''}{cat.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {/* AI suggestion badge */}
-              {aiSuggestion && aiSuggestion.confidence >= 0.4 && (
-                aiSuggestion.confidence > 0.7 ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
-                    <Sparkles className="h-3 w-3" />
-                    AI ✨ {aiSuggestion.categoryName}
-                  </span>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setCategoryId(aiSuggestion.categoryId)}
-                    className="inline-flex items-center gap-1 rounded-full border border-purple-300 px-2.5 py-0.5 text-xs font-medium text-purple-600 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-400 dark:hover:bg-purple-900/20 transition-colors"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    AI предлагает: {aiSuggestion.categoryName}
-                  </button>
-                )
-              )}
-            </div>
-
-            {/* Date */}
-            <div className="space-y-1.5">
-              <Label htmlFor="qa-date">Дата</Label>
-              <Input
-                id="qa-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <Button variant="ghost" onClick={() => setStep('input')}>
-                Назад
-              </Button>
-              <Button
-                onClick={handleSave}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? 'Сохраняю...' : 'Сохранить'}
-              </Button>
-            </div>
-          </div>
-        )}
+        {formContent}
       </DialogContent>
     </Dialog>
   )

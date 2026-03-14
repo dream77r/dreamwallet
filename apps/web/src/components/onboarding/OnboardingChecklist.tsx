@@ -129,7 +129,7 @@ function TaskChip({
       onClick={onClick}
       className={cn(
         'inline-flex shrink-0 items-center gap-1 rounded-xl px-2.5 py-1 text-xs font-medium',
-        'border border-border bg-white dark:bg-card text-foreground',
+        'border border-border bg-card text-foreground',
         'transition-colors hover:border-primary hover:text-primary',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         !task.required && 'opacity-70'

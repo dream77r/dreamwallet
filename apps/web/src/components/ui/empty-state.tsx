@@ -1,3 +1,5 @@
+'use client'
+
 import { cn } from '@/lib/utils'
 import { Card } from '@/components/ui/card'
 
@@ -6,6 +8,7 @@ interface EmptyStateProps {
   title: string
   description?: string
   action?: React.ReactNode
+  illustration?: React.ReactNode
   className?: string
   variant?: 'card' | 'inline'
 }
@@ -15,12 +18,15 @@ export function EmptyState({
   title,
   description,
   action,
+  illustration,
   className,
   variant = 'card',
 }: EmptyStateProps) {
   const inner = (
-    <div className="flex flex-col items-center gap-3 text-center">
-      {typeof icon === 'string' ? (
+    <div className="flex flex-col items-center gap-3 text-center animate-fade-up">
+      {illustration ? (
+        <div className="w-24 h-24">{illustration}</div>
+      ) : typeof icon === 'string' ? (
         <span className="text-4xl">{icon}</span>
       ) : (
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
@@ -33,7 +39,7 @@ export function EmptyState({
           <p className="text-sm text-muted-foreground max-w-[260px]">{description}</p>
         )}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="pt-1">{action}</div>}
     </div>
   )
 

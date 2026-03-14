@@ -35,7 +35,7 @@ export function BalanceSummary({ balances, groupId, onSettle }: BalanceSummaryPr
     return (
       <Card className="rounded-3xl">
         <CardContent className="p-5 text-center">
-          <Scale className="h-8 w-8 mx-auto text-gray-300 mb-2" />
+          <Scale className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
           <p className="text-sm text-green-600 font-medium">Все расчёты завершены!</p>
         </CardContent>
       </Card>
@@ -46,7 +46,7 @@ export function BalanceSummary({ balances, groupId, onSettle }: BalanceSummaryPr
     <Card className="rounded-3xl">
       <CardContent className="p-5">
         <div className="flex items-center gap-2 mb-3">
-          <Scale className="h-4 w-4 text-gray-500" />
+          <Scale className="h-4 w-4 text-muted-foreground" />
           <h2 className="font-semibold text-sm">Кто кому должен</h2>
         </div>
         <div className="space-y-3">
@@ -57,7 +57,7 @@ export function BalanceSummary({ balances, groupId, onSettle }: BalanceSummaryPr
             >
               <div className="flex items-center gap-2 text-sm min-w-0">
                 <span className="truncate font-medium">{b.fromName}</span>
-                <ArrowRight className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <span className="truncate font-medium">{b.toName}</span>
               </div>
               <div className="flex items-center gap-2 shrink-0">

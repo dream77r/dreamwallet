@@ -168,7 +168,7 @@ export function AddExpenseModal({
               </Label>
               {participants.map((p) => (
                 <div key={p.id} className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600 w-24 truncate">{p.name}</span>
+                  <span className="text-sm text-muted-foreground w-24 truncate">{p.name}</span>
                   <Input
                     type="number"
                     min="0"
