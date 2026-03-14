@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
+import { Mic, Plus } from 'lucide-react'
 import { AnimatedNumber } from '@/components/ui/animated-number'
 import { formatAmount } from '@/lib/format'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -21,9 +22,11 @@ interface BalanceHeroProps {
   accounts: Account[]
   currency?: string
   isLoading: boolean
+  onVoiceInput?: () => void
+  onQuickAdd?: () => void
 }
 
-export function BalanceHero({ totalBalance, accounts, currency = 'RUB', isLoading }: BalanceHeroProps) {
+export function BalanceHero({ totalBalance, accounts, currency = 'RUB', isLoading, onVoiceInput, onQuickAdd }: BalanceHeroProps) {
   const isMobile = useIsMobile()
   const [activeIndex, setActiveIndex] = useState(0)
 
@@ -78,9 +81,32 @@ export function BalanceHero({ totalBalance, accounts, currency = 'RUB', isLoadin
                 <div className="absolute -bottom-12 -left-12 w-32 h-32 rounded-full bg-white/[0.04]" />
                 <div className="relative z-10">
                   <p className="text-sm font-medium opacity-75 mb-1">{card.name}</p>
-                  <p className="text-[32px] font-bold tracking-tight leading-none mb-1">
+                  <p className="text-[32px] font-bold tracking-tight leading-none mb-2">
                     <AnimatedNumber value={card.balance} currency={card.currency} className="text-white" />
                   </p>
+                  {/* Action buttons on first card only */}
+                  {card.id === 'total' && (
+                    <div className="flex items-center gap-2">
+                      {onQuickAdd && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onQuickAdd() }}
+                          className="flex items-center gap-1.5 bg-white/[0.15] hover:bg-white/[0.25] rounded-lg px-3 py-1.5 transition-colors active:scale-95"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                          <span className="text-xs font-medium">Добавить</span>
+                        </button>
+                      )}
+                      {onVoiceInput && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); onVoiceInput() }}
+                          className="flex items-center gap-1.5 bg-white/[0.15] hover:bg-white/[0.25] rounded-lg px-3 py-1.5 transition-colors active:scale-95"
+                        >
+                          <Mic className="h-3.5 w-3.5" />
+                          <span className="text-xs font-medium">Голос</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

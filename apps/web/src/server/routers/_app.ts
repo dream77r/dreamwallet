@@ -36,6 +36,7 @@ import { smartRulesRouter } from './smart-rules'
 import { investmentsRouter } from './investments'
 import { bankConnectionRouter } from './bank-connection'
 import { wrappedRouter } from './wrapped'
+import { spacesRouter } from './spaces'
 
 export const appRouter = router({
   wallet: walletRouter,
@@ -75,6 +76,7 @@ export const appRouter = router({
   investments: investmentsRouter,
   bankConnection: bankConnectionRouter,
   wrapped: wrappedRouter,
+  spaces: spacesRouter,
 })
 
 export type AppRouter = typeof appRouter

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useMemo } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { ArrowLeftRight, Sparkles, Upload, Target, Flag } from 'lucide-react'
 import { trpc } from '@/lib/trpc/client'
 import { useIsMobile } from '@/hooks/use-mobile'
@@ -17,6 +17,8 @@ import { RunwayWidget } from '@/components/dashboard/RunwayWidget'
 import { GamificationWidget } from '@/components/dashboard/GamificationWidget'
 import { AiInsights } from '@/components/dashboard/ai-insights'
 import { StaggerList, StaggerItem } from '@/components/ui/stagger-list'
+import { QuickAddModal } from '@/components/transactions/QuickAddModal'
+import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist'
 
 const MONTH_NAMES = ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек']
 
@@ -37,6 +39,8 @@ const quickActions = [
 
 export function FlowTab() {
   const isMobile = useIsMobile()
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [voiceMode, setVoiceMode] = useState(false)
   const { start: monthStart, end: monthEnd } = useMemo(() => getCurrentMonthRange(), [])
 
   const { data: wallet, isLoading: walletLoading } = trpc.wallet.get.useQuery()
@@ -64,12 +68,14 @@ export function FlowTab() {
   if (isMobile) {
     return (
       <div className="space-y-4 animate-fade-up">
-        {/* Balance Hero — swipeable cards */}
+        {/* Balance Hero — swipeable cards with action buttons */}
         <BalanceHero
           totalBalance={stats?.totalBalance ?? 0}
           accounts={(wallet?.accounts ?? []) as Array<{ id: string; name: string; type: string; balance: unknown; currency: string; icon: string | null }>}
           currency={wallet?.currency}
           isLoading={isLoading}
+          onQuickAdd={() => setQuickAddOpen(true)}
+          onVoiceInput={() => setQuickAddOpen(true)}
         />
 
         {/* Quick actions */}
@@ -93,6 +99,9 @@ export function FlowTab() {
             </Link>
           ))}
         </div>
+
+        {/* Onboarding checklist (dismissable) */}
+        <OnboardingChecklist />
 
         {/* AI Daily Summary */}
         <AiDailySummary
@@ -133,6 +142,8 @@ export function FlowTab() {
             <AiInsights />
           </StaggerItem>
         </StaggerList>
+
+        <QuickAddModal open={quickAddOpen} onOpenChange={setQuickAddOpen} />
       </div>
     )
   }
@@ -147,6 +158,9 @@ export function FlowTab() {
         currency={wallet?.currency}
         isLoading={isLoading}
       />
+
+      {/* Onboarding checklist (dismissable) */}
+      <OnboardingChecklist />
 
       {/* KPI Row: Score + Forecast + Month Comparison */}
       <div className="grid grid-cols-3 gap-4">
